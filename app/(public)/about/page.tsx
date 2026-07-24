@@ -17,10 +17,8 @@ const values = [
 ];
 
 const team = [
-  { name: 'Aryan Kapoor', role: 'Founder & CEO', emoji: '👨‍🍳' },
-  { name: 'Priya Nair', role: 'Head Pastry Chef', emoji: '👩‍🍳' },
-  { name: 'Rohit Sharma', role: 'Creative Director', emoji: '🎨' },
-  { name: 'Sneha Desai', role: 'Operations Head', emoji: '📊' },
+  { name: 'V MEENAKSHI', role: 'Founder', emoji: '👩‍🍳' },
+  { name: 'Yuvaraj', role: 'Co-Founder', emoji: '👨‍🍳' },
 ];
 
 export default function AboutPage() {
