@@ -111,7 +111,11 @@ export default function Footer() {
           </div>
           <div>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', marginBottom: '8px' }}>&copy; {new Date().getFullYear()} Thirst. All rights reserved.</p>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', wordBreak: 'break-word', padding: '0 10px' }}>FSSAI: 22425478001152 | Udyam: UDYAM-TN-24-0161809</p>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '4px 8px' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>FSSAI: 22425478001152</span>
+              <span className="hide-mobile">|</span>
+              <span style={{ whiteSpace: 'nowrap' }}>Udyam: UDYAM-TN-24-0161809</span>
+            </div>
           </div>
         </div>
       </div>
