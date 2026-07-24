@@ -48,9 +48,9 @@ export default function ContactPage() {
                   <div style={{ paddingTop: '8px' }}>
                     <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 400, color: 'var(--color-berry)', fontSize: '1.2rem', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</div>
                     {href ? (
-                      <a href={href} style={{ color: 'var(--color-plum)', fontSize: '1rem', fontWeight: 700, textDecoration: 'none' }}>{value}</a>
+                      <a href={href} style={{ color: 'var(--color-plum)', fontSize: '1rem', fontWeight: 700, textDecoration: 'none', wordBreak: 'break-word', display: 'block' }}>{value}</a>
                     ) : (
-                      <p style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', fontWeight: 600 }}>{value}</p>
+                      <p style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', fontWeight: 600, wordBreak: 'break-word' }}>{value}</p>
                     )}
                   </div>
                 </div>
@@ -106,12 +106,12 @@ export default function ContactPage() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="flex-col-mobile" style={{ display: 'flex', gap: '24px', marginBottom: '24px' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <label htmlFor="c-name" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>Name *</label>
                       <input id="c-name" required placeholder="Your name" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }} />
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <label htmlFor="c-phone" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>Phone *</label>
                       <input id="c-phone" type="tel" required placeholder="+91..." value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }} />
                     </div>
