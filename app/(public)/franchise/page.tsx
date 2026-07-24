@@ -135,7 +135,7 @@ export default function FranchisePage() {
                 <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 400, fontSize: '2.5rem', color: 'var(--color-plum)', marginBottom: '8px', textTransform: 'uppercase' }}>{tier.tier}</div>
                 <div style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '24px' }}>{tier.size}</div>
                 <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 400, fontSize: '2rem', color: 'var(--color-berry)', marginBottom: '8px' }}>{tier.investment}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px', background: 'var(--color-gold)', display: 'inline-flex', padding: '6px 16px', borderRadius: '50px', border: '2px solid var(--color-plum)' }}>
+                <div style={{ alignItems: 'center', gap: '8px', marginBottom: '32px', background: 'var(--color-gold)', display: 'inline-flex', padding: '6px 16px', borderRadius: '50px', border: '2px solid var(--color-plum)' }}>
                   <TrendingUp size={16} style={{ color: 'var(--color-plum)' }} />
                   <span style={{ color: 'var(--color-plum)', fontWeight: 800, fontSize: '0.9rem', textTransform: 'uppercase' }}>ROI: {tier.roi}</span>
                 </div>
