@@ -158,7 +158,7 @@ export default function HomePage() {
 
           {/* Left Content */}
           <motion.div initial="hidden" animate="visible" variants={staggerContainer} style={{ flex: '1 1 500px' }}>
-            <motion.h1 variants={fadeUp} style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 8vw, 5rem)', wordBreak: 'break-word', color: 'var(--color-plum)', fontWeight: 400, lineHeight: 1.1, marginBottom: '24px', letterSpacing: '2px', textTransform: 'uppercase' }}>
+            <motion.h1 variants={fadeUp} style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 5vw, 4rem)', color: 'var(--color-plum)', fontWeight: 400, lineHeight: 1.1, marginBottom: '24px', textTransform: 'uppercase' }}>
               Handcrafted <br/>
               <span style={{ position: 'relative' }}>
                 Vintage
