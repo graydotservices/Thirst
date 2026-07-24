@@ -193,9 +193,11 @@ export default function AboutPage() {
               </div>
             ))}
           </div>
-          <Link href="/franchise" className="btn btn-primary" style={{ marginTop: '60px', padding: '16px 40px', fontSize: '1.2rem' }}>
-            Join Our Journey <ArrowRight size={20} />
-          </Link>
+          <div className="flex-col-mobile" style={{ display: 'flex', marginTop: '60px', justifyContent: 'center' }}>
+            <Link href="/franchise" className="btn btn-primary text-center-mobile" style={{ padding: '16px 24px', fontSize: '1.1rem', maxWidth: '100%', justifyContent: 'center' }}>
+              Join Our Journey <ArrowRight size={20} />
+            </Link>
+          </div>
         </div>
       </section>
     </>
