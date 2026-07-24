@@ -269,12 +269,12 @@ export default function HomePage() {
       <section style={{ padding: '120px 0', background: 'var(--gradient-hero)' }}>
         <div className="container">
           <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '60px' }}>
-            <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ flex: '1 1 500px', position: 'relative' }}>
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ flex: '1 1 500px', position: 'relative', width: '100%', maxWidth: '450px', margin: '0 auto' }}>
               <div style={{ position: 'relative', paddingBottom: '100%', borderRadius: '32px', overflow: 'hidden', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-xl)' }}>
                 <Image src="/vintage-hot-chocolate.png" alt="The Signature Sip" fill style={{ objectFit: 'cover' }} />
               </div>
             </motion.div>
-            <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} style={{ flex: '1 1 400px' }}>
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} style={{ flex: '1 1 400px', textAlign: 'center' }}>
               <div style={{ color: 'var(--color-berry)', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>Thirst Special</div>
               <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 4rem)', color: 'var(--color-plum)', lineHeight: 1.1, marginBottom: '24px' }}>
                 The Signature Sip
@@ -283,14 +283,14 @@ export default function HomePage() {
                 Hot chocolate with Milo, marshmallows, biscuit crunch, and a chocolate roll. A truly decadent experience handcrafted for chocolate lovers.
               </p>
               
-              <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', gap: '24px', marginBottom: '40px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '24px', marginBottom: '40px', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Star fill="var(--color-gold)" color="var(--color-gold)" size={20} /><span style={{ fontWeight: 800 }}>5.0 (250+ reviews)</span></div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--color-plum)', fontWeight: 800 }}><Award color="var(--color-berry)" size={20} /><span>Best Seller</span></div>
               </div>
 
-              <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '32px', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-plum)' }}>₹99</div>
-                <Link href="/menu" className="btn btn-primary">Order Now</Link>
+                <Link href="/menu" className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>Order Now</Link>
               </div>
             </motion.div>
           </div>
