@@ -142,10 +142,12 @@ export default function MenuPage() {
         boxShadow: 'var(--shadow-sm)' 
       }}>
         <div className="container">
-          <div className="flex-col-mobile" style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Search */}
-            <div style={{ position: 'relative', flex: '1 1 200px' }}>
-              <Search size={20} style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+            <div style={{ position: 'relative', flex: '1 1 100%', minWidth: '280px' }}>
+              <div style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', display: 'flex', color: 'var(--color-text-muted)' }}>
+                <Search size={20} />
+              </div>
               <input
                 type="text"
                 placeholder="Search menu items..."
@@ -169,7 +171,7 @@ export default function MenuPage() {
             </div>
 
             {/* Category Pills */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flex: '2 1 500px' }}>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flex: '1 1 100%' }}>
               {categories.map(({ id, label, icon: Icon }) => {
                 const isActive = activeCategory === id;
                 return (
