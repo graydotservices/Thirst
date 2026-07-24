@@ -157,8 +157,8 @@ export default function HomePage() {
           </div>
 
           {/* Left Content */}
-          <motion.div initial="hidden" animate="visible" variants={staggerContainer} style={{ flex: '1 1 500px', paddingLeft: '40px' }}>
-            <motion.h1 variants={fadeUp} style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(3rem, 6vw, 5rem)', color: 'var(--color-plum)', fontWeight: 400, lineHeight: 1.1, marginBottom: '24px', letterSpacing: '2px', textTransform: 'uppercase' }}>
+          <motion.div initial="hidden" animate="visible" variants={staggerContainer} style={{ flex: '1 1 500px' }}>
+            <motion.h1 variants={fadeUp} style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 8vw, 5rem)', wordBreak: 'break-word', color: 'var(--color-plum)', fontWeight: 400, lineHeight: 1.1, marginBottom: '24px', letterSpacing: '2px', textTransform: 'uppercase' }}>
               Handcrafted <br/>
               <span style={{ position: 'relative' }}>
                 Vintage
@@ -192,7 +192,7 @@ export default function HomePage() {
                <motion.div 
                  animate={{ rotate: 360 }}
                  transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                 style={{ position: 'absolute', top: '5%', left: '-10%', width: '130px', height: '130px', background: 'var(--color-berry)', borderRadius: '50%', zIndex: 3, boxShadow: 'var(--shadow-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--color-plum)' }}>
+                 style={{ position: 'absolute', top: '5%', left: '-10px', width: '130px', height: '130px', background: 'var(--color-berry)', borderRadius: '50%', zIndex: 3, boxShadow: 'var(--shadow-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--color-plum)' }}>
                  <div style={{ position: 'relative', width: '80%', height: '80%' }}>
                     <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
                       <path id="curve" d="M 50, 50 m -35, 0 a 35,35 0 1,1 70,0 a 35,35 0 1,1 -70,0" fill="transparent" />
