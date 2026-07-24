@@ -228,7 +228,7 @@ export default function MenuPage() {
               </p>
             </div>
           ) : (
-            <motion.div layout className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '40px' }}>
+            <motion.div layout className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '40px' }}>
               <AnimatePresence>
                 {filtered.map((item) => (
                   <motion.div 

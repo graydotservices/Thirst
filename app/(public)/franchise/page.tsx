@@ -90,7 +90,7 @@ export default function FranchisePage() {
             <div style={{ color: 'var(--color-berry)', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>Why Thirst.</div>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', color: 'var(--color-plum)', textTransform: 'uppercase' }}>The Thirst. Advantage</h2>
           </div>
-          <div className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '32px' }}>
+          <div className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '32px' }}>
             {whyChoose.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="flex-col-mobile text-center-mobile" style={{ background: 'var(--color-white)', border: '4px solid var(--color-plum)', borderRadius: '16px', boxShadow: 'var(--shadow-md)', padding: '32px', display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
                 <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-plum)', border: '4px solid var(--color-plum)', flexShrink: 0 }}>
@@ -113,7 +113,7 @@ export default function FranchisePage() {
             <div style={{ color: 'var(--color-berry)', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>Investment</div>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', color: 'var(--color-plum)', textTransform: 'uppercase' }}>Choose Your Model</h2>
           </div>
-          <div className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '32px' }}>
+          <div className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '32px' }}>
             {investments.map((tier) => (
               <div
                 key={tier.tier}
