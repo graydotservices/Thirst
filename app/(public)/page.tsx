@@ -19,6 +19,9 @@ import {
   X,
   MapPin,
   Award,
+  Instagram,
+  Youtube,
+  MessageCircle,
 } from 'lucide-react';
 
 /* ============================================================
@@ -148,9 +151,9 @@ export default function HomePage() {
           
           {/* Vertical Socials */}
           <div className="lg-hidden" style={{ position: 'absolute', left: '-40px', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-             <a href="#" style={{ color: 'var(--color-plum)' }}><Share2 size={20} /></a>
-             <a href="#" style={{ color: 'var(--color-plum)' }}><MessageSquare size={20} /></a>
-             <a href="#" style={{ color: 'var(--color-plum)' }}><Camera size={20} /></a>
+             <a href="https://youtube.com/@thirstfreshzz?si=2bDbGSIyGi6cc8Ix" target="_blank" rel="noreferrer" style={{ color: 'var(--color-plum)' }}><Youtube size={20} /></a>
+             <a href="https://wa.me/918754881546" target="_blank" rel="noreferrer" style={{ color: 'var(--color-plum)' }}><MessageCircle size={20} /></a>
+             <a href="https://www.instagram.com/thirst_fresh?igsh=bnY2cTJqd2p3ZmF1&utm_source=qr" target="_blank" rel="noreferrer" style={{ color: 'var(--color-plum)' }}><Instagram size={20} /></a>
              <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', color: 'var(--color-text-secondary)', fontSize: '0.8rem', letterSpacing: '4px', marginTop: '40px', fontFamily: 'var(--font-heading)' }}>
                VINTAGE RECIPES
              </div>

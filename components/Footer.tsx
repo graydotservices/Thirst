@@ -11,7 +11,10 @@ import {
   Mail,
   Clock,
   Heart,
-  ArrowRight
+  ArrowRight,
+  Instagram,
+  Youtube,
+  MessageCircle,
 } from 'lucide-react';
 
 const quickLinks = [
@@ -23,9 +26,9 @@ const quickLinks = [
 ];
 
 const socialLinks = [
-  { href: 'https://instagram.com', icon: Camera, label: 'Instagram' },
-  { href: 'https://facebook.com', icon: Share2, label: 'Facebook' },
-  { href: 'https://twitter.com', icon: MessageSquare, label: 'Twitter' },
+  { href: 'https://www.instagram.com/thirst_fresh?igsh=bnY2cTJqd2p3ZmF1&utm_source=qr', icon: Instagram, label: 'Instagram' },
+  { href: 'https://youtube.com/@thirstfreshzz?si=2bDbGSIyGi6cc8Ix', icon: Youtube, label: 'YouTube' },
+  { href: 'https://wa.me/918754881546', icon: MessageCircle, label: 'WhatsApp' },
 ];
 
 export default function Footer() {
