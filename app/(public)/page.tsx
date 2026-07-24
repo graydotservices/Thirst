@@ -178,7 +178,7 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.2 }} style={{ flex: '1 1 500px', position: 'relative', display: 'flex', justifyContent: 'center' }}>
             
             {/* Custom Shape Wrapper */}
-            <div style={{ position: 'relative', width: '100%', maxWidth: '500px', paddingBottom: '100%' }}>
+            <div style={{ position: 'relative', width: '100%', maxWidth: '500px', paddingBottom: '100%', marginBottom: '40px' }}>
                {/* Sketchy Border Accent */}
                <div style={{ position: 'absolute', top: '15px', right: '-15px', width: '100%', height: '100%', background: 'var(--color-gold)', borderRadius: '255px 15px 225px 15px/15px 225px 15px 255px', zIndex: 1, border: '4px solid var(--color-plum)' }} />
                
