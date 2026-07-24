@@ -229,7 +229,7 @@ export default function HomePage() {
       </section>
 
       {/* 2. FEATURED CATEGORIES */}
-      <section className="section" style={{ padding: '120px 0', background: 'var(--color-cream)' }}>
+      <section className="pad-mobile" style={{ padding: '120px 0', background: 'var(--color-cream)' }}>
         <div className="container">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer} className="section-header">
             <motion.h2 variants={fadeUp} style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 4vw, 3rem)', color: 'var(--color-plum)', textAlign: 'center', marginBottom: '60px' }}>
@@ -265,12 +265,14 @@ export default function HomePage() {
       </section>
 
       {/* 3. TODAY'S SIGNATURE DESSERT */}
-      <section style={{ padding: '120px 0', background: 'var(--gradient-hero)' }}>
+      <section className="pad-mobile" style={{ padding: '120px 0', background: 'var(--gradient-hero)' }}>
         <div className="container">
-          <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '60px' }}>
-            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ flex: '1 1 500px', position: 'relative', width: '100%', maxWidth: '450px', margin: '0 auto' }}>
-              <div style={{ position: 'relative', paddingBottom: '100%', borderRadius: '32px', overflow: 'hidden', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-xl)' }}>
-                <Image src="/vintage-hot-chocolate.png" alt="The Signature Sip" fill style={{ objectFit: 'cover' }} />
+          <div className="flex-col-mobile text-center-mobile gap-mobile-sm" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px' }}>
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ flex: '1 1 500px', position: 'relative', width: '100%' }}>
+              <div style={{ maxWidth: '300px', margin: '0 auto', width: '100%' }}>
+                <div style={{ position: 'relative', paddingBottom: '100%', borderRadius: '32px', overflow: 'hidden', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-xl)' }}>
+                  <Image src="/vintage-hot-chocolate.png" alt="The Signature Sip" fill style={{ objectFit: 'cover' }} />
+                </div>
               </div>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} style={{ flex: '1 1 400px', textAlign: 'center' }}>
@@ -297,7 +299,7 @@ export default function HomePage() {
       </section>
 
       {/* 4. BEST SELLERS */}
-      <section style={{ padding: '120px 0', background: 'var(--color-cream)' }}>
+      <section className="pad-mobile" style={{ padding: '120px 0', background: 'var(--color-cream)' }}>
         <div className="container">
           <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '60px', flexWrap: 'wrap', gap: '20px' }}>
             <div>
@@ -348,7 +350,7 @@ export default function HomePage() {
       </section>
 
       {/* 5. WHY CHOOSE THIRST */}
-      <section style={{ padding: '120px 0', background: 'linear-gradient(135deg, #FFF7EE 0%, #ffffff 100%)' }}>
+      <section className="pad-mobile" style={{ padding: '120px 0', background: 'linear-gradient(135deg, #FFF7EE 0%, #ffffff 100%)' }}>
         <div className="container">
            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} style={{ textAlign: 'center', marginBottom: '80px' }}>
             <motion.h2 variants={fadeUp} style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 4vw, 3rem)', color: 'var(--color-plum)' }}>The Thirst. Experience</motion.h2>
@@ -375,13 +377,15 @@ export default function HomePage() {
       </section>
 
       {/* 6. BRAND STORY */}
-      <section style={{ padding: '120px 0', background: 'white', overflow: 'hidden' }}>
+      <section className="pad-mobile" style={{ padding: '120px 0', background: 'white', overflow: 'hidden' }}>
         <div className="container">
-          <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '80px' }}>
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 1 }} style={{ flex: '1 1 500px' }}>
-              <div style={{ position: 'relative', paddingBottom: '120%', borderRadius: '40px', overflow: 'hidden', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-xl)' }}>
-                <Image src="/hot-chocolate.png" alt="Brand Story" fill style={{ objectFit: 'cover' }} />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(62,39,35,0.4), transparent)' }} />
+          <div className="flex-col-mobile text-center-mobile gap-mobile-sm" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '80px' }}>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 1 }} style={{ flex: '1 1 500px', width: '100%' }}>
+              <div style={{ maxWidth: '350px', margin: '0 auto', width: '100%' }}>
+                <div style={{ position: 'relative', paddingBottom: '120%', borderRadius: '40px', overflow: 'hidden', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-xl)' }}>
+                  <Image src="/hot-chocolate.png" alt="Brand Story" fill style={{ objectFit: 'cover' }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(62,39,35,0.4), transparent)' }} />
+                </div>
               </div>
             </motion.div>
             <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ flex: '1 1 400px' }}>
