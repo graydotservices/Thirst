@@ -338,7 +338,7 @@ export default function HomePage() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
                     <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-berry)' }}>{item.price}</span>
-                    <button className="btn btn-primary" style={{ padding: '10px 24px' }}>Order</button>
+                    <Link href="/menu" className="btn btn-primary" style={{ padding: '10px 24px' }}>View Menu</Link>
                   </div>
                 </div>
               </motion.div>
