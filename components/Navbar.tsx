@@ -175,11 +175,7 @@ export default function Navbar() {
               </Link>
             </li>
           ))}
-          <li style={{ marginTop: 'var(--space-4)' }}>
-            <Link href="/menu" className="btn btn-primary w-full" style={{ justifyContent: 'center' }}>
-              View Menu
-            </Link>
-          </li>
+
         </ul>
       </div>
 
