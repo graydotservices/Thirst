@@ -67,18 +67,11 @@ const menuItems = [
 export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch] = useState('');
-  const [cart, setCart] = useState<number[]>([]);
-
   const filtered = menuItems.filter(
     (item) =>
       (activeCategory === 'all' || item.category === activeCategory) &&
       item.name.toLowerCase().includes(search.toLowerCase())
   );
-
-  const addToCart = (id: number) => {
-    setCart((prev) => [...prev, id]);
-    setTimeout(() => setCart((prev) => prev.filter((c) => c !== id)), 1500);
-  };
 
   return (
     <div style={{ background: 'var(--color-bg-primary)', minHeight: '100vh' }}>
@@ -308,41 +301,7 @@ export default function MenuPage() {
                         {item.description}
                       </p>
                       
-                      <button
-                        onClick={() => addToCart(item.id)}
-                        style={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          padding: '14px',
-                          borderRadius: '50px',
-                          fontFamily: 'var(--font-heading)',
-                          fontWeight: 700,
-                          fontSize: '1rem',
-                          border: 'none',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          background: cart.includes(item.id) ? 'var(--color-success)' : 'var(--color-soft-pink)',
-                          color: cart.includes(item.id) ? 'white' : 'var(--color-berry)',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!cart.includes(item.id)) {
-                            e.currentTarget.style.background = 'var(--color-berry)';
-                            e.currentTarget.style.color = 'white';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!cart.includes(item.id)) {
-                            e.currentTarget.style.background = 'var(--color-soft-pink)';
-                            e.currentTarget.style.color = 'var(--color-berry)';
-                          }
-                        }}
-                      >
-                        <ShoppingCart size={18} />
-                        {cart.includes(item.id) ? 'Added to Cart!' : 'Add to Cart'}
-                      </button>
+
                     </div>
                   </motion.div>
                 ))}

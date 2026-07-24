@@ -117,8 +117,7 @@ export default function Navbar() {
               Call Us
             </a>
             <Link href="/menu" className="btn btn-primary btn-sm">
-              <ShoppingBag size={15} />
-              Order Now
+              View Menu
             </Link>
           </div>
 
@@ -178,7 +177,7 @@ export default function Navbar() {
           ))}
           <li style={{ marginTop: 'var(--space-4)' }}>
             <Link href="/menu" className="btn btn-primary w-full" style={{ justifyContent: 'center' }}>
-              Order Now
+              View Menu
             </Link>
           </li>
         </ul>

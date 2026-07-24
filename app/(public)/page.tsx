@@ -170,8 +170,7 @@ export default function HomePage() {
               Experience the finest, handcrafted desserts made with natural ingredients. Delicious, beautiful, and absolutely perfect for every occasion.
             </motion.p>
             <motion.div variants={fadeUp} className="flex-col-mobile gap-mobile-sm" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <Link href="/menu" className="btn btn-primary">ORDER NOW</Link>
-              <Link href="/menu" className="btn btn-secondary">EXPLORE MENU</Link>
+              <Link href="/menu" className="btn btn-primary">EXPLORE MENU</Link>
             </motion.div>
           </motion.div>
 
@@ -290,7 +289,7 @@ export default function HomePage() {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '32px', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-plum)' }}>₹99</div>
-                <Link href="/menu" className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>Order Now</Link>
+                <Link href="/menu" className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>View Menu</Link>
               </div>
             </motion.div>
           </div>
