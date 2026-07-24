@@ -170,8 +170,7 @@ export default function MenuPage() {
               />
             </div>
 
-            {/* Category Pills */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flex: '1 1 100%' }}>
+            <div className="hide-scrollbar" style={{ display: 'flex', gap: '12px', flexWrap: 'nowrap', overflowX: 'auto', flex: '1 1 100%', paddingBottom: '10px' }}>
               {categories.map(({ id, label, icon: Icon }) => {
                 const isActive = activeCategory === id;
                 return (
@@ -180,6 +179,8 @@ export default function MenuPage() {
                     onClick={() => setActiveCategory(id)}
                     style={{
                       display: 'flex',
+                      flexShrink: 0,
+                      whiteSpace: 'nowrap',
                       alignItems: 'center',
                       gap: '8px',
                       padding: '12px 20px',
