@@ -106,9 +106,7 @@ export default function Footer() {
 
         {/* Copyright & Certifications */}
         <div style={{ padding: '40px 0 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(255,255,255,0.6)', fontSize: '0.95rem' }}>
-            Crafted with <Heart size={14} fill="var(--color-berry)" color="var(--color-berry)" /> for Dessert Lovers
-          </div>
+
           <div>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', marginBottom: '8px' }}>&copy; {new Date().getFullYear()} Thirst. All rights reserved.</p>
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '4px 8px' }}>
