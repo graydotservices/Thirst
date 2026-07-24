@@ -1317,14 +1317,13 @@ tr:hover td {
   }
   .flex-col-mobile {
     flex-direction: column !important;
-    align-items: stretch !important;
   }
   .flex-col-mobile > * {
-    flex: 1 1 100% !important;
     width: 100% !important;
     max-width: 100% !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+  }
+  .lg-hidden {
+    display: none !important;
   }
   .text-center-mobile {
     text-align: center !important;

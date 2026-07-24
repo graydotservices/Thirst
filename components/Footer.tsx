@@ -41,9 +41,9 @@ export default function Footer() {
             <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', color: 'var(--color-white)', fontWeight: 800, marginBottom: '12px' }}>Join the Thirst Club</h3>
             <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.1rem', lineHeight: 1.6 }}>Subscribe to our newsletter for exclusive offers, seasonal menus, and VIP event invitations.</p>
           </div>
-          <div className="flex-col-mobile gap-mobile-sm" style={{ flex: '1 1 350px', display: 'flex', gap: '12px', background: 'rgba(255,255,255,0.1)', padding: '8px', borderRadius: '50px', border: '2px solid rgba(255,255,255,0.2)' }}>
-            <input type="email" placeholder="Enter your email address" style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'white', padding: '0 20px', fontSize: '1rem' }} />
-            <button className="btn" style={{ background: 'var(--color-gold)', color: 'var(--color-plum)', padding: '14px 32px', borderRadius: '40px', fontWeight: 600 }}>Subscribe</button>
+          <div style={{ flex: '1 1 100%', display: 'flex', flexWrap: 'wrap', gap: '12px', background: 'rgba(255,255,255,0.1)', padding: '8px', borderRadius: '16px', border: '2px solid rgba(255,255,255,0.2)' }}>
+            <input type="email" placeholder="Enter your email address" style={{ flex: '1 1 200px', background: 'transparent', border: 'none', outline: 'none', color: 'white', padding: '10px 12px', fontSize: '1rem' }} />
+            <button className="btn" style={{ flex: '1 1 auto', background: 'var(--color-gold)', color: 'var(--color-plum)', padding: '14px 32px', borderRadius: '12px', fontWeight: 600, justifyContent: 'center' }}>Subscribe</button>
           </div>
         </div>
 
