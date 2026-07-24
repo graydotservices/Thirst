@@ -117,7 +117,7 @@ export default function DashboardPage() {
               <YAxis tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
               <Tooltip
                 contentStyle={{ background: 'white', border: '1px solid #f0e0eb', borderRadius: 12, fontFamily: 'var(--font-heading)', fontSize: 13 }}
-                formatter={(v: number) => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']}
+                formatter={(v: any) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Revenue']}
               />
               <Area type="monotone" dataKey="revenue" stroke="#D94F8A" strokeWidth={2.5} fill="url(#revenueGrad)" dot={{ fill: '#D94F8A', r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
             </AreaChart>
