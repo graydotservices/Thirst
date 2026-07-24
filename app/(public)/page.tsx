@@ -528,7 +528,7 @@ export default function HomePage() {
               referrerPolicy="no-referrer-when-downgrade">
             </iframe>
             
-            <div style={{ position: 'absolute', top: '40px', left: '40px', background: 'var(--color-white)', padding: '32px', borderRadius: '16px', width: '350px', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-md)' }}>
+            <div style={{ position: 'absolute', top: '20px', left: '20px', background: 'var(--color-white)', padding: '24px', borderRadius: '16px', width: 'calc(100% - 40px)', maxWidth: '350px', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-md)' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', color: 'var(--color-plum)', marginBottom: '24px', textTransform: 'uppercase' }}>Store Locator</h3>
               <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
                 <input type="text" placeholder="Enter city or pin code" style={{ flex: 1, padding: '12px 16px', borderRadius: '8px', border: '4px solid var(--color-plum)', outline: 'none', background: 'var(--color-cream)' }} />
