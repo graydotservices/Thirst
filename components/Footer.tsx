@@ -12,8 +12,7 @@ import {
   Clock,
   Heart,
   ArrowRight,
-  Instagram,
-  Youtube,
+  PlayCircle,
   MessageCircle,
 } from 'lucide-react';
 
@@ -26,8 +25,8 @@ const quickLinks = [
 ];
 
 const socialLinks = [
-  { href: 'https://www.instagram.com/thirst_fresh?igsh=bnY2cTJqd2p3ZmF1&utm_source=qr', icon: Instagram, label: 'Instagram' },
-  { href: 'https://youtube.com/@thirstfreshzz?si=2bDbGSIyGi6cc8Ix', icon: Youtube, label: 'YouTube' },
+  { href: 'https://www.instagram.com/thirst_fresh?igsh=bnY2cTJqd2p3ZmF1&utm_source=qr', icon: Camera, label: 'Instagram' },
+  { href: 'https://youtube.com/@thirstfreshzz?si=2bDbGSIyGi6cc8Ix', icon: PlayCircle, label: 'YouTube' },
   { href: 'https://wa.me/918754881546', icon: MessageCircle, label: 'WhatsApp' },
 ];
 
