@@ -389,10 +389,10 @@ export default function HomePage() {
               <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 4rem)', color: 'var(--color-plum)', lineHeight: 1.1, marginBottom: '32px' }}>
                 Baking Memories Since 2018.
               </h2>
-              <p style={{ fontSize: '1.1rem', color: 'var(--color-text-secondary)', lineHeight: 1.8, marginBottom: '24px' }}>
+              <p style={{ fontSize: '1.1rem', color: 'var(--color-text-secondary)', lineHeight: 1.8, marginBottom: '24px', textAlign: 'justify' }}>
                 At Thirst, we believe that desserts are more than just food; they are an experience, an emotion, a memory in the making. What started as a small passion project has blossomed into a premium dessert boutique loved by millions.
               </p>
-              <p style={{ fontSize: '1.1rem', color: 'var(--color-text-secondary)', lineHeight: 1.8, marginBottom: '40px' }}>
+              <p style={{ fontSize: '1.1rem', color: 'var(--color-text-secondary)', lineHeight: 1.8, marginBottom: '40px', textAlign: 'justify' }}>
                 Every ingredient is carefully selected, and every recipe is crafted with meticulous attention to detail. We invite you to taste the art of pure luxury.
               </p>
             </motion.div>
