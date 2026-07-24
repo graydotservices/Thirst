@@ -219,10 +219,10 @@ export default function HomePage() {
               <span style={{ color: 'var(--color-plum)', fontWeight: 900, fontSize: '1rem', fontFamily: 'var(--font-heading)' }}>03</span>
             </div>
             
-            {/* Arrow Navigation (Bottom right) */}
-            <div style={{ position: 'absolute', bottom: '-60px', right: '0', display: 'flex', gap: '12px' }}>
-               <button style={{ width: '48px', height: '48px', borderRadius: '50%', border: '4px solid var(--color-plum)', background: 'var(--color-white)', color: 'var(--color-plum)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-sm)' }}><ArrowRight size={20} style={{ transform: 'rotate(180deg)' }} /></button>
-               <button style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--color-gold)', color: 'var(--color-plum)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-sm)' }}><ArrowRight size={20} /></button>
+            {/* Arrow Navigation (Bottom left) */}
+            <div style={{ position: 'absolute', bottom: '-20px', left: '20px', display: 'flex', gap: '12px', zIndex: 4 }}>
+               <button style={{ width: '48px', height: '48px', borderRadius: '50%', border: '4px solid var(--color-plum)', background: 'var(--color-white)', color: 'var(--color-plum)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}><ArrowRight size={20} style={{ transform: 'rotate(180deg)' }} /></button>
+               <button style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--color-gold)', color: 'var(--color-plum)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}><ArrowRight size={20} /></button>
             </div>
           </motion.div>
 
