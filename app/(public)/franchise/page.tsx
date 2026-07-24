@@ -221,7 +221,7 @@ export default function FranchisePage() {
                 <label htmlFor="f-message" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>Message (Optional)</label>
                 <textarea id="f-message" placeholder="Tell us about your vision, preferred location, or any questions..." value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)', minHeight: '120px' }} />
               </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '16px', fontSize: '1.2rem' }} disabled={loading}>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '16px', fontSize: 'clamp(1rem, 4vw, 1.2rem)', whiteSpace: 'normal', lineHeight: 1.4 }} disabled={loading}>
                 {loading ? (
                   'Submitting...'
                 ) : (
