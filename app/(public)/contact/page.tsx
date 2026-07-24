@@ -31,7 +31,7 @@ export default function ContactPage() {
       {/* Main Content */}
       <section className="section" style={{ background: 'var(--color-cream)' }}>
         <div className="container">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '40px', alignItems: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '40px', alignItems: 'start' }}>
             {/* Info Column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {/* Contact Cards */}

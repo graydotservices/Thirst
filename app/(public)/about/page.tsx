@@ -81,7 +81,7 @@ export default function AboutPage() {
       {/* Story Section */}
       <section className="section" style={{ background: 'var(--color-cream)' }}>
         <div className="container">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '60px', alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: '60px', alignItems: 'center' }}>
             <div style={{ position: 'relative', paddingBottom: '100%', borderRadius: '16px', overflow: 'hidden', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-xl)', background: 'var(--color-white)' }}>
               <Image src="/hot-chocolate.png" alt="Our Story" fill style={{ objectFit: 'cover' }} />
             </div>

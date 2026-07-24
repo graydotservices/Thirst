@@ -83,7 +83,7 @@ export default function OffersPage() {
       {/* Offers Grid */}
       <section className="section" style={{ background: 'var(--color-cream)' }}>
         <div className="container">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '40px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '40px' }}>
             {offers.map((offer) => (
               <div
                 key={offer.id}
