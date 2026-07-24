@@ -144,7 +144,7 @@ export default function HomePage() {
       {/* 1. VINTAGE ILLUSTRATED HERO SECTION */}
       <section style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden', display: 'flex', alignItems: 'center', background: 'var(--color-bg-primary)', paddingTop: '100px' }}>
         
-        <div className="container" style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', gap: '40px', flexWrap: 'wrap' }}>
+        <div className="container flex-col-mobile pad-mobile text-center-mobile" style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', gap: '40px', flexWrap: 'wrap' }}>
           
           {/* Vertical Socials */}
           <div className="lg-hidden" style={{ position: 'absolute', left: '-40px', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -169,7 +169,7 @@ export default function HomePage() {
             <motion.p variants={fadeUp} style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '40px', maxWidth: '480px', lineHeight: 1.6 }}>
               Experience the finest, handcrafted desserts made with natural ingredients. Delicious, beautiful, and absolutely perfect for every occasion.
             </motion.p>
-            <motion.div variants={fadeUp} style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+            <motion.div variants={fadeUp} className="flex-col-mobile gap-mobile-sm" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
               <Link href="/menu" className="btn btn-primary">ORDER NOW</Link>
               <Link href="/menu" className="btn btn-secondary">EXPLORE MENU</Link>
             </motion.div>
@@ -238,7 +238,7 @@ export default function HomePage() {
             </motion.h2>
           </motion.div>
           
-          <div style={{ display: 'flex', gap: '40px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="flex-col-mobile gap-mobile-sm" style={{ display: 'flex', gap: '40px', justifyContent: 'center', flexWrap: 'wrap' }}>
             {categories.map((cat, i) => (
               <Link href={cat.href} key={i}>
                 <motion.div 
@@ -268,7 +268,7 @@ export default function HomePage() {
       {/* 3. TODAY'S SIGNATURE DESSERT */}
       <section style={{ padding: '120px 0', background: 'var(--gradient-hero)' }}>
         <div className="container">
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '60px' }}>
+          <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '60px' }}>
             <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ flex: '1 1 500px', position: 'relative' }}>
               <div style={{ position: 'relative', paddingBottom: '100%', borderRadius: '32px', overflow: 'hidden', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-xl)' }}>
                 <Image src="/vintage-hot-chocolate.png" alt="The Signature Sip" fill style={{ objectFit: 'cover' }} />
@@ -283,12 +283,12 @@ export default function HomePage() {
                 Hot chocolate with Milo, marshmallows, biscuit crunch, and a chocolate roll. A truly decadent experience handcrafted for chocolate lovers.
               </p>
               
-              <div style={{ display: 'flex', gap: '24px', marginBottom: '40px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Star fill="var(--color-gold)" color="var(--color-gold)" size={20} /><span style={{ fontWeight: 800 }}>5.0 (250+ reviews)</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-plum)', fontWeight: 800 }}><Award color="var(--color-berry)" size={20} /><span>Best Seller</span></div>
+              <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', gap: '24px', marginBottom: '40px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Star fill="var(--color-gold)" color="var(--color-gold)" size={20} /><span style={{ fontWeight: 800 }}>5.0 (250+ reviews)</span></div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--color-plum)', fontWeight: 800 }}><Award color="var(--color-berry)" size={20} /><span>Best Seller</span></div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+              <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
                 <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-plum)' }}>₹99</div>
                 <Link href="/menu" className="btn btn-primary">Order Now</Link>
               </div>
@@ -300,7 +300,7 @@ export default function HomePage() {
       {/* 4. BEST SELLERS */}
       <section style={{ padding: '120px 0', background: 'var(--color-cream)' }}>
         <div className="container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '60px', flexWrap: 'wrap', gap: '20px' }}>
+          <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '60px', flexWrap: 'wrap', gap: '20px' }}>
             <div>
               <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 4vw, 3rem)', color: 'var(--color-plum)' }}>Best Sellers</h2>
               <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px', fontSize: '1.1rem' }}>Our most loved handcrafted creations.</p>
@@ -378,7 +378,7 @@ export default function HomePage() {
       {/* 6. BRAND STORY */}
       <section style={{ padding: '120px 0', background: 'white', overflow: 'hidden' }}>
         <div className="container">
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '80px' }}>
+          <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '80px' }}>
             <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 1 }} style={{ flex: '1 1 500px' }}>
               <div style={{ position: 'relative', paddingBottom: '120%', borderRadius: '40px', overflow: 'hidden', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-xl)' }}>
                 <Image src="/hot-chocolate.png" alt="Brand Story" fill style={{ objectFit: 'cover' }} />
@@ -409,7 +409,7 @@ export default function HomePage() {
             </h2>
           </div>
           
-          <div style={{ columnCount: 3, columnGap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px' }}>
             {instagramPosts.map((img, i) => (
               <motion.div 
                 key={i} 

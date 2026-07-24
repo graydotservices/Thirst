@@ -142,7 +142,7 @@ export default function MenuPage() {
         boxShadow: 'var(--shadow-sm)' 
       }}>
         <div className="container">
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="flex-col-mobile" style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Search */}
             <div style={{ position: 'relative', flex: '1 1 200px' }}>
               <Search size={20} style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
@@ -228,7 +228,7 @@ export default function MenuPage() {
               </p>
             </div>
           ) : (
-            <motion.div layout style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '40px' }}>
+            <motion.div layout className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '40px' }}>
               <AnimatePresence>
                 {filtered.map((item) => (
                   <motion.div 

@@ -43,7 +43,7 @@ export default function StoreLocationsPage() {
           </div>
 
           {/* Locations Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
+          <div className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
             {locations.map(loc => (
               <div key={loc.id} style={{ padding: '32px', position: 'relative', background: 'var(--color-white)', border: '4px solid var(--color-plum)', borderRadius: '16px', boxShadow: 'var(--shadow-md)', display: 'flex', flexDirection: 'column' }}>
                 {loc.isFlg && (

@@ -90,9 +90,9 @@ export default function FranchisePage() {
             <div style={{ color: 'var(--color-berry)', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>Why Thirst.</div>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', color: 'var(--color-plum)', textTransform: 'uppercase' }}>The Thirst. Advantage</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
+          <div className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '32px' }}>
             {whyChoose.map(({ icon: Icon, title, desc }) => (
-              <div key={title} style={{ background: 'var(--color-white)', border: '4px solid var(--color-plum)', borderRadius: '16px', boxShadow: 'var(--shadow-md)', padding: '32px', display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+              <div key={title} className="flex-col-mobile text-center-mobile" style={{ background: 'var(--color-white)', border: '4px solid var(--color-plum)', borderRadius: '16px', boxShadow: 'var(--shadow-md)', padding: '32px', display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
                 <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-plum)', border: '4px solid var(--color-plum)', flexShrink: 0 }}>
                   <Icon size={32} />
                 </div>
@@ -113,7 +113,7 @@ export default function FranchisePage() {
             <div style={{ color: 'var(--color-berry)', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>Investment</div>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', color: 'var(--color-plum)', textTransform: 'uppercase' }}>Choose Your Model</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
+          <div className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '32px' }}>
             {investments.map((tier) => (
               <div
                 key={tier.tier}
@@ -179,24 +179,24 @@ export default function FranchisePage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} style={{ background: 'var(--color-white)', padding: '48px', border: '4px solid var(--color-plum)', borderRadius: '16px', boxShadow: 'var(--shadow-xl)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="flex-col-mobile" style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', marginBottom: '24px' }}>
+                <div style={{ flex: '1 1 calc(50% - 12px)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="f-name" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>Full Name *</label>
                   <input id="f-name" required placeholder="Your full name" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ flex: '1 1 calc(50% - 12px)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="f-phone" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>Phone Number *</label>
                   <input id="f-phone" type="tel" required placeholder="+91 98765 43210" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ flex: '1 1 calc(50% - 12px)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="f-email" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>Email Address *</label>
                   <input id="f-email" type="email" required placeholder="you@email.com" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ flex: '1 1 calc(50% - 12px)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="f-city" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>City *</label>
                   <input id="f-city" required placeholder="City for franchise" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ flex: '1 1 calc(50% - 12px)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="f-budget" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>Investment Budget *</label>
                   <select id="f-budget" required value={form.budget} onChange={e => setForm(p => ({ ...p, budget: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }}>
                     <option value="">Select budget range</option>
@@ -206,7 +206,7 @@ export default function FranchisePage() {
                     <option value="50+ Lakhs">₹50+ Lakhs</option>
                   </select>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ flex: '1 1 calc(50% - 12px)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="f-experience" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>Business Experience</label>
                   <select id="f-experience" value={form.experience} onChange={e => setForm(p => ({ ...p, experience: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }}>
                     <option value="">Select experience</option>

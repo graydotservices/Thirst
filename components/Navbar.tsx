@@ -77,9 +77,8 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop Nav */}
           <ul
-            className="md-hidden"
+            className="hide-mobile"
             style={{ display: 'flex', gap: 'var(--space-6)', alignItems: 'center' }}
           >
             {navLinks.map((link) => (
@@ -98,9 +97,8 @@ export default function Navbar() {
             ))}
           </ul>
 
-          {/* Desktop CTA */}
           <div
-            className="md-hidden"
+            className="hide-mobile"
             style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}
           >
             <a

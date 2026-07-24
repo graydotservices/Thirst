@@ -36,12 +36,12 @@ export default function Footer() {
       
       <div className="container" style={{ position: 'relative', zIndex: 10 }}>
         {/* Newsletter Section */}
-        <div style={{ background: 'var(--gradient-berry)', padding: '60px', borderRadius: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '40px', marginBottom: '80px', border: '2px solid var(--color-plum)', boxShadow: 'var(--shadow-md)' }}>
+        <div className="flex-col-mobile pad-mobile text-center-mobile" style={{ background: 'var(--gradient-berry)', padding: '60px', borderRadius: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '40px', marginBottom: '80px', border: '2px solid var(--color-plum)', boxShadow: 'var(--shadow-md)' }}>
           <div style={{ maxWidth: '500px' }}>
             <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', color: 'var(--color-white)', fontWeight: 800, marginBottom: '12px' }}>Join the Thirst Club</h3>
             <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.1rem', lineHeight: 1.6 }}>Subscribe to our newsletter for exclusive offers, seasonal menus, and VIP event invitations.</p>
           </div>
-          <div style={{ flex: '1 1 350px', display: 'flex', gap: '12px', background: 'rgba(255,255,255,0.1)', padding: '8px', borderRadius: '50px', border: '2px solid rgba(255,255,255,0.2)' }}>
+          <div className="flex-col-mobile gap-mobile-sm" style={{ flex: '1 1 350px', display: 'flex', gap: '12px', background: 'rgba(255,255,255,0.1)', padding: '8px', borderRadius: '50px', border: '2px solid rgba(255,255,255,0.2)' }}>
             <input type="email" placeholder="Enter your email address" style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'white', padding: '0 20px', fontSize: '1rem' }} />
             <button className="btn" style={{ background: 'var(--color-gold)', color: 'var(--color-plum)', padding: '14px 32px', borderRadius: '40px', fontWeight: 600 }}>Subscribe</button>
           </div>
@@ -51,7 +51,7 @@ export default function Footer() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '60px', paddingBottom: '60px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           {/* Brand */}
           <div>
-            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+            <Link href="/" className="text-center-mobile" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
               <div style={{ position: 'relative', width: 48, height: 48, background: 'var(--color-cream)', borderRadius: '50%', border: '2px solid var(--color-gold)', overflow: 'hidden' }}>
                 <Image src="/logo-v2.png" alt="Thirst." fill style={{ objectFit: 'contain', transform: 'scale(1.1)' }} />
               </div>

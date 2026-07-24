@@ -1293,13 +1293,21 @@ tr:hover td {
 }
 
 /* ============================================================
-   MD:HIDDEN UTILITY (Mobile-first: hide above 768px)
+   RESPONSIVE UTILITIES & CONTAINER
    ============================================================ */
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
 @media (min-width: 769px) {
   .md\:hidden {
     /* These are the desktop nav items shown on desktop */
   }
 }
+
 @media (max-width: 768px) {
   .md\:hidden {
     display: none !important;
@@ -1307,7 +1315,32 @@ tr:hover td {
   .mobile-only {
     display: flex !important;
   }
+  .flex-col-mobile {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .flex-col-mobile > * {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .text-center-mobile {
+    text-align: center !important;
+    align-items: center !important;
+  }
+  .hide-mobile {
+    display: none !important;
+  }
+  .pad-mobile {
+    padding: 40px 20px !important;
+  }
+  .gap-mobile-sm {
+    gap: 16px !important;
+  }
 }
+
 .mobile-only {
   display: none;
 }
