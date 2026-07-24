@@ -1,13 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
 
-let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-let supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
+const getSupabaseUrl = () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  try {
+    new URL(url);
+    if (!url.startsWith('http')) throw new Error('Must start with http');
+    return url;
+  } catch (e) {
+    return 'https://placeholder.supabase.co';
+  }
+};
 
-if (!supabaseUrl.startsWith('http')) {
-  supabaseUrl = 'https://placeholder.supabase.co';
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(
+  getSupabaseUrl(),
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
+);
 
 export type Database = {
   public: {
