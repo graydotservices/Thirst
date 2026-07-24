@@ -504,9 +504,11 @@ export default function HomePage() {
             <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.2rem', lineHeight: 1.8, marginBottom: '40px' }}>
               Join India's fastest-growing premium dessert brand. High ROI, comprehensive support, and a brand loved by millions.
             </p>
-            <Link href="/franchise" className="btn" style={{ background: 'var(--color-gold)', color: 'var(--color-plum)', padding: '18px 48px', fontSize: '1.2rem', borderRadius: '50px', fontWeight: 700, boxShadow: '0 0 40px rgba(244,201,93,0.3)' }}>
-              Apply for Franchise
-            </Link>
+            <div className="flex-col-mobile" style={{ display: 'flex' }}>
+              <Link href="/franchise" className="btn text-center-mobile" style={{ background: 'var(--color-gold)', color: 'var(--color-plum)', padding: '16px 24px', fontSize: '1.1rem', borderRadius: '50px', fontWeight: 700, boxShadow: '0 0 40px rgba(244,201,93,0.3)', justifyContent: 'center', maxWidth: '100%' }}>
+                Apply for Franchise
+              </Link>
+            </div>
           </div>
         </div>
       </section>
