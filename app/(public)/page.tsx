@@ -142,9 +142,9 @@ export default function HomePage() {
   return (
     <div style={{ background: 'var(--color-cream)' }}>
       {/* 1. VINTAGE ILLUSTRATED HERO SECTION */}
-      <section style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden', display: 'flex', alignItems: 'center', background: 'var(--color-bg-primary)', paddingTop: '100px' }}>
+      <section style={{ position: 'relative', minHeight: '100vh', overflowX: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-primary)', paddingTop: '120px', paddingBottom: '60px' }}>
         
-        <div className="container flex-col-mobile pad-mobile text-center-mobile" style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', gap: '40px', flexWrap: 'wrap' }}>
+        <div className="container flex-col-mobile pad-mobile text-center-mobile" style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', gap: '40px', flexWrap: 'wrap', margin: 'auto' }}>
           
           {/* Vertical Socials */}
           <div className="lg-hidden" style={{ position: 'absolute', left: '-40px', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -178,7 +178,7 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.2 }} style={{ flex: '1 1 500px', position: 'relative', display: 'flex', justifyContent: 'center' }}>
             
             {/* Custom Shape Wrapper */}
-            <div style={{ position: 'relative', width: '100%', maxWidth: '500px', paddingBottom: '100%', marginBottom: '40px' }}>
+            <div style={{ position: 'relative', width: '100%', maxWidth: '450px', paddingBottom: '100%', marginBottom: '40px' }}>
                {/* Sketchy Border Accent */}
                <div style={{ position: 'absolute', top: '15px', right: '-15px', width: '100%', height: '100%', background: 'var(--color-gold)', borderRadius: '255px 15px 225px 15px/15px 225px 15px 255px', zIndex: 1, border: '4px solid var(--color-plum)' }} />
                
