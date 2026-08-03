@@ -39,7 +39,7 @@ export default function ContactPage() {
                 { icon: MapPin, label: 'Our Address', value: 'NO.01, Siva Vishnu kovil street, kakkalur, Thiruvallur, TN - 602001', href: null },
                 { icon: Phone, label: 'Phone', value: '+91 87548 81546', href: 'tel:+918754881546' },
                 { icon: Mail, label: 'Email', value: 'thirst.freshchennai@gmail.com', href: 'mailto:thirst.freshchennai@gmail.com' },
-                { icon: Clock, label: 'Business Hours', value: 'Mon–Sun: 10:00 AM – 11:00 PM', href: null },
+                { icon: Clock, label: 'Business Hours', value: 'Mon–Sun: 2:00 PM – 12:00 AM', href: null },
               ].map(({ icon: Icon, label, value, href }) => (
                 <div key={label} style={{ background: 'var(--color-white)', padding: '24px', borderRadius: '16px', display: 'flex', gap: '20px', alignItems: 'flex-start', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-md)' }}>
                   <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-plum)', flexShrink: 0, border: '4px solid var(--color-plum)' }}>

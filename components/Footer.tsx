@@ -93,7 +93,7 @@ export default function Footer() {
                 { icon: MapPin, text: 'NO.01, Siva Vishnu kovil street, kakkalur, Thiruvallur - 602001' },
                 { icon: Phone, text: '+91 87548 81546' },
                 { icon: Mail, text: 'thirst.freshchennai@gmail.com' },
-                { icon: Clock, text: 'Mon–Sun: 10:00 AM – 11:00 PM' },
+                { icon: Clock, text: 'Mon–Sun: 2:00 PM – 12:00 AM' },
               ].map(({ icon: Icon, text }, i) => (
                 <li key={i} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
                   <div style={{ background: 'rgba(217,79,138,0.1)', padding: '10px', borderRadius: '50%' }}>

@@ -17,7 +17,7 @@ const categories = [
 
 const menuItems = [
   // THIRST SPECIAL
-  { id: 1, name: 'Classic hot chocolate', category: 'special', price: 49, description: 'Smooth steamed milk blended with premium hot chocolate powder.', image: '/hot-chocolate.png', isNew: false, isBestSeller: true },
+
   { id: 2, name: 'Mallow Crown', category: 'special', price: 59, description: 'Soft marshmallows resting like royalty on rich hot chocolate.', image: '/hot-chocolate.png', isNew: false, isBestSeller: false },
   { id: 3, name: 'Cocoa Kick', category: 'special', price: 69, description: 'A bold burst of Milo stirred into silky hot chocolate.', image: '/hot-chocolate.png', isNew: true, isBestSeller: false },
   { id: 4, name: 'Paris Crackle', category: 'special', price: 79, description: 'Smooth hot chocolate meets the buttery crunch of French biscuits.', image: '/hot-chocolate.png', isNew: false, isBestSeller: false },
@@ -35,14 +35,14 @@ const menuItems = [
   
   // THICK SHAKES & BOBA
   { id: 14, name: 'Vanilla Frappe Shake', category: 'shakes', price: 99, description: 'Classic vanilla blended thick with a cool frappe twist.', image: '/thick-shake.png', isNew: false, isBestSeller: false },
-  { id: 15, name: 'Chocolate Fudge Shake', category: 'shakes', price: 99, description: 'Thick chocolate blended deep with rich fudge.', image: '/thick-shake.png', isNew: false, isBestSeller: true },
+
   { id: 16, name: 'Rosemilk Shake', category: 'shakes', price: 50, description: 'Old-school rose with a thick twist.', image: '/thick-shake.png', isNew: false, isBestSeller: false },
   { id: 17, name: 'Vanilla Boba Shake', category: 'shakes', price: 119, description: 'Creamy vanilla blended thick, with boba.', image: '/thick-shake.png', isNew: true, isBestSeller: false },
-  { id: 18, name: 'Chocolate Boba Shake', category: 'shakes', price: 119, description: 'Rich chocolate meets chewy boba.', image: '/thick-shake.png', isNew: true, isBestSeller: true },
+
   
   // THIRST TREATS & CAKES
   { id: 19, name: 'Classic Brownie', category: 'treats', price: 70, description: 'Soft, rich, and fudgy — the OG that never fails.', image: '/dream-cake.png', isNew: false, isBestSeller: true },
-  { id: 20, name: 'Triple Chocolate Brownie', category: 'treats', price: 129, description: 'Dark, milk, and white — three layers of chocolate chaos.', image: '/dream-cake.png', isNew: false, isBestSeller: true },
+
   { id: 21, name: 'London Strawberry', category: 'treats', price: 159, description: 'Fresh cream and sweet strawberries.', image: '/dream-cake.png', isNew: false, isBestSeller: false },
   { id: 22, name: '5 Layer Torte Cake Cup', category: 'treats', price: 139, description: 'Five decadent layers stacked in a cup.', image: '/dream-cake.png', isNew: false, isBestSeller: false },
   { id: 23, name: 'Brownie Kebab', category: 'treats', price: 139, description: 'Skewered with brownie, marshmallow, and dripping chocolate.', image: '/dream-cake.png', isNew: true, isBestSeller: false },
@@ -53,15 +53,15 @@ const menuItems = [
   { id: 26, name: 'Belgium Dark Waffle', category: 'waffles', price: 99, description: 'Rich dark chocolate over classic Belgian crisp.', image: '/biscoff-waffle.png', isNew: false, isBestSeller: true },
   { id: 27, name: 'Nutella Delight Waffle', category: 'waffles', price: 119, description: 'Warm waffle layered with Nutella.', image: '/biscoff-waffle.png', isNew: false, isBestSeller: true },
   { id: 28, name: 'Cotton Candy Waffle', category: 'waffles', price: 109, description: 'Fluffy pink sugar spun into a dreamy dessert ride.', image: '/biscoff-waffle.png', isNew: false, isBestSeller: false },
-  { id: 29, name: 'Choco Rocher Waffle', category: 'waffles', price: 119, description: 'Hazelnut chocolate, crunchy layers.', image: '/biscoff-waffle.png', isNew: false, isBestSeller: false },
+
   { id: 30, name: 'Lotus Biscoff Waffle', category: 'waffles', price: 150, description: 'Not your average waffle. Biscoff-loaded.', image: '/biscoff-waffle.png', isNew: true, isBestSeller: true },
-  { id: 31, name: 'Death by Chocolate Pancake', category: 'waffles', price: 139, description: 'An overdose of chocolate madness.', image: '/biscoff-waffle.png', isNew: false, isBestSeller: true },
+
   { id: 32, name: 'Cookies & Cream Pancake', category: 'waffles', price: 119, description: 'Crunchy cookies collide with creamy bliss.', image: '/biscoff-waffle.png', isNew: false, isBestSeller: false },
   
   // COMBOS & OFFERS
-  { id: 33, name: 'Cold Milo + Double Chocolate Waffle', category: 'combos', price: 199, description: 'A dreamy combo for chocolate lovers.', image: '/biscoff-waffle.png', isNew: false, isBestSeller: true },
+
   { id: 34, name: 'Students Special Combo', category: 'combos', price: 99, description: '6 Pcs Pancake + Mini Brownie + 1 Crusher.', image: '/hot-chocolate.png', isNew: false, isBestSeller: true },
-  { id: 35, name: 'Mini Waffle (Student Offer)', category: 'combos', price: 35, description: 'Mini waffle with any flavor.', image: '/biscoff-waffle.png', isNew: false, isBestSeller: false },
+
 ];
 
 export default function MenuPage() {

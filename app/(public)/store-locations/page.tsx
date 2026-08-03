@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 };
 
 const locations = [
-  { id: 1, name: 'Thirst. Thiruvallur — Flagship', address: 'NO.01, Siva Vishnu kovil st, kakkalur', city: 'Thiruvallur', phone: '+91 87548 81546', hours: '10:00 AM – 11:00 PM', mapUrl: 'https://maps.google.com', isFlg: true },
+  { id: 1, name: 'Thirst. Thiruvallur — Flagship', address: 'NO.01, Siva Vishnu kovil st, kakkalur', city: 'Thiruvallur', phone: '+91 87548 81546', hours: '2:00 PM – 12:00 AM', mapUrl: 'https://maps.google.com', isFlg: true },
 ];
 
 const cities = [...new Set(locations.map(l => l.city))];

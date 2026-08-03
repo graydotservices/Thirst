@@ -160,11 +160,11 @@ ON CONFLICT DO NOTHING;
 -- SEED DATA — STORE LOCATIONS
 -- ============================================================
 INSERT INTO store_locations (name, address, city, phone, hours, is_active) VALUES
-  ('Thirst. Bandra — Flagship', '12 Sweet Lane, Bandra West', 'Mumbai', '+91 98765 43210', '10:00 AM – 11:00 PM', true),
-  ('Thirst. Andheri', '45 Versova Road, Andheri West', 'Mumbai', '+91 98765 43211', '10:00 AM – 10:30 PM', true),
-  ('Thirst. Connaught Place', 'Block A, Connaught Place', 'New Delhi', '+91 98765 43212', '10:00 AM – 11:00 PM', true),
+  ('Thirst. Bandra — Flagship', '12 Sweet Lane, Bandra West', 'Mumbai', '+91 98765 43210', '2:00 PM – 12:00 AM', true),
+  ('Thirst. Andheri', '45 Versova Road, Andheri West', 'Mumbai', '+91 98765 43211', '2:00 PM – 12:00 AM', true),
+  ('Thirst. Connaught Place', 'Block A, Connaught Place', 'New Delhi', '+91 98765 43212', '2:00 PM – 12:00 AM', true),
   ('Thirst. Koramangala', '7th Block, Koramangala', 'Bangalore', '+91 98765 43213', '9:00 AM – 11:00 PM', true),
-  ('Thirst. Jubilee Hills', 'Road No. 10, Jubilee Hills', 'Hyderabad', '+91 98765 43214', '10:00 AM – 10:30 PM', true)
+  ('Thirst. Jubilee Hills', 'Road No. 10, Jubilee Hills', 'Hyderabad', '+91 98765 43214', '2:00 PM – 12:00 AM', true)
 ON CONFLICT DO NOTHING;
 
 -- ============================================================

@@ -5,8 +5,8 @@ import { Plus, MapPin, X, Check, Edit2, Trash2 } from 'lucide-react';
 
 type Location = { id: string; name: string; address: string; city: string; phone: string; hours: string; isActive: boolean; };
 const demo: Location[] = [
-  { id: '1', name: 'Thirst. Bandra — Flagship', address: '12 Sweet Lane, Bandra West', city: 'Mumbai', phone: '+91 98765 43210', hours: '10:00 AM – 11:00 PM', isActive: true },
-  { id: '2', name: 'Thirst. Andheri', address: '45 Versova Road, Andheri West', city: 'Mumbai', phone: '+91 98765 43211', hours: '10:00 AM – 10:30 PM', isActive: true },
+  { id: '1', name: 'Thirst. Bandra — Flagship', address: '12 Sweet Lane, Bandra West', city: 'Mumbai', phone: '+91 98765 43210', hours: '2:00 PM – 12:00 AM', isActive: true },
+  { id: '2', name: 'Thirst. Andheri', address: '45 Versova Road, Andheri West', city: 'Mumbai', phone: '+91 98765 43211', hours: '2:00 PM – 12:00 AM', isActive: true },
   { id: '3', name: 'Thirst. Koramangala', address: '7th Block, Koramangala', city: 'Bangalore', phone: '+91 98765 43213', hours: '9:00 AM – 11:00 PM', isActive: false },
 ];
 
@@ -64,7 +64,7 @@ export default function AdminLocationsPage() {
                 <div className="input-group"><label className="input-label" htmlFor="loc-phone">Phone</label><input id="loc-phone" className="input" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
               </div>
               <div className="input-group"><label className="input-label" htmlFor="loc-addr">Address</label><input id="loc-addr" className="input" value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} /></div>
-              <div className="input-group"><label className="input-label" htmlFor="loc-hours">Business Hours</label><input id="loc-hours" className="input" value={form.hours} onChange={e => setForm(p => ({ ...p, hours: e.target.value }))} placeholder="10:00 AM – 11:00 PM" /></div>
+              <div className="input-group"><label className="input-label" htmlFor="loc-hours">Business Hours</label><input id="loc-hours" className="input" value={form.hours} onChange={e => setForm(p => ({ ...p, hours: e.target.value }))} placeholder="2:00 PM – 12:00 AM" /></div>
               <div className="input-group"><label className="input-label" htmlFor="loc-status">Status</label><select id="loc-status" className="input" value={form.isActive ? 'active' : 'inactive'} onChange={e => setForm(p => ({ ...p, isActive: e.target.value === 'active' }))}><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
               <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
                 <button onClick={handleSave} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}><Check size={16} /> {editing ? 'Update' : 'Add'}</button>

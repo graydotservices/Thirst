@@ -84,18 +84,18 @@ export default function AboutPage() {
               <Image src="/hot-chocolate.png" alt="Our Story" fill style={{ objectFit: 'cover' }} />
             </div>
             <div>
-              <div style={{ color: 'var(--color-berry)', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>Since 2018</div>
+              <div style={{ color: 'var(--color-berry)', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>Since 2025</div>
               <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 4rem)', color: 'var(--color-plum)', lineHeight: 1.1, marginBottom: '24px' }}>
                 A Journey of Taste
               </h2>
               <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px', lineHeight: 1.8, fontSize: '1.1rem', fontWeight: 600, textAlign: 'justify' }}>
-                Thirst. was founded in 2018 by a young chef with a dream of bringing the finest patisserie culture to the streets. From our beautiful flagship store in Thiruvallur, our handcrafted essence remains the core of everything we do.
+                Thirst. was founded in 2025 by a young chef with a dream of bringing the finest patisserie culture to the streets. From our beautiful flagship store in Thiruvallur, our handcrafted essence remains the core of everything we do.
               </p>
               <p style={{ color: 'var(--color-text-secondary)', marginBottom: '32px', lineHeight: 1.8, fontSize: '1.1rem', fontWeight: 600, textAlign: 'justify' }}>
                 Our philosophy is simple: desserts are not just food — they are emotions. We create moments of joy, celebration, and pure indulgence through every handcrafted creation.
               </p>
               <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
-                {[{ value: '6', label: 'Years of Excellence' }, { value: '1', label: 'Flagship Store' }, { value: '10k+', label: 'Happy Customers' }].map(s => (
+                {[{ value: '2', label: 'Years of Excellence' }, { value: '1', label: 'Flagship Store' }, { value: '10k+', label: 'Happy Customers' }].map(s => (
                   <div key={s.label}>
                     <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '2.5rem', color: 'var(--color-plum)' }}>{s.value}</div>
                     <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase' }}>{s.label}</div>

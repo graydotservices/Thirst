@@ -8,52 +8,7 @@ export const metadata: Metadata = {
   description: 'Exclusive offers and deals from Thirst. Premium dessert brand.',
 };
 
-const offers = [
-  {
-    id: 1,
-    title: 'Birthday Special',
-    description: 'Get 30% off on any cake on your birthday month. Show your ID to avail.',
-    discount: 30,
-    code: 'BDAY30',
-    validUntil: 'Ongoing',
-    image: '/vintage-waffle.png',
-    tag: 'Birthday',
-    color: 'var(--color-soft-pink)',
-  },
-  {
-    id: 2,
-    title: 'Weekend Crusher Fiesta',
-    description: 'Buy 2 crushers, get the 3rd free every Saturday and Sunday.',
-    discount: 33,
-    code: 'WEEKEND',
-    validUntil: 'Every Weekend',
-    image: '/vintage-crusher.png',
-    tag: 'Weekend Deal',
-    color: 'var(--color-gold)',
-  },
-  {
-    id: 3,
-    title: 'First Order Delight',
-    description: 'New customers get 20% off on their first order. Welcome to Thirst.!',
-    discount: 20,
-    code: 'FIRST20',
-    validUntil: 'Dec 31, 2025',
-    image: '/vintage-hot-chocolate.png',
-    tag: 'New Customer',
-    color: 'var(--color-lavender)',
-  },
-  {
-    id: 4,
-    title: 'Loyalty Points Bonus',
-    description: 'Earn 3x loyalty points on all orders above ₹1,000 this month.',
-    discount: 0,
-    code: 'LOYALTY3X',
-    validUntil: 'Jul 31, 2025',
-    image: '/vintage-hot-chocolate.png',
-    tag: 'Loyalty',
-    color: 'var(--color-berry)',
-  },
-];
+const offers: any[] = [];
 
 const loyaltyPerks = [
   { icon: Star, title: 'Earn Points', desc: 'Get 1 point per ₹100 spent' },

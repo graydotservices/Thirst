@@ -163,7 +163,7 @@ export default function HomePage() {
             <motion.h1 variants={fadeUp} style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 5vw, 4rem)', color: 'var(--color-plum)', fontWeight: 400, lineHeight: 1.1, marginBottom: '24px', textTransform: 'uppercase' }}>
               Handcrafted <br/>
               <span style={{ position: 'relative' }}>
-                Vintage
+                Premium
                 <svg style={{ position: 'absolute', bottom: '-5px', left: 0, width: '100%', height: '12px' }} viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0,10 Q100,-5 200,10" fill="none" stroke="var(--color-berry)" strokeWidth="8" strokeLinecap="round" /></svg>
               </span> <br/>
               <span style={{ color: 'var(--color-berry)' }}>Desserts.</span>
@@ -198,7 +198,7 @@ export default function HomePage() {
                     <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
                       <path id="curve" d="M 50, 50 m -35, 0 a 35,35 0 1,1 70,0 a 35,35 0 1,1 -70,0" fill="transparent" />
                       <text fontSize="13" fontWeight="900" letterSpacing="1" fill="var(--color-white)" fontFamily="var(--font-heading)">
-                        <textPath href="#curve" startOffset="0%">EST 2018 * MUST TRY * </textPath>
+                        <textPath href="#curve" startOffset="0%">EST 2025 * MUST TRY * </textPath>
                       </text>
                     </svg>
                  </div>
@@ -392,7 +392,7 @@ export default function HomePage() {
             </motion.div>
             <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ flex: '1 1 400px' }}>
               <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 4rem)', color: 'var(--color-plum)', lineHeight: 1.1, marginBottom: '32px' }}>
-                Baking Memories Since 2018.
+                Baking Memories Since 2025.
               </h2>
               <p style={{ fontSize: '1.1rem', color: 'var(--color-text-secondary)', lineHeight: 1.8, marginBottom: '24px', textAlign: 'justify' }}>
                 At Thirst, we believe that desserts are more than just food; they are an experience, an emotion, a memory in the making. What started as a small passion project has blossomed into a premium dessert boutique loved by millions.
