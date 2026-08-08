@@ -12,9 +12,44 @@ import {
   Clock,
   Heart,
   ArrowRight,
-  PlayCircle,
-  MessageCircle,
 } from 'lucide-react';
+
+const InstagramIcon = ({ size = 24, color = "currentColor", className = "" }: any) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} height={size} viewBox="0 0 24 24" fill="none" 
+    stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    className={className}
+  >
+    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+  </svg>
+);
+
+const YoutubeIcon = ({ size = 24, color = "currentColor", className = "" }: any) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} height={size} viewBox="0 0 24 24" fill="none" 
+    stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"></path>
+    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"></polygon>
+  </svg>
+);
+
+const WhatsappIcon = ({ size = 24, color = "currentColor", className = "" }: any) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} height={size} viewBox="0 0 24 24" fill="none" 
+    stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" />
+    <path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1" />
+  </svg>
+);
 
 const quickLinks = [
   { href: '/', label: 'Home' },
@@ -25,9 +60,9 @@ const quickLinks = [
 ];
 
 const socialLinks = [
-  { href: 'https://www.instagram.com/thirst_fresh?igsh=bnY2cTJqd2p3ZmF1&utm_source=qr', icon: Camera, label: 'Instagram' },
-  { href: 'https://youtube.com/@thirstfreshzz?si=2bDbGSIyGi6cc8Ix', icon: PlayCircle, label: 'YouTube' },
-  { href: 'https://wa.me/918754881546', icon: MessageCircle, label: 'WhatsApp' },
+  { href: 'https://www.instagram.com/thirst_fresh?igsh=bnY2cTJqd2p3ZmF1&utm_source=qr', icon: InstagramIcon, label: 'Instagram' },
+  { href: 'https://youtube.com/@thirstfreshzz?si=2bDbGSIyGi6cc8Ix', icon: YoutubeIcon, label: 'YouTube' },
+  { href: 'https://wa.me/918754881546', icon: WhatsappIcon, label: 'WhatsApp' },
 ];
 
 export default function Footer() {
@@ -37,17 +72,6 @@ export default function Footer() {
       <div style={{ position: 'absolute', top: 0, right: '10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(211, 47, 47, 0.15) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(40px)' }} />
       
       <div className="container" style={{ position: 'relative', zIndex: 10 }}>
-        {/* Newsletter Section */}
-        <div className="flex-col-mobile pad-mobile text-center-mobile" style={{ background: 'var(--gradient-berry)', padding: '60px', borderRadius: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '40px', marginBottom: '80px', border: '2px solid var(--color-plum)', boxShadow: 'var(--shadow-md)' }}>
-          <div style={{ maxWidth: '500px' }}>
-            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', color: 'var(--color-white)', fontWeight: 800, marginBottom: '12px' }}>Join the Thirst Club</h3>
-            <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.1rem', lineHeight: 1.6 }}>Subscribe to our newsletter for exclusive offers, seasonal menus, and VIP event invitations.</p>
-          </div>
-          <div style={{ flex: '1 1 100%', display: 'flex', flexWrap: 'wrap', gap: '12px', background: 'rgba(255,255,255,0.1)', padding: '8px', borderRadius: '16px', border: '2px solid rgba(255,255,255,0.2)' }}>
-            <input type="email" placeholder="Enter your email address" style={{ flex: '1 1 200px', background: 'transparent', border: 'none', outline: 'none', color: 'white', padding: '10px 12px', fontSize: '1rem' }} />
-            <button className="btn" style={{ flex: '1 1 auto', background: 'var(--color-gold)', color: 'var(--color-plum)', padding: '14px 32px', borderRadius: '12px', fontWeight: 600, justifyContent: 'center' }}>Subscribe</button>
-          </div>
-        </div>
 
         {/* Main Footer Links */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '60px', paddingBottom: '60px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>

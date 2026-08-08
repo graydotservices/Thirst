@@ -55,6 +55,7 @@ export default function Preloader() {
               src="/logo-v2.png"
               alt="Thirst. Logo"
               fill
+              sizes="(max-width: 768px) 100vw, 300px"
               style={{ objectFit: 'contain' }}
               priority
             />

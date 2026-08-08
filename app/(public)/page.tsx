@@ -40,12 +40,7 @@ const bestSellers = [
   { name: 'Thirst Dream Cake', price: '₹199', rating: 4.9, img: '/dream-cake.png' },
 ];
 
-const features = [
-  { title: 'Fresh Ingredients', desc: 'Sourced daily from premium local farms.', icon: Leaf },
-  { title: 'Premium Quality', desc: 'Uncompromising standards of excellence.', icon: Award },
-  { title: 'Handcrafted', desc: 'Made with passion by master chefs.', icon: Heart },
-  { title: 'Fast Service', desc: 'Delivered perfectly, every single time.', icon: Timer },
-];
+
 
 const instagramPosts = [
   '/hot-chocolate.png',
@@ -143,87 +138,61 @@ export default function HomePage() {
 
   return (
     <div style={{ background: 'var(--color-cream)' }}>
-      {/* 1. VINTAGE ILLUSTRATED HERO SECTION */}
-      <section style={{ position: 'relative', minHeight: '100vh', overflowX: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--color-bg-primary)', paddingTop: '120px', paddingBottom: '60px' }}>
+      {/* 1. STUNNING DARK PREMIUM HERO SECTION */}
+      <section style={{ position: 'relative', minHeight: '80vh', display: 'flex', alignItems: 'center', background: 'var(--color-plum)', overflow: 'hidden', marginTop: '72px', color: 'var(--color-cream)' }}>
         
-        <div className="container flex-col-mobile pad-mobile text-center-mobile" style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', gap: '40px', flexWrap: 'wrap', margin: 'auto' }}>
+        {/* Subtle Luxury Background Glows */}
+        <div style={{ position: 'absolute', top: '-20%', left: '-10%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 70%)', filter: 'blur(60px)', zIndex: 1 }} />
+        <div style={{ position: 'absolute', bottom: '-20%', right: '-10%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%)', filter: 'blur(60px)', zIndex: 1 }} />
+        
+        <div className="container" style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px', padding: '60px 20px' }}>
           
-          {/* Vertical Socials */}
-          <div className="lg-hidden" style={{ position: 'absolute', left: '-40px', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-             <a href="https://youtube.com/@thirstfreshzz?si=2bDbGSIyGi6cc8Ix" target="_blank" rel="noreferrer" style={{ color: 'var(--color-plum)' }}><PlayCircle size={20} /></a>
-             <a href="https://wa.me/918754881546" target="_blank" rel="noreferrer" style={{ color: 'var(--color-plum)' }}><MessageCircle size={20} /></a>
-             <a href="https://www.instagram.com/thirst_fresh?igsh=bnY2cTJqd2p3ZmF1&utm_source=qr" target="_blank" rel="noreferrer" style={{ color: 'var(--color-plum)' }}><Camera size={20} /></a>
-             <div style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', color: 'var(--color-text-secondary)', fontSize: '0.8rem', letterSpacing: '4px', marginTop: '40px', fontFamily: 'var(--font-heading)' }}>
-               VINTAGE RECIPES
-             </div>
-          </div>
-
           {/* Left Content */}
           <motion.div initial="hidden" animate="visible" variants={staggerContainer} style={{ flex: '1 1 500px' }}>
-            <motion.h1 variants={fadeUp} style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.2rem, 5vw, 4rem)', color: 'var(--color-plum)', fontWeight: 400, lineHeight: 1.1, marginBottom: '24px', textTransform: 'uppercase' }}>
-              Handcrafted <br/>
-              <span style={{ position: 'relative' }}>
-                Premium
-                <svg style={{ position: 'absolute', bottom: '-5px', left: 0, width: '100%', height: '12px' }} viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0,10 Q100,-5 200,10" fill="none" stroke="var(--color-berry)" strokeWidth="8" strokeLinecap="round" /></svg>
-              </span> <br/>
-              <span style={{ color: 'var(--color-berry)' }}>Desserts.</span>
+            <motion.div variants={fadeUp} style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <div style={{ width: '40px', height: '1px', background: '#D4AF37' }} />
+              <span style={{ color: '#D4AF37', fontWeight: 600, letterSpacing: '4px', textTransform: 'uppercase', fontSize: '0.85rem' }}>Est. 2025</span>
+            </motion.div>
+            
+            <motion.h1 variants={fadeUp} style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(3rem, 7vw, 5.5rem)', color: 'var(--color-cream)', fontWeight: 400, lineHeight: 1.05, marginBottom: '20px', letterSpacing: '-1px' }}>
+              The Art of <br/>
+              <span style={{ fontStyle: 'italic', color: '#D4AF37', fontWeight: 300 }}>Premium</span> Desserts.
             </motion.h1>
-            <motion.p variants={fadeUp} style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '40px', maxWidth: '480px', lineHeight: 1.6 }}>
-              Experience the finest, handcrafted desserts made with natural ingredients. Delicious, beautiful, and absolutely perfect for every occasion.
+            
+            <motion.p variants={fadeUp} style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.15rem', fontWeight: 300, marginBottom: '40px', maxWidth: '480px', lineHeight: 1.7 }}>
+              Experience the finest, handcrafted desserts made with authentic ingredients. Exquisitely crafted to elevate every moment.
             </motion.p>
-            <motion.div variants={fadeUp} className="flex-col-mobile gap-mobile-sm" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <Link href="/menu" className="btn btn-primary">EXPLORE MENU</Link>
+            
+            <motion.div variants={fadeUp} style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+              <Link href="/menu" style={{ background: '#D4AF37', color: 'var(--color-plum)', padding: '16px 40px', borderRadius: '50px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', fontSize: '0.9rem', boxShadow: '0 8px 30px rgba(212, 175, 55, 0.3)', transition: 'all 0.3s ease' }} onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 12px 40px rgba(212, 175, 55, 0.4)'; e.currentTarget.style.background = '#F3D275'; }} onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 8px 30px rgba(212, 175, 55, 0.3)'; e.currentTarget.style.background = '#D4AF37'; }}>
+                Explore Menu
+              </Link>
             </motion.div>
           </motion.div>
 
           {/* Right Image Composition */}
-          <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8, delay: 0.2 }} style={{ flex: '1 1 500px', position: 'relative', display: 'flex', justifyContent: 'center' }}>
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.2, delay: 0.3, ease: [0.16, 1, 0.3, 1] }} style={{ flex: '1 1 320px', position: 'relative', display: 'flex', justifyContent: 'center' }}>
             
-            {/* Custom Shape Wrapper */}
-            <div style={{ position: 'relative', width: '100%', maxWidth: '450px', paddingBottom: '100%', marginBottom: '40px' }}>
-               {/* Sketchy Border Accent */}
-               <div style={{ position: 'absolute', top: '15px', right: '-15px', width: '100%', height: '100%', background: 'var(--color-gold)', borderRadius: '255px 15px 225px 15px/15px 225px 15px 255px', zIndex: 1, border: '4px solid var(--color-plum)' }} />
-               
-               {/* Main Image */}
-               <div style={{ position: 'absolute', inset: 0, background: 'var(--color-cream)', borderRadius: '255px 15px 225px 15px/15px 225px 15px 255px', overflow: 'hidden', zIndex: 2, border: '4px solid var(--color-plum)' }}>
-                 <Image src="/dream-cake.png" alt="Signature Dessert" fill style={{ objectFit: 'cover' }} />
+            <div style={{ position: 'relative', width: '100%', maxWidth: '380px', aspectRatio: '1 / 1.1', margin: '0 auto' }}>
+               {/* Elegant Oval Image Container */}
+               <div style={{ position: 'absolute', inset: 0, background: 'var(--color-cream)', borderRadius: '200px', overflow: 'hidden', zIndex: 2, boxShadow: '0 30px 60px rgba(0, 0, 0, 0.5)', border: '2px solid rgba(212, 175, 55, 0.3)' }}>
+                 <Image src="/dream-cake.png" alt="Signature Dessert" fill style={{ objectFit: 'cover', transform: 'scale(1.05)' }} priority />
                </div>
 
-               {/* Floating Circular Badge */}
+               {/* Elegant Floating Glass Badge */}
                <motion.div 
-                 animate={{ rotate: 360 }}
-                 transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                 style={{ position: 'absolute', top: '5%', left: '-10px', width: '130px', height: '130px', background: 'var(--color-berry)', borderRadius: '50%', zIndex: 3, boxShadow: 'var(--shadow-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--color-plum)' }}>
-                 <div style={{ position: 'relative', width: '80%', height: '80%' }}>
-                    <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
-                      <path id="curve" d="M 50, 50 m -35, 0 a 35,35 0 1,1 70,0 a 35,35 0 1,1 -70,0" fill="transparent" />
-                      <text fontSize="13" fontWeight="900" letterSpacing="1" fill="var(--color-white)" fontFamily="var(--font-heading)">
-                        <textPath href="#curve" startOffset="0%">EST 2025 * MUST TRY * </textPath>
-                      </text>
-                    </svg>
+                 initial={{ y: 30, opacity: 0 }}
+                 animate={{ y: 0, opacity: 1 }}
+                 transition={{ duration: 1, delay: 1 }}
+                 style={{ position: 'absolute', bottom: '20px', left: '-30px', background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(20px)', padding: '16px 24px', borderRadius: '16px', zIndex: 3, display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                 <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(212, 175, 55, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                   <Star size={24} fill="#D4AF37" color="#D4AF37" />
+                 </div>
+                 <div>
+                   <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--color-cream)', fontFamily: 'var(--font-heading)', letterSpacing: '1px' }}>Customer Favorite</div>
+                   <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', fontWeight: 400 }}>Rated 4.9/5</div>
                  </div>
                </motion.div>
-
-               {/* Rating Card */}
-               <div style={{ position: 'absolute', bottom: '-20px', right: '20px', background: 'var(--color-white)', color: 'var(--color-plum)', padding: '16px 24px', borderRadius: '8px', zIndex: 3, display: 'flex', alignItems: 'center', gap: '12px', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-md)' }}>
-                 <div style={{ display: 'flex', gap: '4px' }}>
-                   {[1,2,3,4,5].map(i => <Star key={i} size={16} fill="var(--color-gold)" color="var(--color-gold)" />)}
-                 </div>
-                 <span style={{ fontWeight: 900, fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>4.9</span>
-               </div>
-            </div>
-
-            {/* Pagination Indicators (Right edge) */}
-            <div className="lg-hidden" style={{ position: 'absolute', right: '-60px', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-              <span style={{ color: 'var(--color-berry)', fontWeight: 900, fontSize: '1rem', fontFamily: 'var(--font-heading)' }}>01</span>
-              <div style={{ width: '4px', height: '60px', background: 'var(--color-plum)' }} />
-              <span style={{ color: 'var(--color-plum)', fontWeight: 900, fontSize: '1rem', fontFamily: 'var(--font-heading)' }}>03</span>
-            </div>
-            
-            {/* Arrow Navigation (Bottom left) */}
-            <div style={{ position: 'absolute', bottom: '-20px', left: '20px', display: 'flex', gap: '12px', zIndex: 4 }}>
-               <button style={{ width: '48px', height: '48px', borderRadius: '50%', border: '4px solid var(--color-plum)', background: 'var(--color-white)', color: 'var(--color-plum)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}><ArrowRight size={20} style={{ transform: 'rotate(180deg)' }} /></button>
-               <button style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'var(--color-gold)', color: 'var(--color-plum)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}><ArrowRight size={20} /></button>
             </div>
           </motion.div>
 
@@ -239,7 +208,7 @@ export default function HomePage() {
             </motion.h2>
           </motion.div>
           
-          <div className="flex-col-mobile gap-mobile-sm" style={{ display: 'flex', gap: '40px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '40px' }}>
             {categories.map((cat, i) => (
               <Link href={cat.href} key={i}>
                 <motion.div 
@@ -252,7 +221,7 @@ export default function HomePage() {
                 >
                   <div style={{ width: '160px', height: '160px', borderRadius: '50%', overflow: 'hidden', position: 'relative', boxShadow: `0 10px 30px rgba(0,0,0,0.1)`, border: `2px solid ${cat.color}`, padding: '4px' }}>
                     <div style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden' }}>
-                      <Image src={cat.image} alt={cat.name} fill style={{ objectFit: 'cover' }} />
+                      <Image src={cat.image} alt={cat.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit: 'cover' }} />
                       <motion.div whileHover={{ opacity: 1 }} initial={{ opacity: 0 }} style={{ position: 'absolute', inset: 0, background: 'rgba(217,79,138,0.3)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.3s ease' }}>
                         <span style={{ color: 'white', fontWeight: 600 }}>Explore</span>
                       </motion.div>
@@ -270,14 +239,14 @@ export default function HomePage() {
       <section className="pad-mobile" style={{ padding: '120px 0', background: 'var(--gradient-hero)' }}>
         <div className="container">
           <div className="flex-col-mobile text-center-mobile gap-mobile-sm" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px' }}>
-            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ flex: '1 1 500px', position: 'relative', width: '100%' }}>
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ flex: 1, minWidth: '280px', position: 'relative', width: '100%' }}>
               <div style={{ maxWidth: '300px', margin: '0 auto', width: '100%' }}>
                 <div style={{ position: 'relative', paddingBottom: '100%', borderRadius: '32px', overflow: 'hidden', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-xl)' }}>
                   <Image src="/vintage-hot-chocolate.png" alt="The Signature Sip" fill style={{ objectFit: 'cover' }} />
                 </div>
               </div>
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} style={{ flex: '1 1 400px', textAlign: 'center' }}>
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} style={{ flex: 1, minWidth: '280px', textAlign: 'center' }}>
               <div style={{ color: 'var(--color-berry)', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>Thirst Special</div>
               <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 4rem)', color: 'var(--color-plum)', lineHeight: 1.1, marginBottom: '24px' }}>
                 The Signature Sip
@@ -308,7 +277,7 @@ export default function HomePage() {
               <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 4vw, 3rem)', color: 'var(--color-plum)' }}>Best Sellers</h2>
               <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px', fontSize: '1.1rem' }}>Our most loved handcrafted creations.</p>
             </div>
-            <Link href="/menu" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-berry)', fontWeight: 600, fontSize: '1.1rem' }}>
+            <Link href="/menu" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--color-berry)', fontWeight: 600, fontSize: '1.1rem' }}>
               View All <ArrowRight size={20} />
             </Link>
           </div>
@@ -321,28 +290,56 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: i * 0.1 }}
-                whileHover={{ y: -8, x: -8, boxShadow: 'var(--shadow-xl)' }}
-                style={{ background: 'var(--color-white)', borderRadius: '16px', overflow: 'hidden', border: '2px solid var(--color-plum)', boxShadow: 'var(--shadow-md)', position: 'relative' }}
+                whileHover={{ y: -12, boxShadow: '0 30px 60px rgba(0,0,0,0.12)' }}
+                style={{ 
+                  background: 'var(--color-white)', 
+                  borderRadius: '24px', 
+                  overflow: 'hidden', 
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.05)', 
+                  border: '1px solid rgba(0,0,0,0.03)',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
               >
-                <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10, background: 'var(--color-gold)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid var(--color-plum)' }}>
-                  <Heart size={20} color="var(--color-plum)" />
-                </div>
-                <div style={{ position: 'relative', paddingBottom: '100%', overflow: 'hidden', borderBottom: '2px solid var(--color-plum)' }}>
-                  <motion.div whileHover={{ scale: 1.1 }} transition={{ duration: 0.6 }} style={{ position: 'absolute', inset: 0 }}>
+                {/* Elegant Heart Button */}
+                <motion.div 
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10, background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(12px)', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+                  <Heart size={20} color="var(--color-berry)" />
+                </motion.div>
+
+                {/* Image Section */}
+                <div style={{ position: 'relative', paddingBottom: '100%', overflow: 'hidden' }}>
+                  <motion.div whileHover={{ scale: 1.08 }} transition={{ duration: 0.8, ease: "easeOut" }} style={{ position: 'absolute', inset: 0 }}>
                     <Image src={item.img} alt={item.name} fill style={{ objectFit: 'cover' }} />
                   </motion.div>
                 </div>
-                <div style={{ padding: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', color: 'var(--color-plum)', fontWeight: 700 }}>{item.name}</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--color-cream)', padding: '4px 8px', borderRadius: '12px', border: '2px solid var(--color-plum)' }}>
+
+                {/* Content Section */}
+                <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--color-cream)', padding: '6px 12px', borderRadius: '20px' }}>
                       <Star size={14} fill="var(--color-gold)" color="var(--color-gold)" />
-                      <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>{item.rating}</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)' }}>{item.rating}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
-                    <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-berry)' }}>{item.price}</span>
-                    <Link href="/menu" className="btn btn-primary" style={{ padding: '10px 24px' }}>View Menu</Link>
+                  
+                  <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.4rem', color: 'var(--color-plum)', fontWeight: 600, marginBottom: '8px', lineHeight: 1.2 }}>{item.name}</h3>
+                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem', marginBottom: '24px', flex: 1 }}>Perfectly handcrafted with premium ingredients for an unforgettable taste.</p>
+                  
+                  {/* Footer (Price & Action) */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                    <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 600, color: 'var(--color-plum)' }}>{item.price}</span>
+                    <Link href="/menu">
+                      <motion.div 
+                        whileHover={{ scale: 1.05, backgroundColor: 'var(--color-plum)', color: 'white' }}
+                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--color-cream)', color: 'var(--color-plum)', transition: 'all 0.3s' }}
+                      >
+                        <ArrowRight size={22} />
+                      </motion.div>
+                    </Link>
                   </div>
                 </div>
               </motion.div>
@@ -351,32 +348,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. WHY CHOOSE THIRST */}
-      <section className="pad-mobile" style={{ padding: '120px 0', background: 'linear-gradient(135deg, #FFF7EE 0%, #ffffff 100%)' }}>
-        <div className="container">
-           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} style={{ textAlign: 'center', marginBottom: '80px' }}>
-            <motion.h2 variants={fadeUp} style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 4vw, 3rem)', color: 'var(--color-plum)' }}>The Thirst. Experience</motion.h2>
-          </motion.div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '32px' }}>
-            {features.map((feat, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: i * 0.1 }}
-                style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.8)', padding: '40px 32px', borderRadius: '32px', textAlign: 'center', boxShadow: '0 20px 40px rgba(74,13,51,0.05)' }}
-              >
-                <div style={{ width: '80px', height: '80px', background: 'var(--color-cream)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', color: 'var(--color-berry)' }}>
-                  <feat.icon size={32} />
-                </div>
-                <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', color: 'var(--color-plum)', marginBottom: '12px', fontWeight: 700 }}>{feat.title}</h3>
-                <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{feat.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+
 
       {/* 6. BRAND STORY */}
       <section className="pad-mobile" style={{ padding: '120px 0', background: 'white', overflow: 'hidden' }}>

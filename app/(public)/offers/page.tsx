@@ -10,12 +10,7 @@ export const metadata: Metadata = {
 
 const offers: any[] = [];
 
-const loyaltyPerks = [
-  { icon: Star, title: 'Earn Points', desc: 'Get 1 point per ₹100 spent' },
-  { icon: Gift, title: 'Redeem Rewards', desc: 'Use points for free desserts' },
-  { icon: Sparkles, title: 'Birthday Offer', desc: 'Special gift on your birthday' },
-  { icon: Percent, title: 'Festival Deals', desc: 'Exclusive discounts on festivals' },
-];
+
 
 export default function OffersPage() {
   return (
@@ -128,57 +123,7 @@ export default function OffersPage() {
         </div>
       </section>
 
-      {/* Loyalty Program Section */}
-      <section className="section" style={{ background: 'var(--color-bg-primary)' }}>
-        <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-            <div style={{ display: 'inline-flex', justifyContent: 'center', marginBottom: '24px', background: 'var(--color-gold)', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-sm)', color: 'var(--color-plum)', padding: '8px 24px', borderRadius: '50px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
-              <Star size={16} style={{ marginRight: '8px' }} /> Loyalty Program
-            </div>
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', color: 'var(--color-plum)', textTransform: 'uppercase' }}>
-              Thirst. Rewards
-            </h2>
-            <p style={{ color: 'var(--color-text-secondary)', marginTop: '16px', fontSize: '1.1rem', fontWeight: 600 }}>
-              Every order earns you points. Points earn you desserts. Simple, delicious rewards.
-            </p>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '32px' }}>
-            {loyaltyPerks.map(({ icon: Icon, title, desc }) => (
-              <div
-                key={title}
-                style={{
-                  textAlign: 'center',
-                  padding: '32px',
-                  background: 'var(--color-white)',
-                  borderRadius: '16px',
-                  border: '4px solid var(--color-plum)',
-                  boxShadow: 'var(--shadow-md)'
-                }}
-              >
-                <div
-                  style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: '50%',
-                    background: 'var(--color-gold)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 24px',
-                    color: 'var(--color-plum)',
-                    border: '4px solid var(--color-plum)'
-                  }}
-                >
-                  <Icon size={32} />
-                </div>
-                <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 400, color: 'var(--color-plum)', marginBottom: '12px', fontSize: '1.4rem' }}>{title}</h3>
-                <p style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', fontWeight: 600 }}>{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
     </>
   );
 }

@@ -36,11 +36,11 @@ export default function Navbar() {
         zIndex: 'var(--z-sticky)',
         transition: 'all var(--transition-base)',
         background: scrolled
-          ? 'rgba(250, 243, 232, 0.95)'
+          ? 'rgba(255, 255, 255, 0.8)'
           : 'transparent',
-        backdropFilter: scrolled ? 'blur(24px)' : 'none',
-        boxShadow: scrolled ? 'var(--shadow-sm)' : 'none',
-        borderBottom: scrolled ? '2px solid var(--color-plum)' : 'none',
+        backdropFilter: scrolled ? 'blur(20px)' : 'none',
+        boxShadow: scrolled ? '0 4px 30px rgba(0, 0, 0, 0.05)' : 'none',
+        borderBottom: scrolled ? '1px solid rgba(255, 255, 255, 0.3)' : 'none',
       }}
     >
       <div className="container">
@@ -87,8 +87,11 @@ export default function Navbar() {
                   href={link.href}
                   className="nav-link"
                   style={{
-                    color: 'var(--color-text-primary)',
-                    fontWeight: 500
+                    color: 'var(--color-plum)',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    fontSize: '0.85rem',
+                    letterSpacing: '1px'
                   }}
                 >
                   {link.label}
@@ -116,7 +119,29 @@ export default function Navbar() {
               <Phone size={16} />
               Call Us
             </a>
-            <Link href="/menu" className="btn btn-primary btn-sm">
+            <Link 
+              href="/menu" 
+              style={{
+                background: 'var(--color-plum)',
+                color: 'var(--color-cream)',
+                padding: '10px 24px',
+                borderRadius: '50px',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                boxShadow: '0 4px 14px rgba(62, 39, 35, 0.2)',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(62, 39, 35, 0.3)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(62, 39, 35, 0.2)';
+              }}
+            >
               View Menu
             </Link>
           </div>
@@ -146,12 +171,12 @@ export default function Navbar() {
           right: 0,
           background: 'rgba(255,255,255,0.97)',
           backdropFilter: 'blur(24px)',
-          borderBottom: '1px solid var(--color-lavender-dark)',
+          borderBottom: isOpen ? '1px solid var(--color-lavender-dark)' : 'none',
           padding: isOpen ? 'var(--space-4) var(--space-6) var(--space-6)' : '0 var(--space-6)',
           maxHeight: isOpen ? '500px' : '0',
           overflow: 'hidden',
           transition: 'all var(--transition-base)',
-          boxShadow: 'var(--shadow-lg)',
+          boxShadow: isOpen ? 'var(--shadow-lg)' : 'none',
         }}
       >
         <ul style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
