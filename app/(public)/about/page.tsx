@@ -88,17 +88,17 @@ export default function AboutPage() {
               <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 4rem)', color: 'var(--color-plum)', lineHeight: 1.1, marginBottom: '24px' }}>
                 A Journey of Taste
               </h2>
-              <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px', lineHeight: 1.8, fontSize: '1.1rem', fontWeight: 600, textAlign: 'justify' }}>
+              <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px', lineHeight: 1.8, fontSize: '1.1rem', fontWeight: 600, textAlign: 'left' }}>
                 Thirst. was founded in 2025 by a young chef with a dream of bringing the finest patisserie culture to the streets. From our beautiful flagship store in Thiruvallur, our handcrafted essence remains the core of everything we do.
               </p>
-              <p style={{ color: 'var(--color-text-secondary)', marginBottom: '32px', lineHeight: 1.8, fontSize: '1.1rem', fontWeight: 600, textAlign: 'justify' }}>
+              <p style={{ color: 'var(--color-text-secondary)', marginBottom: '32px', lineHeight: 1.8, fontSize: '1.1rem', fontWeight: 600, textAlign: 'left' }}>
                 Our philosophy is simple: desserts are not just food — they are emotions. We create moments of joy, celebration, and pure indulgence through every handcrafted creation.
               </p>
-              <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '32px' }}>
                 {[{ value: '2', label: 'Years of Excellence' }, { value: '1', label: 'Flagship Store' }, { value: '10k+', label: 'Happy Customers' }].map(s => (
                   <div key={s.label}>
                     <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '2.5rem', color: 'var(--color-plum)' }}>{s.value}</div>
-                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase' }}>{s.label}</div>
+                    <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>{s.label}</div>
                   </div>
                 ))}
               </div>
@@ -170,30 +170,18 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Awards */}
+      {/* Call to Action */}
       <section className="section" style={{ background: 'var(--color-gold)', textAlign: 'center', borderTop: '4px solid var(--color-plum)' }}>
         <div className="container">
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--color-white)', padding: '8px 24px', borderRadius: '50px', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-sm)', color: 'var(--color-plum)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '32px' }}>
-            <Star size={18} /> Awards & Recognition
+            <Star size={18} /> Join Us
           </div>
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 4rem)', color: 'var(--color-plum)', marginBottom: '48px', textTransform: 'uppercase', letterSpacing: '2px' }}>
-            Recognized for Excellence
+            Ready to Start Your Journey?
           </h2>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap' }}>
-            {[
-              'Best Dessert Brand 2023 — India Food Awards',
-              'Top Franchise Opportunity 2024 — Franchise India',
-              'Customer Choice Award 2022 & 2023 — Google Reviews',
-            ].map((award) => (
-              <div key={award} style={{ background: 'var(--color-white)', borderRadius: '16px', padding: '32px 24px', border: '4px solid var(--color-plum)', maxWidth: 320, boxShadow: 'var(--shadow-md)' }}>
-                <Award size={36} style={{ color: 'var(--color-berry)', marginBottom: '16px' }} />
-                <p style={{ color: 'var(--color-plum)', fontSize: '1.1rem', lineHeight: 1.6, fontWeight: 700 }}>{award}</p>
-              </div>
-            ))}
-          </div>
-          <div className="flex-col-mobile" style={{ display: 'flex', marginTop: '60px', justifyContent: 'center' }}>
+          <div className="flex-col-mobile" style={{ display: 'flex', marginTop: '20px', justifyContent: 'center' }}>
             <Link href="/franchise" className="btn btn-primary text-center-mobile" style={{ padding: '16px 24px', fontSize: '1.1rem', maxWidth: '100%', justifyContent: 'center' }}>
-              Join Our Journey <ArrowRight size={20} />
+              Explore Franchise Opportunities <ArrowRight size={20} />
             </Link>
           </div>
         </div>
