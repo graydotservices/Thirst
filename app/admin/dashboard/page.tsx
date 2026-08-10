@@ -10,49 +10,140 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, AreaChart, Area,
 } from 'recharts';
+import { supabase } from '@/lib/supabase';
+import { OrderItem } from '@/lib/supabase';
 
-// Demo data
-const demoChartData = [
-  { date: 'Mon', revenue: 12400 },
-  { date: 'Tue', revenue: 18200 },
-  { date: 'Wed', revenue: 15800 },
-  { date: 'Thu', revenue: 22100 },
-  { date: 'Fri', revenue: 28400 },
-  { date: 'Sat', revenue: 35600 },
-  { date: 'Sun', revenue: 31200 },
-];
-
-const recentBills = [
-  { bill: 'TH-00012345', customer: 'Priya Sharma', phone: '9876543210', items: 3, total: 1450, method: 'UPI', time: '2:30 PM' },
-  { bill: 'TH-00012344', customer: 'Arjun Mehta', phone: '9876543211', items: 2, total: 680, method: 'Card', time: '2:15 PM' },
-  { bill: 'TH-00012343', customer: 'Sneha Patel', phone: '9876543212', items: 5, total: 2200, method: 'Cash', time: '1:50 PM' },
-  { bill: 'TH-00012342', customer: 'Rohit Kapoor', phone: '9876543213', items: 1, total: 320, method: 'UPI', time: '1:30 PM' },
-  { bill: 'TH-00012341', customer: 'Ananya Singh', phone: '9876543214', items: 4, total: 1890, method: 'Card', time: '1:15 PM' },
-];
-
-const topProducts = [
-  { name: 'Rose Velvet Cake', orders: 48, revenue: 40800 },
-  { name: 'Berry Blast Scoop', orders: 72, revenue: 23040 },
-  { name: 'Gold Parfait', orders: 35, revenue: 16800 },
-  { name: 'Midnight Cheesecake', orders: 22, revenue: 26400 },
-];
+type Order = {
+  id: string;
+  bill_no: string;
+  customer_name: string;
+  customer_phone: string;
+  items: OrderItem[];
+  total: number;
+  payment_method: string;
+  created_at: string;
+};
 
 export default function DashboardPage() {
   const [greeting, setGreeting] = useState('');
+  const [stats, setStats] = useState({
+    todayRevenue: 0,
+    todayOrders: 0,
+    activeCustomers: 0,
+    monthlyRevenue: 0,
+  });
+  const [chartData, setChartData] = useState<{ date: string; revenue: number }[]>([]);
+  const [recentBills, setRecentBills] = useState<any[]>([]);
+  const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const hr = new Date().getHours();
     if (hr < 12) setGreeting('Good Morning');
     else if (hr < 17) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
+
+    fetchDashboardData();
   }, []);
 
-  const stats = [
-    { label: "Today's Revenue", value: '₹63,840', change: '+18.2%', up: true, icon: DollarSign, color: 'var(--color-berry)' },
-    { label: "Today's Orders", value: '142', change: '+9 from yesterday', up: true, icon: ShoppingCart, color: 'var(--color-gold-dark)' },
-    { label: 'Active Customers', value: '2,341', change: '+34 this week', up: true, icon: Users, color: '#6366f1' },
-    { label: 'Monthly Revenue', value: '₹8.4L', change: '+22.5% vs last month', up: true, icon: TrendingUp, color: 'var(--color-success)' },
+  const fetchDashboardData = async () => {
+    try {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(now.getDate() - 30);
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+
+      // Fetch customers count
+      const { count: customersCount } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch orders (last 30 days for safety)
+      const { data: allOrders } = await supabase
+        .from('orders')
+        .select('*')
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (allOrders) {
+        // 1. KPI Stats
+        const todayOrdersList = allOrders.filter(o => o.created_at >= startOfToday);
+        const monthOrdersList = allOrders.filter(o => o.created_at >= startOfMonth);
+
+        const todayRevenue = todayOrdersList.reduce((acc, o) => acc + o.total, 0);
+        const monthlyRevenue = monthOrdersList.reduce((acc, o) => acc + o.total, 0);
+
+        setStats({
+          todayRevenue,
+          todayOrders: todayOrdersList.length,
+          activeCustomers: customersCount || 0,
+          monthlyRevenue,
+        });
+
+        // 2. Recent Bills (Latest 5)
+        setRecentBills(allOrders.slice(0, 5).map(o => ({
+          bill: o.bill_no,
+          customer: o.customer_name || 'Guest',
+          phone: o.customer_phone || '-',
+          items: o.items ? o.items.reduce((acc: number, item: any) => acc + item.qty, 0) : 0,
+          total: o.total,
+          method: o.payment_method.toUpperCase(),
+          time: new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+        })));
+
+        // 3. Chart Data (Last 7 Days)
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const chart = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(now.getDate() - i);
+          const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
+          const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).toISOString();
+          
+          const dayRevenue = allOrders
+            .filter(o => o.created_at >= startOfDay && o.created_at <= endOfDay)
+            .reduce((acc, o) => acc + o.total, 0);
+            
+          chart.push({
+            date: days[d.getDay()],
+            revenue: dayRevenue
+          });
+        }
+        setChartData(chart);
+
+        // 4. Top Products (All time from recent fetch)
+        const productMap: Record<string, { name: string, orders: number, revenue: number }> = {};
+        allOrders.forEach(o => {
+          if (o.items && Array.isArray(o.items)) {
+            o.items.forEach((item: any) => {
+              if (!productMap[item.product_id]) {
+                productMap[item.product_id] = { name: item.name, orders: 0, revenue: 0 };
+              }
+              productMap[item.product_id].orders += item.qty;
+              productMap[item.product_id].revenue += item.total;
+            });
+          }
+        });
+        
+        const sortedProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 4);
+        setTopProducts(sortedProducts);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statCards = [
+    { label: "Today's Revenue", value: `₹${stats.todayRevenue.toLocaleString('en-IN')}`, change: 'Live', up: true, icon: DollarSign, color: 'var(--color-berry)' },
+    { label: "Today's Orders", value: stats.todayOrders.toString(), change: 'Live', up: true, icon: ShoppingCart, color: 'var(--color-gold-dark)' },
+    { label: 'Active Customers', value: stats.activeCustomers.toLocaleString('en-IN'), change: 'Total', up: true, icon: Users, color: '#6366f1' },
+    { label: 'Monthly Revenue', value: `₹${stats.monthlyRevenue.toLocaleString('en-IN')}`, change: 'This Month', up: true, icon: TrendingUp, color: 'var(--color-success)' },
   ];
+
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}><span className="spinner"></span></div>;
 
   return (
     <div style={{ maxWidth: 1400 }}>
@@ -68,7 +159,7 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-4" style={{ marginBottom: 'var(--space-6)', gap: 'var(--space-4)' }}>
-        {stats.map(({ label, value, change, up, icon: Icon, color }) => (
+        {statCards.map(({ label, value, change, up, icon: Icon, color }) => (
           <div key={label} className="stat-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
               <div
@@ -80,9 +171,9 @@ export default function DashboardPage() {
               >
                 <Icon size={22} />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: up ? 'var(--color-success)' : 'var(--color-error)', fontSize: '0.8125rem', fontWeight: 600 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-success)', fontSize: '0.8125rem', fontWeight: 600 }}>
                 <ArrowUpRight size={14} />
-                {change.split(' ')[0]}
+                {change}
               </div>
             </div>
             <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--color-plum)', letterSpacing: '-0.02em', marginBottom: '2px' }}>
@@ -94,18 +185,18 @@ export default function DashboardPage() {
       </div>
 
       {/* Chart + Top Products */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-5)', marginBottom: 'var(--space-6)' }}>
+      <div className="grid grid-chart" style={{ gap: 'var(--space-5)', marginBottom: 'var(--space-6)' }}>
         {/* Revenue Chart */}
         <div className="card" style={{ padding: 'var(--space-6)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
             <div>
-              <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1.0625rem' }}>Weekly Revenue</h3>
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>Mon — Sun</p>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1.0625rem' }}>Last 7 Days Revenue</h3>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>Rolling Window</p>
             </div>
-            <span className="badge badge-primary">This Week</span>
+            <span className="badge badge-primary">Live</span>
           </div>
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={demoChartData}>
+            <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#D94F8A" stopOpacity={0.25} />
@@ -127,10 +218,10 @@ export default function DashboardPage() {
         {/* Top Products */}
         <div className="card" style={{ padding: 'var(--space-6)' }}>
           <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1.0625rem', marginBottom: 'var(--space-5)' }}>
-            Top Products
+            Top Products (Last 30 Days)
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            {topProducts.map((p, i) => (
+            {topProducts.length === 0 ? <div style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>No orders yet.</div> : topProducts.map((p, i) => (
               <div key={p.name}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--color-plum)', fontSize: '0.875rem' }}>
@@ -139,7 +230,7 @@ export default function DashboardPage() {
                   <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>₹{p.revenue.toLocaleString('en-IN')}</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 3, background: 'var(--color-lavender)' }}>
-                  <div style={{ height: '100%', borderRadius: 3, background: 'var(--gradient-berry)', width: `${(p.orders / 80) * 100}%`, transition: 'width 1s ease' }} />
+                  <div style={{ height: '100%', borderRadius: 3, background: 'var(--gradient-berry)', width: `${Math.min((p.orders / (topProducts[0]?.orders || 1)) * 100, 100)}%`, transition: 'width 1s ease' }} />
                 </div>
                 <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>{p.orders} orders</div>
               </div>
@@ -168,7 +259,9 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {recentBills.map(bill => (
+              {recentBills.length === 0 ? (
+                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '20px', color: 'var(--color-text-muted)' }}>No bills generated yet.</td></tr>
+              ) : recentBills.map(bill => (
                 <tr key={bill.bill}>
                   <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--color-plum)' }}>{bill.bill}</td>
                   <td style={{ fontWeight: 500 }}>{bill.customer}</td>

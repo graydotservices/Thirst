@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard,
   ShoppingCart,
+  Receipt,
   Users,
   Package,
   BarChart3,
@@ -24,6 +27,7 @@ import {
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/billing', label: 'Billing / POS', icon: ShoppingCart },
+  { href: '/admin/orders', label: 'Orders', icon: Receipt },
   { href: '/admin/customers', label: 'Customers', icon: Users },
   { href: '/admin/staff', label: 'Staff', icon: UserCog },
   { href: '/admin/inventory', label: 'Inventory', icon: Package },
@@ -38,8 +42,47 @@ const navItems = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const [role, setRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (pathname === '/admin' || pathname === '/admin/login') {
+      setLoading(false);
+      return;
+    }
+
+    const checkRole = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/admin/login');
+        return;
+      }
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('role')
+        .eq('email', session.user.email)
+        .single();
+        
+      const userRole = staffData?.role || 'cashier';
+      setRole(userRole);
+      
+      // Protect routes for cashiers
+      if (userRole === 'cashier' && pathname !== '/admin/billing') {
+        router.push('/admin/billing');
+      }
+      setLoading(false);
+    };
+    checkRole();
+  }, [pathname, router]);
 
   if (pathname === '/admin' || pathname === '/admin/login') return <>{children}</>;
+  
+  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span className="spinner"></span></div>;
+
+  const visibleNavItems = role === 'cashier' 
+    ? navItems.filter(item => item.href === '/admin/billing')
+    : navItems;
 
   return (
     <div className="admin-layout">
@@ -63,7 +106,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Logo */}
         <div style={{ padding: 'var(--space-6)', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ position: 'relative', width: 36, height: 36 }}>
-            <Image src="/logo-v2.png" alt="Thirst." fill style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+            <Image src="/logo-v2.png" alt="Thirst." fill style={{ objectFit: 'contain' }} />
           </div>
           <div>
             <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.25rem', color: 'white' }}>
@@ -76,7 +119,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Nav */}
         <nav style={{ flex: 1, padding: 'var(--space-4)', overflowY: 'auto' }}>
           <ul style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {navItems.map(({ href, label, icon: Icon }) => {
+            {visibleNavItems.map(({ href, label, icon: Icon }) => {
               const active = pathname.startsWith(href);
               return (
                 <li key={href}>
@@ -160,7 +203,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <div style={{ flex: 1 }}>
             <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--color-plum)', fontSize: '1rem' }}>
-              {navItems.find(n => pathname.startsWith(n.href))?.label || 'Admin'}
+              {visibleNavItems.find(n => pathname.startsWith(n.href))?.label || 'Admin'}
             </span>
           </div>
 

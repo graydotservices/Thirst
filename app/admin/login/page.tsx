@@ -19,11 +19,30 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError('');
     try {
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) {
         setError('Invalid email or password. Please try again.');
-      } else {
-        router.push('/admin/dashboard');
+      } else if (authData.user) {
+        const { data: staffData, error: staffError } = await supabase
+          .from('staff')
+          .select('role, status')
+          .eq('email', authData.user.email)
+          .single();
+
+        if (staffError || !staffData) {
+          setError('User role not found. Please contact an administrator.');
+          await supabase.auth.signOut();
+        } else if (staffData.status === 'inactive') {
+          setError('Your account has been deactivated.');
+          await supabase.auth.signOut();
+        } else {
+          // Route based on role
+          if (staffData.role === 'cashier') {
+            router.push('/admin/billing');
+          } else {
+            router.push('/admin/dashboard');
+          }
+        }
       }
     } catch {
       setError('Something went wrong. Please try again.');
@@ -36,99 +55,133 @@ export default function AdminLoginPage() {
     <div
       style={{
         minHeight: '100vh',
-        background: 'var(--gradient-dark)',
+        background: '#0f0c29', // Fallback
+        backgroundImage: 'linear-gradient(135deg, #240b36 0%, #c31432 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 'var(--space-6)',
+        padding: 'var(--space-4)',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Background orbs */}
-      <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(217,79,138,0.3) 0%, transparent 70%)', filter: 'blur(60px)' }} />
-      <div style={{ position: 'absolute', bottom: '-100px', left: '-100px', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(244,201,93,0.2) 0%, transparent 70%)', filter: 'blur(40px)' }} />
+      {/* Animated Background Orbs */}
+      <div 
+        className="animate-float" 
+        style={{ position: 'absolute', top: '10%', left: '15%', width: '40vw', height: '40vw', minWidth: 300, minHeight: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(244,201,93,0.4) 0%, transparent 60%)', filter: 'blur(60px)', animationDuration: '8s' }} 
+      />
+      <div 
+        className="animate-float" 
+        style={{ position: 'absolute', bottom: '5%', right: '10%', width: '50vw', height: '50vw', minWidth: 350, minHeight: 350, borderRadius: '50%', background: 'radial-gradient(circle, rgba(217,79,138,0.5) 0%, transparent 70%)', filter: 'blur(70px)', animationDuration: '12s', animationDelay: '1s' }} 
+      />
+      <div 
+        className="animate-float" 
+        style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%, -50%)', width: '60vw', height: '60vw', minWidth: 400, minHeight: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%)', filter: 'blur(80px)', animationDuration: '15s', animationDelay: '2s' }} 
+      />
 
+      {/* Glassmorphic Card */}
       <div
-        className="card animate-scale-in"
+        className="animate-scale-in"
         style={{
           width: '100%',
-          maxWidth: 440,
-          padding: 'var(--space-10)',
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.12)',
-          backdropFilter: 'blur(24px)',
+          maxWidth: 420,
+          padding: '40px 32px',
+          background: 'rgba(20, 10, 20, 0.4)',
+          borderRadius: '24px',
+          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
           position: 'relative',
           zIndex: 1,
         }}
       >
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
-          <div style={{ position: 'relative', width: 64, height: 64, margin: '0 auto var(--space-4)' }}>
-            <Image src="/logo-v2.png" alt="Thirst." fill style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+        {/* Logo Area */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ 
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', 
+            width: 76, height: 76, borderRadius: '50%', 
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%)',
+            marginBottom: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.2)',
+            backdropFilter: 'blur(10px)' 
+          }}>
+            <Image src="/logo-v2.png" alt="Thirst." width={50} height={50} style={{ objectFit: 'contain' }} />
           </div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.75rem', color: 'white', letterSpacing: '-0.02em', marginBottom: '4px' }}>
-            Thirst<span style={{ color: 'var(--color-berry)' }}>.</span> Admin
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '2rem', color: 'white', letterSpacing: '-0.03em', marginBottom: '8px' }}>
+            Thirst<span style={{ color: 'var(--color-gold)' }}>.</span>
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>Sign in to your admin account</p>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9375rem', fontWeight: 500 }}>Admin Portal</p>
         </div>
 
         {/* Error */}
         {error && (
-          <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-md)', padding: 'var(--space-3) var(--space-4)', marginBottom: 'var(--space-5)', color: '#fca5a5', fontSize: '0.875rem' }}>
+          <div className="animate-fade-in" style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '12px', padding: '12px 16px', marginBottom: '24px', color: '#fca5a5', fontSize: '0.875rem', fontWeight: 500, textAlign: 'center', backdropFilter: 'blur(4px)' }}>
             {error}
           </div>
         )}
 
         <form onSubmit={handleLogin}>
           {/* Email */}
-          <div className="input-group" style={{ marginBottom: 'var(--space-4)' }}>
-            <label className="input-label" htmlFor="admin-email" style={{ color: 'rgba(255,255,255,0.7)' }}>Email</label>
+          <div style={{ marginBottom: '20px' }}>
             <div style={{ position: 'relative' }}>
-              <Mail size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
+              <Mail size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)' }} />
               <input
                 id="admin-email"
                 type="email"
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="admin@thirstcafe.in"
-                className="input"
+                placeholder="Email address"
                 style={{
-                  paddingLeft: 48,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.15)',
+                  width: '100%',
+                  padding: '16px 16px 16px 48px',
+                  fontSize: '1rem',
+                  borderRadius: '16px',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                   color: 'white',
+                  outline: 'none',
+                  transition: 'all 0.3s ease',
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
                 }}
+                onFocus={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
+                onBlur={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
               />
             </div>
           </div>
 
           {/* Password */}
-          <div className="input-group" style={{ marginBottom: 'var(--space-6)' }}>
-            <label className="input-label" htmlFor="admin-password" style={{ color: 'rgba(255,255,255,0.7)' }}>Password</label>
+          <div style={{ marginBottom: '32px' }}>
             <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
+              <Lock size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)' }} />
               <input
                 id="admin-password"
                 type={showPass ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="input"
+                placeholder="Password"
                 style={{
-                  paddingLeft: 48,
-                  paddingRight: 48,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.15)',
+                  width: '100%',
+                  padding: '16px 48px 16px 48px',
+                  fontSize: '1rem',
+                  borderRadius: '16px',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                   color: 'white',
+                  outline: 'none',
+                  transition: 'all 0.3s ease',
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
                 }}
+                onFocus={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}
+                onBlur={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
               />
               <button
                 type="button"
                 onClick={() => setShowPass(!showPass)}
-                style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, transition: 'color 0.2s ease' }}
+                onMouseEnter={e => e.currentTarget.style.color = 'white'}
+                onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
                 aria-label={showPass ? 'Hide password' : 'Show password'}
               >
                 {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -139,20 +192,42 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="btn btn-primary btn-lg w-full"
-            style={{ justifyContent: 'center', background: 'var(--color-berry)', boxShadow: '0 4px 24px rgba(217,79,138,0.4)' }}
+            style={{ 
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center', 
+              padding: '16px', 
+              fontSize: '1.0625rem',
+              fontWeight: 700,
+              fontFamily: 'var(--font-heading)',
+              letterSpacing: '0.02em',
+              textTransform: 'uppercase',
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+              boxShadow: '0 4px 15px rgba(255, 75, 43, 0.4)',
+              border: 'none',
+              color: 'white',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1,
+              transition: 'all 0.3s ease',
+            }}
+            onMouseEnter={e => { if(!loading) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(255, 75, 43, 0.6)'; } }}
+            onMouseLeave={e => { if(!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(255, 75, 43, 0.4)'; } }}
           >
             {loading ? (
               <span className="spinner spinner-sm" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: 'white' }} />
             ) : (
-              'Sign In to Admin'
+              'Enter Admin Panel'
             )}
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', marginTop: 'var(--space-6)', color: 'rgba(255,255,255,0.35)', fontSize: '0.8125rem' }}>
-          Authorized personnel only. All activity is logged.
-        </p>
+        <div style={{ marginTop: '32px', textAlign: 'center' }}>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            Secure Server Connection
+          </p>
+        </div>
       </div>
     </div>
   );

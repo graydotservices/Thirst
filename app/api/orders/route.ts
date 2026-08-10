@@ -46,6 +46,26 @@ export async function POST(request: NextRequest) {
         .eq('id', customer.id);
     }
 
+    // Decrement stock
+    if (body.items && Array.isArray(body.items)) {
+      for (const item of body.items) {
+        if (!item.product_id) continue;
+        
+        const { data: product } = await supabase
+          .from('products')
+          .select('stock')
+          .eq('id', item.product_id)
+          .single();
+          
+        if (product) {
+          await supabase
+            .from('products')
+            .update({ stock: Math.max(0, product.stock - (item.qty || 1)) })
+            .eq('id', item.product_id);
+        }
+      }
+    }
+
     return Response.json({ success: true, order, billNo }, { status: 201 });
   } catch (err) {
     console.error('Order API error:', err);

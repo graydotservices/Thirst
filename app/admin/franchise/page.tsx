@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check, X, Eye, Clock } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 type App = { id: string; name: string; phone: string; email: string; city: string; budget: string; experience: string; message: string; status: 'pending' | 'reviewing' | 'approved' | 'rejected'; created_at: string; };
 const demo: App[] = [
@@ -14,10 +15,26 @@ const demo: App[] = [
 const statusColors: Record<string, string> = { pending: 'badge-warning', reviewing: 'badge-primary', approved: 'badge-success', rejected: 'badge-error' };
 
 export default function FranchiseAdminPage() {
-  const [apps, setApps] = useState<App[]>(demo);
+  const [apps, setApps] = useState<App[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<App | null>(null);
 
-  const updateStatus = (id: string, status: App['status']) => {
+  useEffect(() => {
+    fetchApps();
+  }, []);
+
+  const fetchApps = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('franchise_applications')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (data) setApps(data as App[]);
+    setLoading(false);
+  };
+
+  const updateStatus = async (id: string, status: App['status']) => {
+    await supabase.from('franchise_applications').update({ status }).eq('id', id);
     setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status } : null);
   };
@@ -32,7 +49,11 @@ export default function FranchiseAdminPage() {
         <table>
           <thead><tr><th>Applicant</th><th>City</th><th>Budget</th><th>Experience</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
-            {apps.map(a => (
+            {loading ? (
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)' }}><span className="spinner"></span></td></tr>
+            ) : apps.length === 0 ? (
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>No franchise applications found.</td></tr>
+            ) : apps.map(a => (
               <tr key={a.id}>
                 <td><div style={{ fontWeight: 600, color: 'var(--color-plum)' }}>{a.name}</div><div style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>{a.phone}</div></td>
                 <td>{a.city}</td>

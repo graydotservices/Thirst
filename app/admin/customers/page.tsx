@@ -1,37 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, UserPlus, Star, Phone, Mail, Calendar, ShoppingBag, X, Gift } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 type Customer = {
   id: string;
   name: string;
   phone: string;
-  email: string;
-  birthday: string;
-  loyaltyPoints: number;
-  totalPurchase: number;
-  lastVisit: string;
-  visits: number;
+  email: string | null;
+  birthday: string | null;
+  loyalty_points: number;
+  total_purchase: number;
+  last_visit: string;
 };
 
-const demoCustomers: Customer[] = [
-  { id: '1', name: 'Priya Sharma', phone: '9876543210', email: 'priya@gmail.com', birthday: '1995-03-15', loyaltyPoints: 2340, totalPurchase: 234000, lastVisit: '2025-07-20', visits: 47 },
-  { id: '2', name: 'Arjun Mehta', phone: '9876543211', email: 'arjun@gmail.com', birthday: '1990-07-23', loyaltyPoints: 1850, totalPurchase: 185000, lastVisit: '2025-07-18', visits: 38 },
-  { id: '3', name: 'Sneha Patel', phone: '9876543212', email: 'sneha@gmail.com', birthday: '1998-12-08', loyaltyPoints: 980, totalPurchase: 98000, lastVisit: '2025-07-22', visits: 22 },
-  { id: '4', name: 'Rohit Kapoor', phone: '9876543213', email: 'rohit@gmail.com', birthday: '1985-04-20', loyaltyPoints: 3200, totalPurchase: 320000, lastVisit: '2025-07-21', visits: 64 },
-  { id: '5', name: 'Ananya Singh', phone: '9876543214', email: 'ananya@gmail.com', birthday: '2000-09-30', loyaltyPoints: 540, totalPurchase: 54000, lastVisit: '2025-07-15', visits: 12 },
-];
-
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>(demoCustomers);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      setLoading(true);
+      const { data } = await supabase
+        .from('customers')
+        .select('*')
+        .order('last_visit', { ascending: false });
+      
+      if (data) setCustomers(data as Customer[]);
+      setLoading(false);
+    };
+    fetchCustomers();
+  }, []);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Customer | null>(null);
 
   const filtered = customers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.phone.includes(search) ||
-    c.email.toLowerCase().includes(search.toLowerCase())
+    c.phone.includes(search)
   );
 
   return (
@@ -48,9 +54,16 @@ export default function CustomersPage() {
       <div className="grid grid-4" style={{ marginBottom: 'var(--space-6)', gap: 'var(--space-4)' }}>
         {[
           { label: 'Total Customers', value: customers.length, icon: UserPlus, color: 'var(--color-berry)' },
-          { label: 'Total Loyalty Points', value: customers.reduce((s, c) => s + c.loyaltyPoints, 0).toLocaleString('en-IN'), icon: Star, color: 'var(--color-gold-dark)' },
-          { label: 'Total Revenue', value: `₹${(customers.reduce((s, c) => s + c.totalPurchase, 0) / 100000).toFixed(1)}L`, icon: ShoppingBag, color: '#6366f1' },
-          { label: 'Avg. Visits', value: Math.round(customers.reduce((s, c) => s + c.visits, 0) / customers.length), icon: Calendar, color: 'var(--color-success)' },
+          { label: 'Total Loyalty Points', value: customers.reduce((s, c) => s + c.loyalty_points, 0).toLocaleString('en-IN'), icon: Star, color: 'var(--color-gold-dark)' },
+          { 
+            label: 'Total Revenue', 
+            value: (() => {
+              const total = customers.reduce((s, c) => s + Number(c.total_purchase || 0), 0);
+              return total >= 100000 ? `₹${(total / 100000).toFixed(1)}L` : `₹${total.toLocaleString('en-IN')}`;
+            })(), 
+            icon: ShoppingBag, color: '#6366f1' 
+          },
+          { label: 'Avg. Revenue/Cust', value: customers.length > 0 ? `₹${Math.round(customers.reduce((s, c) => s + Number(c.total_purchase || 0), 0) / customers.length).toLocaleString('en-IN')}` : '₹0', icon: Calendar, color: 'var(--color-success)' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="stat-card">
             <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
@@ -76,7 +89,7 @@ export default function CustomersPage() {
       <div className="table-container">
         <table>
           <thead>
-            <tr><th>Customer</th><th>Phone</th><th>Email</th><th>Birthday</th><th>Last Visit</th><th>Loyalty Pts</th><th>Total Spent</th><th>Action</th></tr>
+            <tr><th>Customer</th><th>Phone</th><th>Last Visit</th><th>Loyalty Pts</th><th>Total Spent</th><th>Action</th></tr>
           </thead>
           <tbody>
             {filtered.map(c => (
@@ -90,17 +103,15 @@ export default function CustomersPage() {
                   </div>
                 </td>
                 <td><a href={`tel:${c.phone}`} style={{ color: 'var(--color-text-secondary)' }}>{c.phone}</a></td>
-                <td><a href={`mailto:${c.email}`} style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>{c.email}</a></td>
-                <td style={{ fontSize: '0.875rem' }}>{new Date(c.birthday).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
-                <td style={{ fontSize: '0.875rem' }}>{new Date(c.lastVisit).toLocaleDateString('en-IN')}</td>
+                <td style={{ fontSize: '0.875rem' }}>{c.last_visit ? new Date(c.last_visit).toLocaleDateString('en-IN') : '-'}</td>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Star size={13} fill="var(--color-gold)" color="var(--color-gold)" />
-                    <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)' }}>{c.loyaltyPoints.toLocaleString('en-IN')}</span>
+                    <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)' }}>{c.loyalty_points.toLocaleString('en-IN')}</span>
                   </div>
                 </td>
                 <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-berry)' }}>
-                  ₹{c.totalPurchase.toLocaleString('en-IN')}
+                  ₹{c.total_purchase.toLocaleString('en-IN')}
                 </td>
                 <td>
                   <button onClick={() => setSelected(c)} className="btn btn-secondary btn-sm">View</button>
@@ -124,8 +135,6 @@ export default function CustomersPage() {
                   <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1.375rem' }}>{selected.name}</h3>
                   <div style={{ display: 'flex', gap: 'var(--space-4)', color: 'var(--color-text-muted)', fontSize: '0.875rem', marginTop: '4px', flexWrap: 'wrap' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Phone size={12} />{selected.phone}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Mail size={12} />{selected.email}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={12} />Birthday: {new Date(selected.birthday).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}</span>
                   </div>
                 </div>
               </div>
@@ -133,12 +142,11 @@ export default function CustomersPage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-4" style={{ gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+            <div className="grid grid-3" style={{ gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
               {[
-                { label: 'Total Spent', value: `₹${selected.totalPurchase.toLocaleString('en-IN')}`, icon: ShoppingBag },
-                { label: 'Loyalty Points', value: selected.loyaltyPoints.toLocaleString('en-IN'), icon: Star },
-                { label: 'Total Visits', value: selected.visits, icon: Calendar },
-                { label: 'Last Visit', value: new Date(selected.lastVisit).toLocaleDateString('en-IN'), icon: Gift },
+                { label: 'Total Spent', value: `₹${selected.total_purchase.toLocaleString('en-IN')}`, icon: ShoppingBag },
+                { label: 'Loyalty Points', value: selected.loyalty_points.toLocaleString('en-IN'), icon: Star },
+                { label: 'Last Visit', value: selected.last_visit ? new Date(selected.last_visit).toLocaleDateString('en-IN') : '-', icon: Gift },
               ].map(({ label, value, icon: Icon }) => (
                 <div key={label} style={{ textAlign: 'center', padding: 'var(--space-4)', background: 'var(--color-lavender)', borderRadius: 'var(--radius-lg)' }}>
                   <Icon size={20} style={{ color: 'var(--color-berry)', margin: '0 auto var(--space-2)' }} />

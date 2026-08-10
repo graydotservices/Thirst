@@ -274,8 +274,8 @@ export default function HomePage() {
         <div className="container">
           <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '60px', flexWrap: 'wrap', gap: '20px' }}>
             <div>
-              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 4vw, 3rem)', color: 'var(--color-plum)' }}>Best Sellers</h2>
-              <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px', fontSize: '1.1rem' }}>Our most loved handcrafted creations.</p>
+              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 4vw, 3rem)', color: 'var(--color-plum)' }}>Customer Favorites</h2>
+              <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px', fontSize: '1.1rem' }}>The most loved items by our customers.</p>
             </div>
             <Link href="/menu" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--color-berry)', fontWeight: 600, fontSize: '1.1rem' }}>
               View All <ArrowRight size={20} />
@@ -382,7 +382,7 @@ export default function HomePage() {
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '60px' }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 4vw, 3rem)', color: 'var(--color-plum)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-              <Camera size={36} color="var(--color-berry)" /> @thirst.cafe
+              <Camera size={36} color="var(--color-berry)" /> @thirst_fresh
             </h2>
           </div>
           

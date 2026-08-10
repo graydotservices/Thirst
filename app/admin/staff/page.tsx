@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UserPlus, Search, Edit2, Trash2, X, Check } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 type Staff = {
   id: string;
@@ -12,42 +13,100 @@ type Staff = {
   status: 'active' | 'inactive';
 };
 
-const demoStaff: Staff[] = [
-  { id: '1', name: 'Aryan Kapoor', phone: '9876543210', email: 'aryan@thirstcafe.in', role: 'admin', status: 'active' },
-  { id: '2', name: 'Priya Nair', phone: '9876543211', email: 'priya@thirstcafe.in', role: 'manager', status: 'active' },
-  { id: '3', name: 'Rohit Sharma', phone: '9876543212', email: 'rohit@thirstcafe.in', role: 'cashier', status: 'active' },
-  { id: '4', name: 'Ananya Desai', phone: '9876543213', email: 'ananya@thirstcafe.in', role: 'cashier', status: 'inactive' },
-];
-
 const roleColors: Record<string, string> = { admin: 'badge-dark', manager: 'badge-primary', cashier: 'badge-gold' };
 
 export default function StaffPage() {
-  const [staff, setStaff] = useState<Staff[]>(demoStaff);
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Staff | null>(null);
-  const [form, setForm] = useState({ name: '', phone: '', email: '', role: 'cashier' as Staff['role'], status: 'active' as Staff['status'] });
+  const [form, setForm] = useState({ name: '', phone: '', email: '', role: 'cashier' as Staff['role'], status: 'active' as Staff['status'], password: '' });
+  const [saving, setSaving] = useState(false);
 
-  const filtered = staff.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.phone.includes(search) ||
-    s.role.includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    fetchStaff();
+  }, []);
 
-  const openAdd = () => { setEditing(null); setForm({ name: '', phone: '', email: '', role: 'cashier', status: 'active' }); setShowModal(true); };
-  const openEdit = (s: Staff) => { setEditing(s); setForm({ name: s.name, phone: s.phone, email: s.email, role: s.role, status: s.status }); setShowModal(true); };
-
-  const handleSave = () => {
-    if (editing) {
-      setStaff(prev => prev.map(s => s.id === editing.id ? { ...s, ...form } : s));
-    } else {
-      setStaff(prev => [...prev, { ...form, id: Date.now().toString() }]);
-    }
-    setShowModal(false);
+  const fetchStaff = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('staff').select('*').order('created_at', { ascending: false });
+    if (data) setStaff(data as Staff[]);
+    setLoading(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Remove this staff member?')) setStaff(prev => prev.filter(s => s.id !== id));
+  const filtered = staff.filter(s =>
+    (s.name && s.name.toLowerCase().includes(search.toLowerCase())) ||
+    (s.phone && s.phone.includes(search)) ||
+    (s.role && s.role.includes(search.toLowerCase()))
+  );
+
+  const openAdd = () => { setEditing(null); setForm({ name: '', phone: '', email: '', role: 'cashier', status: 'active', password: '' }); setError(''); setShowModal(true); };
+  const openEdit = (s: Staff) => { setEditing(s); setForm({ name: s.name, phone: s.phone || '', email: s.email, role: s.role, status: s.status, password: '' }); setError(''); setShowModal(true); };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    
+    if (editing) {
+      // Update
+      const { error: updateError } = await supabase
+        .from('staff')
+        .update({ name: form.name, phone: form.phone, role: form.role, status: form.status })
+        .eq('id', editing.id);
+      
+      if (updateError) {
+        setError(updateError.message);
+      } else {
+        setStaff(prev => prev.map(s => s.id === editing.id ? { ...s, ...form } : s));
+        setShowModal(false);
+      }
+    } else {
+      // Add new
+      if (!form.password) {
+        setError('Password is required for new staff');
+        setSaving(false);
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/staff', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form)
+        });
+        const data = await res.json();
+        
+        if (!res.ok) {
+          setError(data.error || 'Failed to create auth account');
+        } else {
+          // Now insert into database using the authenticated admin's session
+          const { data: staffData, error: staffError } = await supabase
+            .from('staff')
+            .insert([{ id: data.userId, name: form.name, phone: form.phone, email: form.email, role: form.role, status: form.status }])
+            .select()
+            .single();
+
+          if (staffError) {
+            setError(staffError.message);
+          } else if (staffData) {
+            setStaff(prev => [staffData as Staff, ...prev]);
+            setShowModal(false);
+          }
+        }
+      } catch (err) {
+        setError('Network error');
+      }
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Remove this staff member? This cannot be undone.')) {
+      await supabase.from('staff').delete().eq('id', id);
+      setStaff(prev => prev.filter(s => s.id !== id));
+    }
   };
 
   return (
@@ -73,7 +132,11 @@ export default function StaffPage() {
             <tr><th>Name</th><th>Phone</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody>
-            {filtered.map(s => (
+            {loading ? (
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px' }}>Loading...</td></tr>
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)' }}>No staff found.</td></tr>
+            ) : filtered.map(s => (
               <tr key={s.id}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
@@ -83,7 +146,7 @@ export default function StaffPage() {
                     <span style={{ fontWeight: 600, color: 'var(--color-plum)' }}>{s.name}</span>
                   </div>
                 </td>
-                <td>{s.phone}</td>
+                <td>{s.phone || '-'}</td>
                 <td>{s.email}</td>
                 <td><span className={`badge ${roleColors[s.role]}`}>{s.role}</span></td>
                 <td>
@@ -94,7 +157,11 @@ export default function StaffPage() {
                 <td>
                   <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
                     <button onClick={() => openEdit(s)} className="btn btn-secondary btn-sm"><Edit2 size={14} /> Edit</button>
-                    <button onClick={() => handleDelete(s.id)} className="btn btn-sm" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--color-error)', border: 'none', borderRadius: 'var(--radius-full)', padding: '8px 14px', fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                    {s.role !== 'admin' && (
+                      <button onClick={() => handleDelete(s.id)} className="btn btn-sm" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--color-error)', border: 'none', borderRadius: 'var(--radius-full)', padding: '8px 14px', fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.8125rem', cursor: 'pointer' }}>
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -124,8 +191,14 @@ export default function StaffPage() {
               </div>
               <div className="input-group">
                 <label className="input-label" htmlFor="sm-email">Email</label>
-                <input id="sm-email" className="input" type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="Email address" />
+                <input id="sm-email" className="input" type="email" disabled={!!editing} value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="Email address" />
               </div>
+              {!editing && (
+                <div className="input-group">
+                  <label className="input-label" htmlFor="sm-password">Initial Password</label>
+                  <input id="sm-password" type="password" className="input" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="Create password" />
+                </div>
+              )}
               <div className="input-group">
                 <label className="input-label" htmlFor="sm-role">Role</label>
                 <select id="sm-role" className="input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value as Staff['role'] }))}>
@@ -135,6 +208,9 @@ export default function StaffPage() {
                 </select>
               </div>
             </div>
+            
+            {error && <div style={{ color: 'var(--color-error)', fontSize: '0.875rem', marginBottom: 'var(--space-4)' }}>{error}</div>}
+            
             <div className="input-group" style={{ marginBottom: 'var(--space-6)' }}>
               <label className="input-label" htmlFor="sm-status">Status</label>
               <select id="sm-status" className="input" value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as Staff['status'] }))}>
@@ -143,8 +219,8 @@ export default function StaffPage() {
               </select>
             </div>
             <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-              <button onClick={handleSave} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
-                <Check size={16} /> {editing ? 'Update' : 'Add Staff'}
+              <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                <Check size={16} /> {saving ? 'Saving...' : (editing ? 'Update' : 'Add Staff')}
               </button>
               <button onClick={() => setShowModal(false)} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>
                 Cancel

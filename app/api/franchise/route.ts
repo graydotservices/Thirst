@@ -10,15 +10,13 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Required fields missing' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('franchise_applications')
-      .insert([{ name, phone, email, city, budget, experience, message, status: 'pending' }])
-      .select()
-      .single();
+      .insert([{ name, phone, email, city, budget, experience, message, status: 'pending' }]);
 
     if (error) throw error;
 
-    return Response.json({ success: true, id: data.id }, { status: 201 });
+    return Response.json({ success: true }, { status: 201 });
   } catch (err) {
     console.error('Franchise API error:', err);
     return Response.json({ error: 'Internal server error' }, { status: 500 });
