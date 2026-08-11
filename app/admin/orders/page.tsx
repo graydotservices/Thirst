@@ -10,6 +10,8 @@ type Order = {
   bill_no: string;
   customer_name: string;
   customer_phone: string;
+  subtotal: number;
+  discount: number;
   total: number;
   payment_method: string;
   status: string;
