@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Search, Receipt, Calendar, CreditCard, ChevronRight, X, Download, Trash2, MessageCircle } from 'lucide-react';
-import { generateInvoicePDF } from '@/lib/pdfUtils';
+import { generateInvoicePDF, generateInvoiceImage } from '@/lib/pdfUtils';
 
 type Order = {
   id: string;
@@ -47,15 +47,48 @@ export default function OrdersPage() {
     }
   };
 
-  const handleWhatsApp = (order: Order) => {
+  const handleWhatsApp = async (order: Order) => {
     if (!order.customer_phone || order.customer_phone === '0000000000') {
       alert('No valid phone number found for this customer.');
       return;
     }
-    const msg = encodeURIComponent(
-      `Hi ${order.customer_name || 'Valued Customer'},\n\nThank you for visiting *Thirst.*!\n\nInvoice No: ${order.bill_no}\nDate: ${new Date(order.created_at).toLocaleDateString('en-IN')}\nAmount: ₹${order.total}\n\nYour invoice is ready. Hope to see you again! ❤\n\n— Thirst. Team`
-    );
-    window.open(`https://wa.me/${order.customer_phone}?text=${msg}`, '_blank');
+    const regularItems = order.items.filter(item => (item as any).product_id !== 'meta_staff' && !item.name.startsWith('Billed by:'));
+    const itemListText = regularItems.map(item => `- ${item.qty} x ${item.name}`).join('\n');
+    const msg = `Hi ${order.customer_name || 'Valued Customer'},\n\nThank you for visiting *Thirst.*!\n\n*Invoice No:* ${order.bill_no}\n*Date:* ${new Date(order.created_at).toLocaleDateString('en-IN')}\n\n*Order Details:*\n${itemListText}\n\n*Total Amount:* ₹${order.total}\n\nHope to see you again! ❤\n\n— Thirst. Team`;
+    
+    try {
+      const orderData = {
+        bill_no: order.bill_no,
+        created_at: order.created_at,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        items: order.items,
+        subtotal: order.subtotal || order.total,
+        discount: order.discount || 0,
+        gst: 0,
+        total: order.total,
+        payment_method: order.payment_method
+      };
+      
+      const blob = await generateInvoiceImage(orderData);
+      
+      if (blob) {
+        const file = new File([blob], `Thirst_Invoice_${order.bill_no}.jpg`, { type: 'image/jpeg' });
+        
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: `Thirst Invoice ${order.bill_no}`,
+            text: msg,
+          });
+          return;
+        }
+      }
+      window.open(`https://wa.me/${order.customer_phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    } catch (e) {
+      console.error('Error sharing:', e);
+      window.open(`https://wa.me/${order.customer_phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
   };
 
   const filtered = orders.filter(o => 

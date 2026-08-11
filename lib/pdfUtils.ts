@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 type OrderData = {
   bill_no: string;
@@ -13,6 +14,100 @@ type OrderData = {
   payment_method: string;
 };
 
+export const generateInvoiceImage = async (order: OrderData): Promise<Blob | null> => {
+  return new Promise((resolve) => {
+    // Create container
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '400px';
+    container.style.background = '#ffffff';
+    container.style.fontFamily = 'sans-serif';
+    container.style.color = '#2d1e2f';
+    container.style.padding = '30px';
+    
+    // Build HTML
+    const dateStr = new Date(order.created_at).toLocaleString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+    
+    const regularItems = order.items.filter(item => (item as any).product_id !== 'meta_staff' && !item.name.startsWith('Billed by:'));
+    
+    container.innerHTML = `
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h1 style="color: #d94f8a; margin: 0; font-size: 28px; font-weight: 800;">Thirst.</h1>
+        <div style="font-size: 12px; color: #787878; margin-top: 5px;">NO.01, Siva Vishnu kovil street,</div>
+        <div style="font-size: 12px; color: #787878;">kakkalur, Thiruvallur - 602001</div>
+      </div>
+      
+      <div style="border-top: 1px dashed #d94f8a; border-bottom: 1px dashed #d94f8a; padding: 10px 0; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 5px;">
+          <strong>Bill No:</strong> <span>${order.bill_no}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 14px;">
+          <strong>Date:</strong> <span>${dateStr}</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <div style="font-size: 12px; color: #787878; margin-bottom: 5px;">Billed To:</div>
+        <div style="font-size: 16px; font-weight: bold; color: #d94f8a;">${order.customer_name || 'Walk-in Customer'}</div>
+        <div style="font-size: 14px; color: #787878;">${order.customer_phone || 'N/A'}</div>
+      </div>
+      
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+          <tr style="border-bottom: 2px solid #2d1e2f;">
+            <th style="text-align: left; padding: 8px 0; font-size: 14px;">Item</th>
+            <th style="text-align: center; padding: 8px 0; font-size: 14px;">Qty</th>
+            <th style="text-align: right; padding: 8px 0; font-size: 14px;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${regularItems.map(item => `
+            <tr style="border-bottom: 1px solid #f0f0f0;">
+              <td style="padding: 8px 0; font-size: 14px;">${item.name}<br><span style="font-size: 12px; color: #787878;">Rs. ${item.price}</span></td>
+              <td style="text-align: center; padding: 8px 0; font-size: 14px;">${item.qty}</td>
+              <td style="text-align: right; padding: 8px 0; font-size: 14px; font-weight: bold;">Rs. ${item.total}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div style="border-top: 2px solid #2d1e2f; padding-top: 15px; margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px;">
+          <span>Subtotal</span> <span>Rs. ${order.subtotal}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 15px; color: #dc2626;">
+          <span>Discount</span> <span>- Rs. ${order.discount}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: bold; background: #d94f8a; color: white; padding: 10px; border-radius: 8px;">
+          <span>TOTAL</span> <span>Rs. ${order.total}</span>
+        </div>
+      </div>
+      
+      <div style="text-align: center; font-size: 14px; color: #d94f8a; font-weight: bold; margin-bottom: 5px;">
+        Thank you for indulging with Thirst!
+      </div>
+      <div style="text-align: center; font-size: 12px; color: #787878;">
+        Paid via ${order.payment_method.toUpperCase()}
+      </div>
+    `;
+    
+    document.body.appendChild(container);
+    
+    html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+      document.body.removeChild(container);
+      canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.9);
+    }).catch(err => {
+      console.error(err);
+      if (document.body.contains(container)) document.body.removeChild(container);
+      resolve(null);
+    });
+  });
+};
+
 const loadLogoAsBase64 = async (): Promise<string> => {
   const response = await fetch('/logo-v2.png');
   const blob = await response.blob();
@@ -23,7 +118,7 @@ const loadLogoAsBase64 = async (): Promise<string> => {
   });
 };
 
-export const generateInvoicePDF = async (order: OrderData) => {
+export const generateInvoicePDF = async (order: OrderData, autoDownload = true) => {
   const doc = new jsPDF('p', 'pt', 'a4'); 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -218,6 +313,9 @@ export const generateInvoicePDF = async (order: OrderData) => {
   
   doc.text('Follow us @thirst_fresh  |  Visit us at www.thirstcafe.in', pageWidth / 2, footerY + 28, { align: 'center' });
 
-  doc.save(`Thirst_Invoice_${order.bill_no}.pdf`);
+  if (autoDownload) {
+    doc.save(`Thirst_Invoice_${order.bill_no}.pdf`);
+  }
+  
   return doc;
 };

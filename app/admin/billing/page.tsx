@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, Plus, Minus, Trash2, Printer, MessageCircle, Download, Check } from 'lucide-react';
 import Image from 'next/image';
-import { generateInvoicePDF } from '@/lib/pdfUtils';
+import { generateInvoicePDF, generateInvoiceImage } from '@/lib/pdfUtils';
 import { supabase } from '@/lib/supabase';
 
 type CartItem = {
@@ -239,11 +239,48 @@ export default function BillingPage() {
     }
   };
 
-  const handleWhatsApp = () => {
-    const msg = encodeURIComponent(
-      `Hi ${customerName || 'Valued Customer'},\n\nThank you for visiting *Thirst.*!\n\nInvoice No: ${billNo}\nDate: ${new Date().toLocaleDateString('en-IN')}\nAmount: ₹${total}\n\nYour invoice is ready. Hope to see you again! ❤\n\n— Thirst. Team`
-    );
-    window.open(`https://wa.me/${customerPhone}?text=${msg}`, '_blank');
+  const handleWhatsApp = async () => {
+    const itemListText = cart.map(item => `- ${item.qty} x ${item.name}`).join('\n');
+    const msg = `Hi ${customerName || 'Valued Customer'},\n\nThank you for visiting *Thirst.*!\n\n*Invoice No:* ${billNo}\n*Date:* ${new Date().toLocaleDateString('en-IN')}\n\n*Order Details:*\n${itemListText}\n\n*Total Amount:* ₹${total}\n\nHope to see you again! ❤\n\n— Thirst. Team`;
+    
+    try {
+      // 1. Generate PDF (without downloading)
+      const orderData = {
+        bill_no: billNo,
+        created_at: new Date().toISOString(),
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        items: cart.map(c => ({ name: c.name, qty: c.qty, price: c.price, total: c.price * c.qty })),
+        subtotal,
+        discount: discountAmt,
+        gst: 0,
+        total,
+        payment_method: paymentMethod === 'upi' && upiRefId ? `UPI (Ref: ${upiRefId})` : paymentMethod
+      };
+      
+      const blob = await generateInvoiceImage(orderData);
+      
+      if (blob) {
+        const file = new File([blob], `Thirst_Invoice_${billNo}.jpg`, { type: 'image/jpeg' });
+        
+        // 2. Try native sharing (works well on mobile devices to share files to WhatsApp)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: `Thirst Invoice ${billNo}`,
+            text: msg,
+          });
+          return;
+        }
+      }
+      
+      // Fallback to web link if file sharing is unsupported (e.g. some desktop browsers)
+      window.open(`https://wa.me/${customerPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+    } catch (e) {
+      console.error('Error sharing:', e);
+      // Fallback if sharing is aborted or fails
+      window.open(`https://wa.me/${customerPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
   };
 
   const resetBill = () => {
@@ -272,7 +309,7 @@ export default function BillingPage() {
         <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Create invoices and process payments</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 'var(--space-6)', alignItems: 'start' }}>
+      <div className="pos-grid" style={{ alignItems: 'start' }}>
         {/* Left: Products */}
         <div>
           {/* Search */}
@@ -289,7 +326,7 @@ export default function BillingPage() {
           </div>
 
           {/* Product Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 'var(--space-3)', maxHeight: 'calc(100vh - 260px)', overflowY: 'auto', paddingRight: 4 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 'var(--space-3)', maxHeight: 'calc(100vh - 260px)', overflowY: 'auto', paddingRight: 4 }}>
             {filtered.map(p => (
               <button
                 key={p.id}
@@ -356,20 +393,20 @@ export default function BillingPage() {
                       <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem', color: 'var(--color-plum)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
                       <div style={{ color: 'var(--color-berry)', fontSize: '0.8125rem', fontWeight: 600 }}>₹{item.price} each</div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button onClick={() => updateQty(item.id, item.qty - 1)} style={{ width: 26, height: 26, borderRadius: '50%', background: 'white', border: '1px solid var(--color-soft-pink)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-plum)' }}>
-                        <Minus size={12} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button onClick={() => updateQty(item.id, item.qty - 1)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'white', border: '1px solid var(--color-soft-pink)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-plum)' }}>
+                        <Minus size={14} />
                       </button>
-                      <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', minWidth: 24, textAlign: 'center', fontSize: '0.9rem' }}>{item.qty}</span>
-                      <button onClick={() => updateQty(item.id, item.qty + 1)} style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--color-berry)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                        <Plus size={12} />
+                      <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', minWidth: 28, textAlign: 'center', fontSize: '1rem' }}>{item.qty}</span>
+                      <button onClick={() => updateQty(item.id, item.qty + 1)} style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--color-berry)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                        <Plus size={14} />
                       </button>
                     </div>
-                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '0.9rem', minWidth: 64, textAlign: 'right' }}>
+                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '0.95rem', minWidth: 64, textAlign: 'right' }}>
                       ₹{item.price * item.qty}
                     </div>
-                    <button onClick={() => updateQty(item.id, 0)} style={{ color: 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                      <Trash2 size={15} />
+                    <button onClick={() => updateQty(item.id, 0)} style={{ color: 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', padding: 8 }}>
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 ))}

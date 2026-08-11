@@ -25,16 +25,16 @@ export default function StaffPage() {
   const [form, setForm] = useState({ name: '', phone: '', email: '', role: 'cashier' as Staff['role'], status: 'active' as Staff['status'], password: '' });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetchStaff();
-  }, []);
-
   const fetchStaff = async () => {
     setLoading(true);
     const { data } = await supabase.from('staff').select('*').order('created_at', { ascending: false });
     if (data) setStaff(data as Staff[]);
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchStaff();
+  }, []);
 
   const filtered = staff.filter(s =>
     (s.name && s.name.toLowerCase().includes(search.toLowerCase())) ||
@@ -106,6 +106,17 @@ export default function StaffPage() {
     if (window.confirm('Remove this staff member? This cannot be undone.')) {
       await supabase.from('staff').delete().eq('id', id);
       setStaff(prev => prev.filter(s => s.id !== id));
+    }
+  };
+
+  const testInsert = async () => {
+    const { data, error } = await supabase.from('staff').insert([{
+      name: 'Test Staff', phone: '1234567890', email: 'test@example.com', role: 'cashier', status: 'active'
+    }]);
+    if (error) {
+      alert(`Test insert error: ${JSON.stringify(error)}`);
+    } else {
+      alert('Test insert success!');
     }
   };
 
