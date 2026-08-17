@@ -65,6 +65,16 @@ export default function AdminLoginPage() {
         overflow: 'hidden',
       }}
     >
+      <style dangerouslySetInnerHTML={{__html: `
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active{
+            -webkit-box-shadow: 0 0 0 30px #2a1b38 inset !important;
+            -webkit-text-fill-color: white !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+      `}} />
       {/* Animated Background Orbs */}
       <div 
         className="animate-float" 
@@ -124,7 +134,7 @@ export default function AdminLoginPage() {
           {/* Email */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{ position: 'relative' }}>
-              <Mail size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)' }} />
+              <Mail size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)', zIndex: 2 }} />
               <input
                 id="admin-email"
                 type="email"
@@ -153,7 +163,7 @@ export default function AdminLoginPage() {
           {/* Password */}
           <div style={{ marginBottom: '32px' }}>
             <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)' }} />
+              <Lock size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)', zIndex: 2 }} />
               <input
                 id="admin-password"
                 type={showPass ? 'text' : 'password'}
@@ -179,9 +189,9 @@ export default function AdminLoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPass(!showPass)}
-                style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, transition: 'color 0.2s ease' }}
+                style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.9)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, transition: 'color 0.2s ease', zIndex: 2 }}
                 onMouseEnter={e => e.currentTarget.style.color = 'white'}
-                onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.9)'}
                 aria-label={showPass ? 'Hide password' : 'Show password'}
               >
                 {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -232,3 +242,4 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
