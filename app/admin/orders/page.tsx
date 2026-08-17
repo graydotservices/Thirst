@@ -12,6 +12,7 @@ type Order = {
   customer_phone: string;
   subtotal: number;
   discount: number;
+  gst: number;
   total: number;
   payment_method: string;
   status: string;
