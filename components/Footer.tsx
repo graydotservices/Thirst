@@ -13,6 +13,7 @@ import {
   Heart,
   ArrowRight,
 } from 'lucide-react';
+import { useCompanySettings, createWhatsAppUrl } from '@/lib/companySettings';
 
 const InstagramIcon = ({ size = 24, color = "currentColor", className = "" }: any) => (
   <svg 
@@ -66,6 +67,21 @@ const socialLinks = [
 ];
 
 export default function Footer() {
+  const { settings, formattedAddress, phoneDisplay } = useCompanySettings();
+
+  const socialLinks = [
+    { href: 'https://www.instagram.com/thirst_fresh?igsh=bnY2cTJqd2p3ZmF1&utm_source=qr', icon: InstagramIcon, label: 'Instagram' },
+    { href: 'https://youtube.com/@thirstfreshzz?si=2bDbGSIyGi6cc8Ix', icon: YoutubeIcon, label: 'YouTube' },
+    { href: createWhatsAppUrl(settings.phone, 'Hello Thirst! I would like to inquire about your desserts.'), icon: WhatsappIcon, label: 'WhatsApp' },
+  ];
+
+  const contactItems = [
+    { icon: MapPin, text: formattedAddress || 'NO.01, Siva Vishnu kovil street, kakkalur, Thiruvallur - 602001' },
+    { icon: Phone, text: phoneDisplay || settings.phone || '+91 87548 81546' },
+    { icon: Mail, text: settings.email || 'thirst.freshchennai@gmail.com' },
+    { icon: Clock, text: settings.opening_hours || 'Mon–Sun: 2:00 PM – 12:00 AM' },
+  ];
+
   return (
     <footer style={{ background: 'var(--color-plum)', color: 'var(--color-cream)', paddingTop: '100px', borderTop: '2px dashed var(--color-lavender-dark)', position: 'relative', overflow: 'hidden' }}>
       {/* Decorative Blur */}
@@ -81,14 +97,14 @@ export default function Footer() {
               <div style={{ position: 'relative', width: 48, height: 48, background: 'var(--color-cream)', borderRadius: '50%', border: '2px solid var(--color-gold)', overflow: 'hidden' }}>
                 <Image src="/logo-v2.png" alt="Thirst." fill style={{ objectFit: 'contain', transform: 'scale(1.1)' }} />
               </div>
-              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.02em' }}>Thirst<span style={{ color: 'var(--color-gold)' }}>.</span></span>
+              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.02em' }}>{settings.name || 'Thirst'}<span style={{ color: 'var(--color-gold)' }}>.</span></span>
             </Link>
             <p style={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.8, marginBottom: '32px' }}>
-              One For Living. Handcrafted desserts that redefine indulgence and luxury in every bite.
+              {settings.tagline || 'One For Living. Handcrafted desserts that redefine indulgence and luxury in every bite.'}
             </p>
             <div style={{ display: 'flex', gap: '12px' }}>
               {socialLinks.map(({ href, icon: Icon, label }) => (
-                <a key={label} href={href} target="_blank" rel="noreferrer" style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)', transition: '0.3s' }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-berry)'; e.currentTarget.style.borderColor = 'var(--color-berry)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
+                <a key={label} href={href} target="_blank" rel="noreferrer" aria-label={label} style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)', transition: '0.3s' }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-berry)'; e.currentTarget.style.borderColor = 'var(--color-berry)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
                   <Icon size={18} color="white" />
                 </a>
               ))}
@@ -113,14 +129,9 @@ export default function Footer() {
           <div>
             <h4 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', fontWeight: 700, marginBottom: '24px' }}>Get in Touch</h4>
             <ul style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {[
-                { icon: MapPin, text: 'NO.01, Siva Vishnu kovil street, kakkalur, Thiruvallur - 602001' },
-                { icon: Phone, text: '+91 87548 81546' },
-                { icon: Mail, text: 'thirst.freshchennai@gmail.com' },
-                { icon: Clock, text: 'Mon–Sun: 2:00 PM – 12:00 AM' },
-              ].map(({ icon: Icon, text }, i) => (
+              {contactItems.map(({ icon: Icon, text }, i) => (
                 <li key={i} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                  <div style={{ background: 'rgba(217,79,138,0.1)', padding: '10px', borderRadius: '50%' }}>
+                  <div style={{ background: 'rgba(217,79,138,0.1)', padding: '10px', borderRadius: '50%', flexShrink: 0 }}>
                     <Icon size={18} color="var(--color-soft-pink)" />
                   </div>
                   <span style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, marginTop: '4px' }}>{text}</span>
@@ -132,11 +143,12 @@ export default function Footer() {
 
         {/* Copyright & Certifications */}
         <div style={{ padding: '40px 0 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-
           <div>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', marginBottom: '8px' }}>&copy; {new Date().getFullYear()} Thirst. All rights reserved.</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', marginBottom: '8px' }}>&copy; {new Date().getFullYear()} {settings.name || 'Thirst.'} All rights reserved.</p>
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '4px 8px' }}>
-              <span style={{ whiteSpace: 'nowrap' }}>FSSAI: 22425478001152</span>
+              <span style={{ whiteSpace: 'nowrap' }}>FSSAI: {settings.fssai || '22425478001152'}</span>
+              <span className="hide-mobile">|</span>
+              <span style={{ whiteSpace: 'nowrap' }}>GSTIN: {settings.gstin || '33AABCT0000A1Z5'}</span>
               <span className="hide-mobile">|</span>
               <span style={{ whiteSpace: 'nowrap' }}>Udyam: UDYAM-TN-24-0161809</span>
             </div>

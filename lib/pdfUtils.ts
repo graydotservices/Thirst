@@ -1,12 +1,13 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { getCachedCompanySettings, CompanySettings, getFormattedAddress, formatIndianPhoneDisplay, getWhatsAppPhone } from './companySettings';
 
-type OrderData = {
+export type OrderData = {
   bill_no: string;
   created_at: string;
   customer_name: string;
   customer_phone: string;
-  items: Array<{ name: string; qty: number; price: number; total: number }>;
+  items: Array<{ name: string; qty: number; price: number; total: number; product_id?: string }>;
   subtotal: number;
   discount: number;
   gst: number;
@@ -16,31 +17,322 @@ type OrderData = {
   tax?: number;
 };
 
-export const generateInvoiceImage = async (order: OrderData): Promise<Blob | null> => {
+/**
+ * Format itemized WhatsApp message for a completed bill
+ */
+export function formatWhatsAppBillMessage(order: OrderData, customSettings?: CompanySettings): string {
+  const settings = customSettings || getCachedCompanySettings();
+  const dateStr = new Date(order.created_at).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+  
+  const regularItems = order.items.filter(item => item.product_id !== 'meta_staff' && !item.name.startsWith('Billed by:'));
+  const itemList = regularItems.map(item => `• ${item.qty}x ${item.name} — ₹${item.total.toFixed(0)}`).join('\n');
+  const points = Math.floor(order.total / 100);
+
+  return `*${(settings.name || 'THIRST.').toUpperCase()} — LUXURY DESSERTS* 🍰
+📍 ${getFormattedAddress(settings) || 'Thiruvallur Flagship'}
+📞 Tel: ${settings.phone || '+91 87548 81546'}
+${settings.gstin ? `GSTIN: ${settings.gstin}` : ''}
+───────────────────────────
+🧾 *TAX INVOICE*
+*Bill No:* ${order.bill_no}
+*Date:* ${dateStr}
+*Customer:* ${order.customer_name || 'Walk-in Customer'}
+${order.billed_by ? `*Served by:* ${order.billed_by}` : ''}
+
+*ORDER DETAILS:*
+${itemList}
+
+───────────────────────────
+*Subtotal:* ₹${order.subtotal.toFixed(0)}
+${order.discount > 0 ? `*Discount:* -₹${order.discount.toFixed(0)}\n` : ''}*TOTAL AMOUNT:* *₹${order.total.toFixed(0)}*
+*Payment Mode:* ${order.payment_method.toUpperCase()}
+${points > 0 ? `*Loyalty Points Earned:* ${points} pts ⭐\n` : ''}───────────────────────────
+Thank you for indulging with Thirst.! ❤
+We hope to see you again soon!`;
+}
+
+/**
+ * Open WhatsApp with customer phone and formatted bill message
+ */
+export function sendBillViaWhatsApp(order: OrderData, customSettings?: CompanySettings) {
+  const cleanPhone = getWhatsAppPhone(order.customer_phone);
+  const message = formatWhatsAppBillMessage(order, customSettings);
+  if (!cleanPhone) {
+    alert('Please enter a valid customer phone number to send WhatsApp bill.');
+    return;
+  }
+  const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+}
+
+/**
+ * Print compact thermal receipt directly to printer via browser print dialog.
+ * Supports standard 80mm roll paper (default) or 58mm compact roll paper.
+ */
+export function printThermalReceipt(order: OrderData, paperWidth: '80mm' | '58mm' = '80mm', customSettings?: CompanySettings) {
+  const settings = customSettings || getCachedCompanySettings();
+  const is58mm = paperWidth === '58mm';
+
+  const dateStr = new Date(order.created_at).toLocaleString('en-IN', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+
+  const regularItems = order.items.filter(item => item.product_id !== 'meta_staff' && !item.name.startsWith('Billed by:'));
+  const points = Math.floor(order.total / 100);
+
+  const receiptHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>Receipt - ${order.bill_no}</title>
+      <style>
+        @page {
+          size: ${paperWidth} auto;
+          margin: 0mm;
+        }
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+        body {
+          font-family: 'Courier New', Courier, monospace;
+          width: ${is58mm ? '52mm' : '72mm'};
+          margin: 0 auto;
+          padding: 4mm 2mm;
+          color: #000;
+          font-size: ${is58mm ? '10px' : '12px'};
+          line-height: 1.3;
+          background: #fff;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .center {
+          text-align: center;
+        }
+        .bold {
+          font-weight: bold;
+        }
+        .brand-title {
+          font-size: ${is58mm ? '16px' : '20px'};
+          font-weight: 900;
+          letter-spacing: 1px;
+          margin-bottom: 2px;
+        }
+        .divider {
+          border-top: 1px dashed #000;
+          margin: 6px 0;
+        }
+        .double-divider {
+          border-top: 2px solid #000;
+          margin: 6px 0;
+        }
+        .flex-between {
+          display: flex;
+          justify-content: space-between;
+          align-items: baseline;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 4px 0;
+        }
+        th, td {
+          padding: 3px 0;
+          font-size: ${is58mm ? '10px' : '11px'};
+        }
+        th {
+          border-bottom: 1px dashed #000;
+          font-weight: bold;
+        }
+        .item-row td {
+          vertical-align: top;
+        }
+        .total-box {
+          font-size: ${is58mm ? '13px' : '15px'};
+          font-weight: 900;
+          margin: 6px 0;
+        }
+        .footer-note {
+          font-size: ${is58mm ? '9px' : '10px'};
+          margin-top: 8px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="center">
+        <div class="brand-title">${(settings.name || 'THIRST.').toUpperCase()}</div>
+        <div>${settings.tagline || 'Luxury Dessert Boutique'}</div>
+        <div style="font-size: ${is58mm ? '9px' : '10px'}; margin-top: 2px;">
+          ${settings.address_line1 || ''}${settings.address_line2 ? `, ${settings.address_line2}` : ''}<br />
+          ${settings.city || 'Thiruvallur'}${settings.pincode ? ` - ${settings.pincode}` : ''}
+        </div>
+        <div style="font-size: ${is58mm ? '9px' : '10px'}; margin-top: 2px;">
+          Tel: ${settings.phone || '+91 87548 81546'}
+        </div>
+        ${settings.gstin ? `<div style="font-size: ${is58mm ? '9px' : '10px'};">GSTIN: ${settings.gstin}</div>` : ''}
+        ${settings.fssai ? `<div style="font-size: ${is58mm ? '9px' : '10px'};">FSSAI: ${settings.fssai}</div>` : ''}
+      </div>
+
+      <div class="double-divider"></div>
+      <div class="center bold" style="letter-spacing: 1px;">TAX INVOICE / CASH BILL</div>
+      <div class="divider"></div>
+
+      <div class="flex-between">
+        <span>Bill No:</span>
+        <span class="bold">${order.bill_no}</span>
+      </div>
+      <div class="flex-between">
+        <span>Date & Time:</span>
+        <span>${dateStr}</span>
+      </div>
+      <div class="flex-between">
+        <span>Customer:</span>
+        <span class="bold">${order.customer_name || 'Walk-in'}</span>
+      </div>
+      ${order.customer_phone ? `
+      <div class="flex-between">
+        <span>Phone:</span>
+        <span>${order.customer_phone}</span>
+      </div>` : ''}
+      ${order.billed_by ? `
+      <div class="flex-between">
+        <span>Cashier:</span>
+        <span>${order.billed_by}</span>
+      </div>` : ''}
+
+      <div class="divider"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align: left;">Item</th>
+            <th style="text-align: center; width: 30px;">Qty</th>
+            <th style="text-align: right; width: 45px;">Price</th>
+            <th style="text-align: right; width: 50px;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${regularItems.map(item => `
+            <tr class="item-row">
+              <td style="text-align: left;">${item.name}</td>
+              <td style="text-align: center;">${item.qty}</td>
+              <td style="text-align: right;">${item.price.toFixed(0)}</td>
+              <td style="text-align: right; font-weight: bold;">${item.total.toFixed(0)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="divider"></div>
+
+      <div class="flex-between">
+        <span>Subtotal:</span>
+        <span>Rs. ${order.subtotal.toFixed(2)}</span>
+      </div>
+      ${order.discount > 0 ? `
+      <div class="flex-between">
+        <span>Discount:</span>
+        <span>-Rs. ${order.discount.toFixed(2)}</span>
+      </div>` : ''}
+
+      <div class="divider"></div>
+
+      <div class="flex-between total-box">
+        <span>NET TOTAL:</span>
+        <span>Rs. ${order.total.toFixed(2)}</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="flex-between">
+        <span>Payment Mode:</span>
+        <span class="bold">${order.payment_method.toUpperCase()}</span>
+      </div>
+      ${points > 0 ? `
+      <div class="flex-between" style="margin-top: 3px;">
+        <span>Points Earned:</span>
+        <span class="bold">${points} pts</span>
+      </div>` : ''}
+
+      <div class="double-divider"></div>
+
+      <div class="center footer-note">
+        <div class="bold">THANK YOU FOR INDULGING!</div>
+        <div>Please visit again for sweet celebrations.</div>
+        <div style="margin-top: 4px; font-size: 8px;">* Computer Generated Invoice *</div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Create hidden iframe for dedicated printing
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    alert('Unable to initiate receipt printing. Please try again.');
+    return;
+  }
+
+  doc.open();
+  doc.write(receiptHtml);
+  doc.close();
+
+  iframe.onload = () => {
+    try {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    } catch (e) {
+      console.error('Print iframe error:', e);
+    } finally {
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      }, 2000);
+    }
+  };
+}
+
+/**
+ * Generate Invoice Image for Social Sharing
+ */
+export const generateInvoiceImage = async (order: OrderData, customSettings?: CompanySettings): Promise<Blob | null> => {
+  const settings = customSettings || getCachedCompanySettings();
+
   return new Promise((resolve) => {
-    // Create container
     const container = document.createElement('div');
     container.style.position = 'absolute';
     container.style.left = '-9999px';
     container.style.top = '0';
-    container.style.width = '400px';
+    container.style.width = '420px';
     container.style.background = '#ffffff';
     container.style.fontFamily = 'sans-serif';
     container.style.color = '#2d1e2f';
     container.style.padding = '30px';
     
-    // Build HTML
     const dateStr = new Date(order.created_at).toLocaleString('en-IN', {
       day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
     });
     
-    const regularItems = order.items.filter(item => (item as any).product_id !== 'meta_staff' && !item.name.startsWith('Billed by:'));
+    const regularItems = order.items.filter(item => item.product_id !== 'meta_staff' && !item.name.startsWith('Billed by:'));
     
     container.innerHTML = `
       <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #d94f8a; margin: 0; font-size: 28px; font-weight: 800;">Thirst.</h1>
-        <div style="font-size: 12px; color: #787878; margin-top: 5px;">Flagship Branch: 12 Sweet Lane, Bandra West,</div>
-        <div style="font-size: 12px; color: #787878;">Mumbai, Maharashtra - 400050</div>
+        <h1 style="color: #d94f8a; margin: 0; font-size: 28px; font-weight: 800;">${settings.name || 'Thirst.'}</h1>
+        <div style="font-size: 12px; color: #787878; margin-top: 5px;">${getFormattedAddress(settings)}</div>
+        <div style="font-size: 12px; color: #787878;">Tel: ${settings.phone || '+91 87548 81546'}</div>
       </div>
       
       <div style="border-top: 1px dashed #d94f8a; border-bottom: 1px dashed #d94f8a; padding: 10px 0; margin-bottom: 20px;">
@@ -112,16 +404,24 @@ export const generateInvoiceImage = async (order: OrderData): Promise<Blob | nul
 };
 
 const loadLogoAsBase64 = async (): Promise<string> => {
-  const response = await fetch('/logo-v2.png');
-  const blob = await response.blob();
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.readAsDataURL(blob);
-  });
+  try {
+    const response = await fetch('/logo-v2.png');
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return '';
+  }
 };
 
-export const generateInvoicePDF = async (order: OrderData, autoDownload = true) => {
+/**
+ * Generate A4 PDF Invoice with dynamic company details
+ */
+export const generateInvoicePDF = async (order: OrderData, autoDownload = true, customSettings?: CompanySettings) => {
+  const settings = customSettings || getCachedCompanySettings();
   const doc = new jsPDF('p', 'pt', 'a4'); 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -136,7 +436,6 @@ export const generateInvoicePDF = async (order: OrderData, autoDownload = true) 
     lightGray: [240, 240, 240] as [number, number, number],
   };
 
-  // --- HEADER SECTION ---
   // Top thick brand bar
   doc.setFillColor(...colors.berry);
   doc.rect(0, 0, pageWidth, 12, 'F');
@@ -147,32 +446,42 @@ export const generateInvoicePDF = async (order: OrderData, autoDownload = true) 
 
   try {
     const logoBase64 = await loadLogoAsBase64();
-    doc.addImage(logoBase64, 'PNG', margin, 40, 50, 50);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(26);
-    doc.setTextColor(...colors.dark);
-    doc.text('Thirst.', margin + 60, 75);
-  } catch (e) {
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', margin, 40, 50, 50);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(26);
+      doc.setTextColor(...colors.dark);
+      doc.text(settings.name || 'Thirst.', margin + 60, 75);
+    } else {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(28);
+      doc.setTextColor(...colors.dark);
+      doc.text(settings.name || 'Thirst.', margin, 75);
+    }
+  } catch {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(28);
     doc.setTextColor(...colors.dark);
-    doc.text('Thirst.', margin, 75);
+    doc.text(settings.name || 'Thirst.', margin, 75);
   }
 
   // Company Address (Left)
+  const addrOffset = margin + 60;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...colors.gray);
-  doc.text('Flagship Branch: 12 Sweet Lane, Bandra West,', margin + 60, 95);
-  doc.text('Mumbai, Maharashtra - 400050', margin + 60, 110);
-  doc.text('Phone: +91 98765 43210  |  Email: contact@thirstcafe.in', margin + 60, 125);
+  doc.text(`Flagship: ${settings.address_line1 || 'NO.01, Siva Vishnu kovil street'}`, addrOffset, 95);
+  doc.text(`${settings.address_line2 ? `${settings.address_line2}, ` : ''}${settings.city || 'Thiruvallur'} - ${settings.pincode || '602001'}`, addrOffset, 110);
+  doc.text(`Phone: ${settings.phone || '+91 87548 81546'}  |  Email: ${settings.email || 'thirst.freshchennai@gmail.com'}`, addrOffset, 125);
+  if (settings.gstin) {
+    doc.text(`GSTIN: ${settings.gstin}  |  FSSAI: ${settings.fssai || '22425478001152'}`, addrOffset, 138);
+  }
 
   // Invoice Title & Details (Right)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(24);
   doc.setTextColor(...colors.berry);
-  doc.text('INVOICE', pageWidth - margin, 65, { align: 'right' });
+  doc.text('TAX INVOICE', pageWidth - margin, 65, { align: 'right' });
 
   doc.setFontSize(10);
   doc.setTextColor(...colors.dark);
@@ -203,7 +512,7 @@ export const generateInvoicePDF = async (order: OrderData, autoDownload = true) 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.setTextColor(...colors.gray);
-  doc.text(`Phone: ${order.customer_phone || 'N/A'}`, margin, 245);
+  doc.text(`Phone: ${order.customer_phone ? formatIndianPhoneDisplay(order.customer_phone) : 'N/A'}`, margin, 245);
 
   // --- ITEMS TABLE ---
   let y = 290;
@@ -225,8 +534,8 @@ export const generateInvoicePDF = async (order: OrderData, autoDownload = true) 
   // Table Body
   doc.setFont('helvetica', 'normal');
   
-  const regularItems = order.items.filter(item => (item as any).product_id !== 'meta_staff' && !item.name.startsWith('Billed by:'));
-  const staffMeta = order.items.find(item => (item as any).product_id === 'meta_staff' || item.name.startsWith('Billed by:'));
+  const regularItems = order.items.filter(item => item.product_id !== 'meta_staff' && !item.name.startsWith('Billed by:'));
+  const staffMeta = order.items.find(item => item.product_id === 'meta_staff' || item.name.startsWith('Billed by:'));
 
   regularItems.forEach((item, index) => {
     if (y > pageHeight - 200) {
@@ -234,7 +543,6 @@ export const generateInvoicePDF = async (order: OrderData, autoDownload = true) 
       y = margin;
     }
 
-    // Alternating row colors
     if (index % 2 === 0) {
       doc.setFillColor(250, 250, 250);
       doc.rect(margin, y, pageWidth - (margin * 2), 30, 'F');
@@ -274,10 +582,12 @@ export const generateInvoicePDF = async (order: OrderData, autoDownload = true) 
   doc.text('Subtotal', totalsX, y);
   doc.text(`Rs. ${order.subtotal.toFixed(2)}`, pageWidth - margin, y, { align: 'right' });
 
-  y += 20;
-  doc.text('Discount', totalsX, y);
-  doc.setTextColor(220, 38, 38);
-  doc.text(`-Rs. ${order.discount.toFixed(2)}`, pageWidth - margin, y, { align: 'right' });
+  if (order.discount > 0) {
+    y += 20;
+    doc.text('Discount', totalsX, y);
+    doc.setTextColor(220, 38, 38);
+    doc.text(`-Rs. ${order.discount.toFixed(2)}`, pageWidth - margin, y, { align: 'right' });
+  }
 
   y += 15;
   doc.setDrawColor(...colors.lightGray);
@@ -323,4 +633,3 @@ export const generateInvoicePDF = async (order: OrderData, autoDownload = true) 
   
   return doc;
 };
-

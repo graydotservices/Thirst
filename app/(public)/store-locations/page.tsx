@@ -1,18 +1,27 @@
-import type { Metadata } from 'next';
+'use client';
+
 import { MapPin, Phone, Clock, Navigation } from 'lucide-react';
-
-export const metadata: Metadata = {
-  title: 'Store Locations — Thirst.',
-  description: 'Find a Thirst. cafe near you. 50+ locations across India.',
-};
-
-const locations = [
-  { id: 1, name: 'Thirst. Thiruvallur — Flagship', address: 'NO.01, Siva Vishnu kovil st, kakkalur', city: 'Thiruvallur', phone: '+91 87548 81546', hours: '2:00 PM – 12:00 AM', mapUrl: 'https://maps.google.com', isFlg: true },
-];
-
-const cities = [...new Set(locations.map(l => l.city))];
+import Link from 'next/link';
+import { useCompanySettings } from '@/lib/companySettings';
 
 export default function StoreLocationsPage() {
+  const { settings, formattedAddress, phoneDisplay } = useCompanySettings();
+
+  const locations = [
+    { 
+      id: 1, 
+      name: `${settings.name || 'Thirst.'} ${settings.city || 'Thiruvallur'} — Flagship`, 
+      address: formattedAddress || 'NO.01, Siva Vishnu kovil street, kakkalur, Thiruvallur - 602001', 
+      city: settings.city || 'Thiruvallur', 
+      phone: phoneDisplay || settings.phone || '+91 87548 81546', 
+      hours: settings.opening_hours || '2:00 PM – 12:00 AM', 
+      mapUrl: settings.google_maps_url || 'https://maps.google.com', 
+      isFlg: true 
+    },
+  ];
+
+  const cities = [...new Set(locations.map(l => l.city))];
+
   return (
     <>
       {/* Hero */}
@@ -25,7 +34,7 @@ export default function StoreLocationsPage() {
             Find Us Near You
           </h1>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.2rem', maxWidth: 500, margin: '0 auto', fontWeight: 700 }}>
-            Visit our flagship store in Thiruvallur. More locations coming soon!
+            Visit our flagship store in {settings.city || 'Thiruvallur'}. More boutique locations coming soon!
           </p>
         </div>
       </section>
@@ -43,7 +52,7 @@ export default function StoreLocationsPage() {
           </div>
 
           {/* Locations Grid */}
-          <div className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '32px' }}>
+          <div className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '32px' }}>
             {locations.map(loc => (
               <div key={loc.id} style={{ padding: '32px', position: 'relative', background: 'var(--color-white)', border: '4px solid var(--color-plum)', borderRadius: '16px', boxShadow: 'var(--shadow-md)', display: 'flex', flexDirection: 'column' }}>
                 {loc.isFlg && (
@@ -55,11 +64,11 @@ export default function StoreLocationsPage() {
                 <ul style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px', flex: 1 }}>
                   <li style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                     <MapPin size={20} style={{ color: 'var(--color-berry)', flexShrink: 0, marginTop: 2 }} />
-                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', fontWeight: 600 }}>{loc.address}, {loc.city}</span>
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', fontWeight: 600 }}>{loc.address}</span>
                   </li>
                   <li style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <Phone size={20} style={{ color: 'var(--color-berry)', flexShrink: 0 }} />
-                    <a href={`tel:${loc.phone}`} style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', fontWeight: 600, textDecoration: 'none' }}>{loc.phone}</a>
+                    <a href={`tel:${loc.phone.replace(/\s+/g, '')}`} style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', fontWeight: 600, textDecoration: 'none' }}>{loc.phone}</a>
                   </li>
                   <li style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                     <Clock size={20} style={{ color: 'var(--color-berry)', flexShrink: 0 }} />
@@ -90,9 +99,9 @@ export default function StoreLocationsPage() {
           <p style={{ color: 'var(--color-plum)', fontSize: '1.2rem', marginBottom: '40px', fontWeight: 700 }}>
             Become a Thirst. franchise partner and bring the luxury to your city!
           </p>
-          <a href="/franchise" className="btn btn-primary" style={{ padding: '16px 40px', fontSize: '1.2rem' }}>
+          <Link href="/franchise" className="btn btn-primary" style={{ padding: '16px 40px', fontSize: '1.2rem', display: 'inline-flex' }}>
             Apply for Franchise
-          </a>
+          </Link>
         </div>
       </section>
     </>

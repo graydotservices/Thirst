@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -22,6 +22,7 @@ import {
   PlayCircle,
   MessageCircle,
 } from 'lucide-react';
+import { useCompanySettings } from '@/lib/companySettings';
 
 /* ============================================================
    DATA
@@ -121,6 +122,7 @@ function Counter({ value, suffix, label }: { value: number; suffix: string; labe
 }
 
 export default function HomePage() {
+  const { settings, formattedAddress } = useCompanySettings();
   const { scrollYProgress } = useScroll();
   const heroY = useTransform(scrollYProgress, [0, 1], ['0%', '50%']);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
@@ -517,8 +519,8 @@ export default function HomePage() {
                 <div style={{ display: 'flex', gap: '16px', paddingBottom: '16px' }}>
                   <MapPin color="var(--color-berry)" style={{ flexShrink: 0 }} />
                   <div>
-                    <div style={{ fontWeight: 800, color: 'var(--color-plum)', marginBottom: '8px', textTransform: 'uppercase' }}>Thiruvallur Flagship</div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>NO.01, Siva Vishnu kovil street,<br/>kakkalur, Thiruvallur, TN - 602001</div>
+                    <div style={{ fontWeight: 800, color: 'var(--color-plum)', marginBottom: '8px', textTransform: 'uppercase' }}>{settings.city || 'Thiruvallur'} Flagship</div>
+                    <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>{formattedAddress || 'NO.01, Siva Vishnu kovil street, kakkalur, Thiruvallur, TN - 602001'}</div>
                   </div>
                 </div>
               </div>

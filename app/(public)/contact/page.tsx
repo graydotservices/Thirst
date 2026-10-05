@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { MapPin, Phone, Mail, Clock, MessageCircle, Camera, Share2, Send } from 'lucide-react';
+import { useCompanySettings, createWhatsAppUrl } from '@/lib/companySettings';
 
 export default function ContactPage() {
+  const { settings, formattedAddress, phoneDisplay } = useCompanySettings();
   const [form, setForm] = useState({ name: '', phone: '', email: '', subject: '', message: '' });
   const [sent, setSent] = useState(false);
 
@@ -12,6 +14,33 @@ export default function ContactPage() {
     await new Promise(r => setTimeout(r, 800));
     setSent(true);
   };
+
+  const contactCards = [
+    { 
+      icon: MapPin, 
+      label: 'Our Address', 
+      value: formattedAddress || 'NO.01, Siva Vishnu kovil street, kakkalur, Thiruvallur, TN - 602001', 
+      href: settings.google_maps_url || null 
+    },
+    { 
+      icon: Phone, 
+      label: 'Phone', 
+      value: phoneDisplay || settings.phone || '+91 87548 81546', 
+      href: `tel:${settings.phone?.replace(/\s+/g, '')}` 
+    },
+    { 
+      icon: Mail, 
+      label: 'Email', 
+      value: settings.email || 'thirst.freshchennai@gmail.com', 
+      href: `mailto:${settings.email}` 
+    },
+    { 
+      icon: Clock, 
+      label: 'Business Hours', 
+      value: settings.opening_hours || 'Mon–Sun: 2:00 PM – 12:00 AM', 
+      href: null 
+    },
+  ];
 
   return (
     <>
@@ -35,12 +64,7 @@ export default function ContactPage() {
             {/* Info Column */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {/* Contact Cards */}
-              {[
-                { icon: MapPin, label: 'Our Address', value: 'NO.01, Siva Vishnu kovil street, kakkalur, Thiruvallur, TN - 602001', href: null },
-                { icon: Phone, label: 'Phone', value: '+91 87548 81546', href: 'tel:+918754881546' },
-                { icon: Mail, label: 'Email', value: 'thirst.freshchennai@gmail.com', href: 'mailto:thirst.freshchennai@gmail.com' },
-                { icon: Clock, label: 'Business Hours', value: 'Mon–Sun: 2:00 PM – 12:00 AM', href: null },
-              ].map(({ icon: Icon, label, value, href }) => (
+              {contactCards.map(({ icon: Icon, label, value, href }) => (
                 <div key={label} style={{ background: 'var(--color-white)', padding: '24px', borderRadius: '16px', display: 'flex', gap: '20px', alignItems: 'flex-start', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-md)' }}>
                   <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-plum)', flexShrink: 0, border: '4px solid var(--color-plum)' }}>
                     <Icon size={28} />
@@ -48,7 +72,7 @@ export default function ContactPage() {
                   <div style={{ paddingTop: '8px' }}>
                     <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 400, color: 'var(--color-berry)', fontSize: '1.2rem', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</div>
                     {href ? (
-                      <a href={href} style={{ color: 'var(--color-plum)', fontSize: '1rem', fontWeight: 700, textDecoration: 'none', wordBreak: 'break-word', display: 'block' }}>{value}</a>
+                      <a href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" style={{ color: 'var(--color-plum)', fontSize: '1rem', fontWeight: 700, textDecoration: 'none', wordBreak: 'break-word', display: 'block' }}>{value}</a>
                     ) : (
                       <p style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', fontWeight: 600, wordBreak: 'break-word' }}>{value}</p>
                     )}
@@ -61,7 +85,7 @@ export default function ContactPage() {
                 <h4 style={{ fontFamily: 'var(--font-heading)', fontWeight: 400, color: 'var(--color-plum)', marginBottom: '24px', fontSize: '1.5rem', textTransform: 'uppercase' }}>Follow Us</h4>
                 <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                   {[
-                    { icon: MessageCircle, label: 'WhatsApp', href: 'https://wa.me/918754881546' },
+                    { icon: MessageCircle, label: 'WhatsApp', href: createWhatsAppUrl(settings.phone, 'Hello Thirst! I have an inquiry.') },
                     { icon: Camera, label: 'Instagram', href: 'https://instagram.com' },
                     { icon: Share2, label: 'Facebook', href: 'https://facebook.com' },
                   ].map(({ icon: Icon, label, href }) => (
@@ -82,14 +106,14 @@ export default function ContactPage() {
 
               {/* WhatsApp CTA */}
               <a
-                href="https://wa.me/918754881546?text=Hello%20Thirst.%20I%20would%20like%20to%20know%20more!"
+                href={createWhatsAppUrl(settings.phone, 'Hello Thirst! I would like to know more about your menu and offers.')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-primary"
-                style={{ justifyContent: 'center', padding: '16px', fontSize: '1.2rem', width: '100%' }}
+                style={{ width: '100%', justifyContent: 'center', background: '#25D366', borderColor: 'var(--color-plum)', padding: '16px', fontSize: '1.1rem' }}
               >
-                <MessageCircle size={24} style={{ marginRight: '8px' }} />
-                Chat on WhatsApp
+                <MessageCircle size={22} style={{ marginRight: '8px' }} />
+                Chat on WhatsApp Now
               </a>
             </div>
 

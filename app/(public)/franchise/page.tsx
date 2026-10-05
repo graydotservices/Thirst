@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import Image from 'next/image';
@@ -29,17 +29,24 @@ export default function FranchisePage() {
     experience: '',
     message: '',
   });
+  const [isCustomBudget, setIsCustomBudget] = useState(false);
+  const [customBudgetAmount, setCustomBudgetAmount] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    const finalBudget = isCustomBudget 
+      ? (customBudgetAmount ? `Custom: ₹${customBudgetAmount}` : 'Custom Budget') 
+      : form.budget;
+
     try {
       const res = await fetch('/api/franchise', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, budget: finalBudget }),
       });
       if (res.ok) setSubmitted(true);
     } catch {
@@ -125,14 +132,64 @@ export default function FranchisePage() {
                   <input id="f-city" required placeholder="City for franchise" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }} />
                 </div>
                 <div style={{ flex: '1 1 calc(50% - 12px)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label htmlFor="f-budget" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>Investment Budget *</label>
-                  <select id="f-budget" required value={form.budget} onChange={e => setForm(p => ({ ...p, budget: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }}>
-                    <option value="">Select budget range</option>
-                    <option value="8-12 Lakhs">₹8–12 Lakhs (Kiosk)</option>
-                    <option value="18-28 Lakhs">₹18–28 Lakhs (Café)</option>
-                    <option value="35-50 Lakhs">₹35–50 Lakhs (Flagship)</option>
-                    <option value="50+ Lakhs">₹50+ Lakhs</option>
-                  </select>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label htmlFor="f-budget" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>
+                      Investment Budget *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomBudget(!isCustomBudget);
+                        if (!isCustomBudget) setForm(p => ({ ...p, budget: 'Custom Amount' }));
+                      }}
+                      style={{ background: 'none', border: 'none', color: 'var(--color-berry)', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      {isCustomBudget ? 'Choose Preset Range' : 'Enter Custom Amount'}
+                    </button>
+                  </div>
+
+                  {!isCustomBudget ? (
+                    <select 
+                      id="f-budget" 
+                      required 
+                      value={form.budget} 
+                      onChange={e => {
+                        if (e.target.value === 'custom') {
+                          setIsCustomBudget(true);
+                          setForm(p => ({ ...p, budget: 'Custom Amount' }));
+                        } else {
+                          setForm(p => ({ ...p, budget: e.target.value }));
+                        }
+                      }} 
+                      style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }}
+                    >
+                      <option value="">Select budget range</option>
+                      <option value="8-12 Lakhs">₹8–12 Lakhs (Kiosk Model)</option>
+                      <option value="18-28 Lakhs">₹18–28 Lakhs (Café Model)</option>
+                      <option value="35-50 Lakhs">₹35–50 Lakhs (Flagship Model)</option>
+                      <option value="50+ Lakhs">₹50+ Lakhs (Multi-Unit Master)</option>
+                      <option value="custom">Enter Custom Amount...</option>
+                    </select>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span style={{ padding: '16px 20px', background: 'var(--color-plum)', color: 'white', fontWeight: 800, fontSize: '1.1rem', borderRadius: '8px 0 0 8px', border: '4px solid var(--color-plum)', borderRight: 'none' }}>
+                          ₹
+                        </span>
+                        <input
+                          id="f-custom-budget"
+                          required
+                          placeholder="e.g. 15,00,000 or 25 Lakhs"
+                          value={customBudgetAmount}
+                          onChange={e => setCustomBudgetAmount(e.target.value)}
+                          style={{ flex: 1, padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '0 8px 8px 0', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)' }}
+                        />
+                      </div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                        Specify your planned capital allocation or custom budget capacity.
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div style={{ flex: '1 1 calc(50% - 12px)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <label htmlFor="f-experience" style={{ fontWeight: 800, color: 'var(--color-plum)', textTransform: 'uppercase', fontSize: '0.9rem' }}>Business Experience</label>

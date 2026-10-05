@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Search, Receipt, Calendar, CreditCard, ChevronRight, X, Download, Trash2, MessageCircle } from 'lucide-react';
-import { generateInvoicePDF, generateInvoiceImage } from '@/lib/pdfUtils';
+import { Search, Receipt, Calendar, CreditCard, ChevronRight, X, Download, Trash2, MessageCircle, Printer } from 'lucide-react';
+import { generateInvoicePDF, generateInvoiceImage, printThermalReceipt, sendBillViaWhatsApp, OrderData } from '@/lib/pdfUtils';
 
 type Order = {
   id: string;
@@ -231,25 +231,45 @@ export default function OrdersPage() {
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                       <button 
                         onClick={() => setSelectedOrder(order)}
                         className="btn btn-secondary btn-sm" 
-                        style={{ padding: '6px 12px' }}
+                        style={{ padding: '6px 10px' }}
                       >
-                        View <ChevronRight size={14} />
+                        View <ChevronRight size={13} />
+                      </button>
+                      <button
+                        onClick={() => printThermalReceipt({
+                          bill_no: order.bill_no,
+                          created_at: order.created_at,
+                          customer_name: order.customer_name,
+                          customer_phone: order.customer_phone,
+                          items: (order.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
+                          subtotal: order.subtotal || order.total,
+                          discount: order.discount || 0,
+                          gst: 0,
+                          total: order.total,
+                          payment_method: order.payment_method,
+                          billed_by: order.billed_by
+                        }, '80mm')}
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: '6px 8px' }}
+                        title="Quick Print Thermal Receipt (80mm)"
+                      >
+                        <Printer size={14} />
                       </button>
                       {order.status !== 'cancelled' ? (
                         <button 
                           onClick={() => cancelOrder(order)}
                           className="btn btn-sm" 
-                          style={{ padding: '6px 10px', background: 'rgba(220, 38, 38, 0.1)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.2)', cursor: 'pointer' }}
+                          style={{ padding: '6px 8px', background: 'rgba(220, 38, 38, 0.1)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.2)', cursor: 'pointer' }}
                           title="Void / Cancel Order"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={13} />
                         </button>
                       ) : (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', padding: '6px 8px' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', padding: '4px 6px' }}>
                           Voided
                         </span>
                       )}
@@ -324,32 +344,67 @@ export default function OrdersPage() {
               </div>
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
-                <button 
-                  onClick={() => generateInvoicePDF({
-                    bill_no: selectedOrder.bill_no,
-                    created_at: selectedOrder.created_at,
-                    customer_name: selectedOrder.customer_name,
-                    customer_phone: selectedOrder.customer_phone,
-                    items: (selectedOrder.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
-                    subtotal: selectedOrder.subtotal || selectedOrder.total,
-                    discount: selectedOrder.discount || 0,
-                    gst: 0,
-                    total: selectedOrder.total,
-                    payment_method: selectedOrder.payment_method
-                  })}
-                  className="btn btn-secondary" 
-                  style={{ flex: 1, justifyContent: 'center' }}
-                >
-                  <Download size={16} /> PDF
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'var(--space-3)' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    onClick={() => printThermalReceipt({
+                      bill_no: selectedOrder.bill_no,
+                      created_at: selectedOrder.created_at,
+                      customer_name: selectedOrder.customer_name,
+                      customer_phone: selectedOrder.customer_phone,
+                      items: (selectedOrder.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
+                      subtotal: selectedOrder.subtotal || selectedOrder.total,
+                      discount: selectedOrder.discount || 0,
+                      gst: 0,
+                      total: selectedOrder.total,
+                      payment_method: selectedOrder.payment_method,
+                      billed_by: selectedOrder.billed_by
+                    }, '80mm')}
+                    className="btn btn-primary" 
+                    style={{ flex: 1, justifyContent: 'center' }}
+                  >
+                    <Printer size={16} /> Thermal Bill (80mm)
+                  </button>
+                  <button 
+                    onClick={() => generateInvoicePDF({
+                      bill_no: selectedOrder.bill_no,
+                      created_at: selectedOrder.created_at,
+                      customer_name: selectedOrder.customer_name,
+                      customer_phone: selectedOrder.customer_phone,
+                      items: (selectedOrder.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
+                      subtotal: selectedOrder.subtotal || selectedOrder.total,
+                      discount: selectedOrder.discount || 0,
+                      gst: 0,
+                      total: selectedOrder.total,
+                      payment_method: selectedOrder.payment_method,
+                      billed_by: selectedOrder.billed_by
+                    })}
+                    className="btn btn-secondary" 
+                    style={{ flex: 1, justifyContent: 'center' }}
+                  >
+                    <Download size={16} /> Download A4
+                  </button>
+                </div>
+
                 {selectedOrder.customer_phone && selectedOrder.customer_phone !== '0000000000' && (
                   <button 
-                    onClick={() => handleWhatsApp(selectedOrder)}
+                    onClick={() => sendBillViaWhatsApp({
+                      bill_no: selectedOrder.bill_no,
+                      created_at: selectedOrder.created_at,
+                      customer_name: selectedOrder.customer_name,
+                      customer_phone: selectedOrder.customer_phone,
+                      items: (selectedOrder.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
+                      subtotal: selectedOrder.subtotal || selectedOrder.total,
+                      discount: selectedOrder.discount || 0,
+                      gst: 0,
+                      total: selectedOrder.total,
+                      payment_method: selectedOrder.payment_method,
+                      billed_by: selectedOrder.billed_by
+                    })}
                     className="btn" 
-                    style={{ flex: 1, background: '#25D366', color: 'white', justifyContent: 'center' }}
+                    style={{ background: '#25D366', color: 'white', justifyContent: 'center', borderRadius: 'var(--radius-md)', padding: '10px' }}
                   >
-                    <MessageCircle size={16} /> WhatsApp
+                    <MessageCircle size={16} /> Send via WhatsApp (+91 {selectedOrder.customer_phone})
                   </button>
                 )}
               </div>
