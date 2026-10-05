@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import { Search, Plus, Minus, Trash2, Printer, MessageCircle, Download, Check } from 'lucide-react';
@@ -240,6 +240,8 @@ export default function BillingPage() {
   };
 
   const handleWhatsApp = async () => {
+    const rawDigits = customerPhone.replace(/[^\d]/g, '');
+    const formattedPhone = rawDigits.length === 10 ? '91' + rawDigits : rawDigits;
     const itemListText = cart.map(item => `- ${item.qty} x ${item.name}`).join('\n');
     const msg = `Hi ${customerName || 'Valued Customer'},\n\nThank you for visiting *Thirst.*!\n\n*Invoice No:* ${billNo}\n*Date:* ${new Date().toLocaleDateString('en-IN')}\n\n*Order Details:*\n${itemListText}\n\n*Total Amount:* ₹${total}\n\nHope to see you again! ❤\n\n— Thirst. Team`;
     
@@ -341,7 +343,7 @@ export default function BillingPage() {
                   transition: 'all var(--transition-fast)',
                   boxShadow: 'var(--shadow-sm)',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-berry)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(217,79,138,0.15)'; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-berry)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(217,79₹38,0.15)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-lavender-dark)'; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-sm)'; }}
               >
                 <div style={{ position: 'relative', paddingBottom: '70%', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 'var(--space-2)', background: 'var(--color-lavender)' }}>
@@ -457,7 +459,7 @@ export default function BillingPage() {
                   style={{
                     flex: 1, padding: '8px 4px', borderRadius: 'var(--radius-md)', border: '1.5px solid',
                     borderColor: paymentMethod === m ? 'var(--color-berry)' : 'var(--color-lavender-dark)',
-                    background: paymentMethod === m ? 'rgba(217,79,138,0.1)' : 'transparent',
+                    background: paymentMethod === m ? 'rgba(217,79₹38,0.1)' : 'transparent',
                     color: paymentMethod === m ? 'var(--color-berry)' : 'var(--color-text-muted)',
                     fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.75rem',
                     cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.03em',
@@ -472,7 +474,7 @@ export default function BillingPage() {
             {/* Actions */}
             {billGenerated ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 'var(--radius-md)', padding: 'var(--space-3)', textAlign: 'center', color: '#16a34a', fontFamily: 'var(--font-heading)', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.9rem' }}>
+                <div style={{ background: 'rgba(34₹97,94,0.1)', border: '1px solid rgba(34₹97,94,0.3)', borderRadius: 'var(--radius-md)', padding: 'var(--space-3)', textAlign: 'center', color: '#16a34a', fontFamily: 'var(--font-heading)', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.9rem' }}>
                   <Check size={16} /> Bill Generated: {billNo}
                 </div>
                 <button onClick={generatePDF} className="btn btn-secondary" style={{ justifyContent: 'center' }}><Download size={16} /> Download PDF</button>
@@ -532,3 +534,4 @@ export default function BillingPage() {
     </div>
   );
 }
+

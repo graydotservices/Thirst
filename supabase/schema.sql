@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 -- THIRST. DATABASE SCHEMA
 -- Run this in your Supabase SQL editor
 -- ============================================================
@@ -201,3 +201,4 @@ CREATE POLICY "Admin full access customers" ON customers FOR ALL TO authenticate
 CREATE POLICY "Admin full access staff" ON staff FOR ALL TO authenticated USING (true);
 CREATE POLICY "Admin full access franchise" ON franchise_applications FOR ALL TO authenticated USING (true);
 CREATE POLICY "Admin full access products" ON products FOR ALL TO authenticated USING (true);
+

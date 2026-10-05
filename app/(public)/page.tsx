@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -58,7 +58,7 @@ const reviews = [
 ];
 
 const stats = [
-  { value: 1, suffix: '', label: 'Flagship Store' },
+  { value: 1, suffix: '★', label: 'Flagship Store' },
   { value: 10, suffix: 'k+', label: 'Happy Customers' },
   { value: 50, suffix: '+', label: 'Menu Items' },
   { value: 4.9, suffix: '★', label: 'Average Rating' },
@@ -530,3 +530,4 @@ export default function HomePage() {
     </div>
   );
 }
+

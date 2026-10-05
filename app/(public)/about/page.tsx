@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+﻿import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, Award, Leaf, Coffee, Users, Star, ArrowRight } from 'lucide-react';
@@ -189,3 +189,4 @@ export default function AboutPage() {
     </>
   );
 }
+

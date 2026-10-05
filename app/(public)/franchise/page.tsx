@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import Image from 'next/image';
@@ -71,7 +71,7 @@ export default function FranchisePage() {
             Build Your Empire<br />
             <span style={{ color: 'var(--color-white)', position: 'relative' }}>
               With Thirst.
-              <svg style={{ position: 'absolute', bottom: '-5px', left: 0, width: '100%', height: '12px' }} viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0,10 Q100,-5 200,10" fill="none" stroke="var(--color-berry)" strokeWidth="8" strokeLinecap="round" /></svg>
+              <svg style={{ position: 'absolute', bottom: '-5px', left: 0, width: '100%', height: '12px' }} viewBox="0 0 200 12" preserveAspectRatio="none"><path d="M0₹0 Q100,-5 200₹0" fill="none" stroke="var(--color-berry)" strokeWidth="8" strokeLinecap="round" /></svg>
             </span>
           </h1>
           <p style={{ color: 'var(--color-plum)', fontSize: '1.2rem', maxWidth: 560, margin: '0 auto 40px', fontWeight: 700 }}>
@@ -163,3 +163,4 @@ export default function FranchisePage() {
     </>
   );
 }
+

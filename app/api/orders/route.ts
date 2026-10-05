@@ -5,19 +5,26 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Clean and normalize phone number
+    const normalizedPhone = body.customer_phone ? body.customer_phone.replace(/[^\d+]/g, '').trim() : '';
+
     // Upsert customer (update if phone exists)
-    const { data: customer } = await supabase
-      .from('customers')
-      .upsert(
-        {
-          phone: body.customer_phone,
-          name: body.customer_name,
-          last_visit: new Date().toISOString(),
-        },
-        { onConflict: 'phone', ignoreDuplicates: false }
-      )
-      .select()
-      .single();
+    let customer = null;
+    if (normalizedPhone) {
+      const { data } = await supabase
+        .from('customers')
+        .upsert(
+          {
+            phone: normalizedPhone,
+            name: body.customer_name || 'Walk-in Customer',
+            last_visit: new Date().toISOString(),
+          },
+          { onConflict: 'phone', ignoreDuplicates: false }
+        )
+        .select()
+        .single();
+      customer = data;
+    }
 
     // Create order
     const billNo = `TH-${Date.now().toString().slice(-8)}`;
@@ -25,6 +32,7 @@ export async function POST(request: NextRequest) {
       .from('orders')
       .insert([{
         ...body,
+        customer_phone: normalizedPhone || body.customer_phone,
         bill_no: billNo,
         customer_id: customer?.id || null,
         status: 'completed',
@@ -34,36 +42,38 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Update loyalty points (1 point per ₹100)
+    // Update loyalty points (1 point per ?100 spent)
     if (customer?.id) {
-      const pointsEarned = Math.floor(body.total / 100);
+      const pointsEarned = Math.floor((body.total || 0) / 100);
       await supabase
         .from('customers')
         .update({
           loyalty_points: (customer.loyalty_points || 0) + pointsEarned,
-          total_purchase: (customer.total_purchase || 0) + body.total,
+          total_purchase: (customer.total_purchase || 0) + (body.total || 0),
         })
         .eq('id', customer.id);
     }
 
-    // Decrement stock
+    // Decrement stock for purchased items
     if (body.items && Array.isArray(body.items)) {
-      for (const item of body.items) {
-        if (!item.product_id) continue;
-        
-        const { data: product } = await supabase
-          .from('products')
-          .select('stock')
-          .eq('id', item.product_id)
-          .single();
-          
-        if (product) {
-          await supabase
+      await Promise.all(
+        body.items.map(async (item: { product_id?: string; qty?: number }) => {
+          if (!item.product_id || item.product_id === 'meta_staff') return;
+
+          const { data: product } = await supabase
             .from('products')
-            .update({ stock: Math.max(0, product.stock - (item.qty || 1)) })
-            .eq('id', item.product_id);
-        }
-      }
+            .select('stock')
+            .eq('id', item.product_id)
+            .single();
+
+          if (product && typeof product.stock === 'number') {
+            await supabase
+              .from('products')
+              .update({ stock: Math.max(0, product.stock - (item.qty || 1)) })
+              .eq('id', item.product_id);
+          }
+        })
+      );
     }
 
     return Response.json({ success: true, order, billNo }, { status: 201 });

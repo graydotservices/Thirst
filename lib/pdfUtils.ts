@@ -1,4 +1,4 @@
-import jsPDF from 'jspdf';
+﻿import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 type OrderData = {
@@ -37,8 +37,8 @@ export const generateInvoiceImage = async (order: OrderData): Promise<Blob | nul
     container.innerHTML = `
       <div style="text-align: center; margin-bottom: 20px;">
         <h1 style="color: #d94f8a; margin: 0; font-size: 28px; font-weight: 800;">Thirst.</h1>
-        <div style="font-size: 12px; color: #787878; margin-top: 5px;">NO.01, Siva Vishnu kovil street,</div>
-        <div style="font-size: 12px; color: #787878;">kakkalur, Thiruvallur - 602001</div>
+        <div style="font-size: 12px; color: #787878; margin-top: 5px;">Flagship Branch: 12 Sweet Lane, Bandra West,</div>
+        <div style="font-size: 12px; color: #787878;">Mumbai, Maharashtra - 400050</div>
       </div>
       
       <div style="border-top: 1px dashed #d94f8a; border-bottom: 1px dashed #d94f8a; padding: 10px 0; margin-bottom: 20px;">
@@ -161,9 +161,9 @@ export const generateInvoicePDF = async (order: OrderData, autoDownload = true) 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...colors.gray);
-  doc.text('NO.01, Siva Vishnu kovil street,', margin + 60, 95);
-  doc.text('kakkalur, Thiruvallur - 602001', margin + 60, 110);
-  doc.text('Phone: +91 87548 81546  |  Email: thirst.freshchennai@gmail.com', margin + 60, 125);
+  doc.text('Flagship Branch: 12 Sweet Lane, Bandra West,', margin + 60, 95);
+  doc.text('Mumbai, Maharashtra - 400050', margin + 60, 110);
+  doc.text('Phone: +91 98765 43210  |  Email: contact@thirstcafe.in', margin + 60, 125);
 
   // Invoice Title & Details (Right)
   doc.setFont('helvetica', 'bold');
@@ -319,3 +319,4 @@ export const generateInvoicePDF = async (order: OrderData, autoDownload = true) 
   
   return doc;
 };
+

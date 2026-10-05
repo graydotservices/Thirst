@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Lilita_One, Nunito } from "next/font/google";
 import "./globals.css";
 
@@ -112,3 +112,4 @@ export default function RootLayout({
     </html>
   );
 }
+
