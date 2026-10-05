@@ -5,7 +5,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend,
 } from 'recharts';
-import { Download, TrendingUp, ShoppingCart, Users, DollarSign } from 'lucide-react';
+import { Download, TrendingUp, ShoppingCart, Users, IndianRupee, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 const ranges = ['Daily', 'Weekly', 'Monthly', 'Yearly'] as const;
@@ -17,6 +17,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     const fetchOrders = async () => {
+      setLoading(true);
       const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: true });
       if (data) setOrders(data);
       setLoading(false);
@@ -26,40 +27,74 @@ export default function ReportsPage() {
 
   const getChartData = () => {
     const dataMap = new Map<string, { revenue: number, orders: number }>();
-    
-    // Initialize default structure based on range
-    if (range === 'Weekly') {
-      ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => dataMap.set(d, { revenue: 0, orders: 0 }));
-    } else if (range === 'Monthly') {
-      ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach(m => dataMap.set(m, { revenue: 0, orders: 0 }));
-    }
+    const now = new Date();
 
-    orders.forEach(o => {
-      const date = new Date(o.created_at);
-      let key = '';
-      
-      if (range === 'Daily') {
-        const today = new Date();
-        if (date.getDate() === today.getDate() && date.getMonth() === today.getMonth()) {
-          key = `${date.getHours()}:00`;
-        }
-      } else if (range === 'Weekly') {
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        key = days[date.getDay()];
-      } else if (range === 'Monthly') {
-        if (date.getFullYear() === new Date().getFullYear()) {
-          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-          key = months[date.getMonth()];
-        }
-      } else if (range === 'Yearly') {
-        key = date.getFullYear().toString();
+    if (range === 'Daily') {
+      // 24 hours of today
+      for (let h = 8; h <= 23; h++) {
+        const hourLabel = `${h.toString().padStart(2, '0')}:00`;
+        dataMap.set(hourLabel, { revenue: 0, orders: 0 });
       }
-      
-      if (key) {
-        const curr = dataMap.get(key) || { revenue: 0, orders: 0 };
-        dataMap.set(key, { revenue: curr.revenue + o.total, orders: curr.orders + 1 });
+
+      orders.forEach(o => {
+        const d = new Date(o.created_at);
+        if (
+          d.getDate() === now.getDate() &&
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear()
+        ) {
+          const hourKey = `${d.getHours().toString().padStart(2, '0')}:00`;
+          const curr = dataMap.get(hourKey) || { revenue: 0, orders: 0 };
+          dataMap.set(hourKey, { revenue: curr.revenue + (o.total || 0), orders: curr.orders + 1 });
+        }
+      });
+    } else if (range === 'Weekly') {
+      // Rolling 7 days
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const past7Dates: { key: string, dateStr: string }[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        const dayName = days[d.getDay()];
+        const key = `${dayName} (${d.getDate()}/${d.getMonth() + 1})`;
+        past7Dates.push({ key, dateStr: d.toISOString().split('T')[0] });
+        dataMap.set(key, { revenue: 0, orders: 0 });
       }
-    });
+
+      orders.forEach(o => {
+        const orderDateStr = new Date(o.created_at).toISOString().split('T')[0];
+        const match = past7Dates.find(p => p.dateStr === orderDateStr);
+        if (match) {
+          const curr = dataMap.get(match.key) || { revenue: 0, orders: 0 };
+          dataMap.set(match.key, { revenue: curr.revenue + (o.total || 0), orders: curr.orders + 1 });
+        }
+      });
+    } else if (range === 'Monthly') {
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      months.forEach(m => dataMap.set(m, { revenue: 0, orders: 0 }));
+
+      orders.forEach(o => {
+        const d = new Date(o.created_at);
+        if (d.getFullYear() === now.getFullYear()) {
+          const mKey = months[d.getMonth()];
+          const curr = dataMap.get(mKey) || { revenue: 0, orders: 0 };
+          dataMap.set(mKey, { revenue: curr.revenue + (o.total || 0), orders: curr.orders + 1 });
+        }
+      });
+    } else if (range === 'Yearly') {
+      const currentYear = now.getFullYear();
+      [currentYear - 2, currentYear - 1, currentYear].forEach(yr => {
+        dataMap.set(yr.toString(), { revenue: 0, orders: 0 });
+      });
+
+      orders.forEach(o => {
+        const yr = new Date(o.created_at).getFullYear().toString();
+        if (dataMap.has(yr)) {
+          const curr = dataMap.get(yr) || { revenue: 0, orders: 0 };
+          dataMap.set(yr, { revenue: curr.revenue + (o.total || 0), orders: curr.orders + 1 });
+        }
+      });
+    }
 
     return Array.from(dataMap.entries()).map(([date, stats]) => ({ date, ...stats }));
   };
@@ -68,24 +103,52 @@ export default function ReportsPage() {
     const productMap = new Map<string, { orders: number, revenue: number }>();
     orders.forEach(o => {
       o.items?.forEach((item: any) => {
-        if (item.product_id === 'meta_staff' || item.name.startsWith('Billed by:')) return;
+        if (!item || item.product_id === 'meta_staff' || (item.name && item.name.startsWith('Billed by:'))) return;
         const curr = productMap.get(item.name) || { orders: 0, revenue: 0 };
-        productMap.set(item.name, { orders: curr.orders + item.qty, revenue: curr.revenue + item.total });
+        productMap.set(item.name, { orders: curr.orders + (item.qty || 1), revenue: curr.revenue + (item.total || 0) });
       });
     });
     
     return Array.from(productMap.entries())
-      .map(([name, stats]) => ({ name, ...stats, growth: 0 }))
+      .map(([name, stats]) => ({ name, ...stats }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
   };
 
+  const exportCSV = () => {
+    if (orders.length === 0) {
+      alert('No orders available to export.');
+      return;
+    }
+
+    const headers = ['Bill No', 'Date', 'Customer Phone', 'Payment Method', 'Subtotal (INR)', 'Discount (INR)', 'Tax (INR)', 'Total (INR)'];
+    const rows = orders.map(o => [
+      `"${o.bill_no || o.id}"`,
+      `"${new Date(o.created_at).toLocaleString('en-IN')}"`,
+      `"${o.customer_phone || 'Walk-in'}"`,
+      `"${o.payment_method || 'Cash'}"`,
+      o.subtotal || 0,
+      o.discount || 0,
+      o.tax || 0,
+      o.total || 0
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `thirst_sales_report_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const data = getChartData();
   const topProducts = getTopProducts();
-  const uniqueCustomers = new Set(orders.map(o => o.customer_id).filter(id => id)).size;
+  const uniqueCustomers = new Set(orders.map(o => o.customer_phone || o.customer_id).filter(Boolean)).size;
 
   const totals = {
-    revenue: orders.reduce((s, o) => s + o.total, 0),
+    revenue: orders.reduce((s, o) => s + (Number(o.total) || 0), 0),
     orders: orders.length,
     newCustomers: uniqueCustomers
   };
@@ -95,7 +158,7 @@ export default function ReportsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>Reports & Analytics</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Business performance insights</p>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Business performance and financial insights</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Range Toggle */}
@@ -105,7 +168,7 @@ export default function ReportsPage() {
                 key={r}
                 onClick={() => setRange(r)}
                 style={{
-                  padding: '8px 16px', borderRadius: 'var(--radius-full)', border: 'none',
+                  padding: '7px clamp(8px, 2.5vw, 16px)', borderRadius: 'var(--radius-full)', border: 'none',
                   background: range === r ? 'var(--color-berry)' : 'transparent',
                   color: range === r ? 'white' : 'var(--color-text-secondary)',
                   fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.8125rem',
@@ -116,56 +179,78 @@ export default function ReportsPage() {
               </button>
             ))}
           </div>
-          <button className="btn btn-secondary btn-sm"><Download size={14} /> Export</button>
+          <button id="btn-export-reports" onClick={exportCSV} className="btn btn-secondary btn-sm">
+            <Download size={14} /> Export CSV
+          </button>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-4" style={{ marginBottom: 'var(--space-6)', gap: 'var(--space-4)' }}>
         {[
-          { label: `Total Revenue`, value: `₹${totals.revenue.toLocaleString()}`, icon: DollarSign, color: 'var(--color-berry)', change: '+--%' },
-          { label: `Total Orders`, value: totals.orders.toLocaleString(), icon: ShoppingCart, color: '#6366f1', change: '+--%' },
-          { label: 'Avg. Order Value', value: `₹${totals.orders > 0 ? Math.round(totals.revenue / totals.orders).toLocaleString() : 0}`, icon: TrendingUp, color: 'var(--color-gold-dark)', change: '+--%' },
-          { label: 'New Customers', value: totals.newCustomers.toLocaleString(), icon: Users, color: 'var(--color-success)', change: '+--%' },
-        ].map(({ label, value, icon: Icon, color, change }) => (
+          { label: `Total Revenue`, value: `₹${totals.revenue.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'var(--color-berry)', subtitle: 'All-time gross sales' },
+          { label: `Total Orders`, value: totals.orders.toLocaleString('en-IN'), icon: ShoppingCart, color: '#6366f1', subtitle: 'Completed bills' },
+          { label: 'Avg. Order Value', value: `₹${totals.orders > 0 ? Math.round(totals.revenue / totals.orders).toLocaleString('en-IN') : 0}`, icon: TrendingUp, color: 'var(--color-gold-dark)', subtitle: 'Revenue per transaction' },
+          { label: 'Unique Customers', value: totals.newCustomers.toLocaleString('en-IN'), icon: Users, color: 'var(--color-success)', subtitle: 'Distinct patrons' },
+        ].map(({ label, value, icon: Icon, color, subtitle }) => (
           <div key={label} className="stat-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
               <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
                 <Icon size={20} />
               </div>
-              <span style={{ color: 'var(--color-success)', fontWeight: 600, fontSize: '0.8125rem', background: 'rgba(34,197,94,0.1)', padding: '4px 10px', borderRadius: 'var(--radius-full)' }}>{change}</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', background: 'var(--color-lavender)', padding: '3px 8px', borderRadius: 'var(--radius-full)' }}>
+                {range}
+              </span>
             </div>
             <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.625rem', color: 'var(--color-plum)' }}>{value}</div>
             <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>{label}</div>
+            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72rem', marginTop: '2px' }}>{subtitle}</div>
           </div>
         ))}
       </div>
 
       {/* Revenue Chart */}
       <div className="card" style={{ padding: 'var(--space-6)', marginBottom: 'var(--space-5)' }}>
-        <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', marginBottom: 'var(--space-5)' }}>Revenue & Orders — {range}</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={data}>
-            <defs>
-              <linearGradient id="rg2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#D94F8A" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#D94F8A" stopOpacity={0.02} />
-              </linearGradient>
-              <linearGradient id="og2" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#F4C95D" stopOpacity={0.2} />
-                <stop offset="95%" stopColor="#F4C95D" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0e0eb" />
-            <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} />
-            <YAxis yAxisId="left" tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} />
-            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} />
-            <Tooltip contentStyle={{ background: 'white', border: '1px solid #f0e0eb', borderRadius: 12, fontFamily: 'var(--font-heading)', fontSize: 12 }} />
-            <Legend />
-            <Area yAxisId="left" type="monotone" dataKey="revenue" name="Revenue (₹)" stroke="#D94F8A" strokeWidth={2} fill="url(#rg2)" />
-            <Area yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="#F4C95D" strokeWidth={2} fill="url(#og2)" />
-          </AreaChart>
-        </ResponsiveContainer>
+        <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', marginBottom: 'var(--space-5)' }}>
+          Revenue & Orders — {range}
+        </h3>
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 280, color: 'var(--color-text-muted)' }}>
+            <Loader2 className="animate-spin" size={24} />
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={data}>
+              <defs>
+                <linearGradient id="rg2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#D94F8A" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#D94F8A" stopOpacity={0.02} />
+                </linearGradient>
+                <linearGradient id="og2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#F4C95D" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#F4C95D" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0e0eb" />
+              <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} />
+              <YAxis 
+                yAxisId="left" 
+                tick={{ fontSize: 12, fill: '#9c8490' }} 
+                axisLine={false} 
+                tickLine={false} 
+                tickFormatter={v => v >= 1000 ? `₹${(v/1000).toFixed(0)}k` : `₹${v}`} 
+              />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} />
+              <Tooltip 
+                formatter={(val: any, name: any) => [name === 'Revenue (₹)' ? `₹${Number(val).toLocaleString('en-IN')}` : val, name]}
+                contentStyle={{ background: 'white', border: '1px solid #f0e0eb', borderRadius: 12, fontFamily: 'var(--font-heading)', fontSize: 12 }} 
+              />
+              <Legend />
+              <Area yAxisId="left" type="monotone" dataKey="revenue" name="Revenue (₹)" stroke="#D94F8A" strokeWidth={2} fill="url(#rg2)" />
+              <Area yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="#F4C95D" strokeWidth={2} fill="url(#og2)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Top Products Table */}
@@ -173,23 +258,36 @@ export default function ReportsPage() {
         <div style={{ padding: 'var(--space-5) var(--space-6)', borderBottom: '1px solid var(--color-lavender)' }}>
           <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)' }}>Top Performing Products</h3>
         </div>
-        <div className="table-container" style={{ borderRadius: 0, border: 'none' }}>
-          <table>
-            <thead><tr><th>Rank</th><th>Product</th><th>Orders</th><th>Revenue</th><th>Growth</th></tr></thead>
+        <div className="table-container" style={{ borderRadius: 0, border: 'none', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ minWidth: 600 }}>
+            <thead>
+              <tr><th>Rank</th><th>Product</th><th>Orders Sold</th><th>Revenue</th><th>Share of Sales</th></tr>
+            </thead>
             <tbody>
-              {topProducts.map((p, i) => (
-                <tr key={p.name}>
-                  <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)' }}>#{i + 1}</td>
-                  <td style={{ fontWeight: 500 }}>{p.name}</td>
-                  <td>{p.orders.toLocaleString()}</td>
-                  <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-berry)' }}>₹{p.revenue.toLocaleString('en-IN')}</td>
-                  <td>
-                    <span style={{ color: p.growth >= 0 ? 'var(--color-success)' : 'var(--color-error)', fontWeight: 600, fontSize: '0.875rem', background: p.growth >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', padding: '3px 10px', borderRadius: 'var(--radius-full)' }}>
-                      {p.growth >= 0 ? '+' : ''}{p.growth}%
-                    </span>
+              {topProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-muted)' }}>
+                    No product sales recorded yet.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                topProducts.map((p, i) => {
+                  const share = totals.revenue > 0 ? ((p.revenue / totals.revenue) * 100).toFixed(1) : '0';
+                  return (
+                    <tr key={p.name}>
+                      <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)' }}>#{i + 1}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--color-plum)' }}>{p.name}</td>
+                      <td>{p.orders.toLocaleString('en-IN')} units</td>
+                      <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-berry)' }}>₹{p.revenue.toLocaleString('en-IN')}</td>
+                      <td>
+                        <span style={{ color: 'var(--color-berry)', fontWeight: 600, fontSize: '0.8125rem', background: 'rgba(217,79,138,0.1)', padding: '3px 10px', borderRadius: 'var(--radius-full)' }}>
+                          {share}%
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -197,3 +295,4 @@ export default function ReportsPage() {
     </div>
   );
 }
+

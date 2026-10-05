@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create order
-    const billNo = `TH-${Date.now().toString().slice(-8)}`;
+    const billNo = body.bill_no || `TH-${Date.now().toString().slice(-8)}`;
     const { data: order, error } = await supabase
       .from('orders')
       .insert([{

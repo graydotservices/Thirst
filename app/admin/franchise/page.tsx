@@ -18,6 +18,7 @@ export default function FranchiseAdminPage() {
   const [apps, setApps] = useState<App[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<App | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchApps();
@@ -39,21 +40,44 @@ export default function FranchiseAdminPage() {
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status } : null);
   };
 
+  const filteredApps = apps.filter(a => statusFilter === 'all' || a.status === statusFilter);
+
   return (
     <div>
-      <div style={{ marginBottom: 'var(--space-6)' }}>
+      <div style={{ marginBottom: 'var(--space-5)' }}>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>Franchise Applications</h1>
         <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{apps.filter(a => a.status === 'pending').length} pending · {apps.filter(a => a.status === 'reviewing').length} reviewing</p>
       </div>
-      <div className="table-container">
-        <table>
+
+      {/* Filter Tabs */}
+      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '2px', marginBottom: 'var(--space-5)' }}>
+        {[
+          { id: 'all', label: `All (${apps.length})` },
+          { id: 'pending', label: `Pending (${apps.filter(a => a.status === 'pending').length})` },
+          { id: 'reviewing', label: `Reviewing (${apps.filter(a => a.status === 'reviewing').length})` },
+          { id: 'approved', label: `Approved (${apps.filter(a => a.status === 'approved').length})` },
+          { id: 'rejected', label: `Rejected (${apps.filter(a => a.status === 'rejected').length})` },
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setStatusFilter(t.id)}
+            className={`btn btn-sm ${statusFilter === t.id ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap' }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="table-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ minWidth: 650 }}>
           <thead><tr><th>Applicant</th><th>City</th><th>Budget</th><th>Experience</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
             {loading ? (
               <tr><td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)' }}><span className="spinner"></span></td></tr>
-            ) : apps.length === 0 ? (
+            ) : filteredApps.length === 0 ? (
               <tr><td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>No franchise applications found.</td></tr>
-            ) : apps.map(a => (
+            ) : filteredApps.map(a => (
               <tr key={a.id}>
                 <td><div style={{ fontWeight: 600, color: 'var(--color-plum)' }}>{a.name}</div><div style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>{a.phone}</div></td>
                 <td>{a.city}</td>

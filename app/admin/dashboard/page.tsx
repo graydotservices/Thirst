@@ -3,26 +3,15 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  TrendingUp, ShoppingCart, Users, DollarSign,
+  TrendingUp, ShoppingCart, Users, IndianRupee,
   ArrowUpRight, Clock, BarChart3, Eye,
 } from 'lucide-react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, AreaChart, Area,
 } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { OrderItem } from '@/lib/supabase';
-
-type Order = {
-  id: string;
-  bill_no: string;
-  customer_name: string;
-  customer_phone: string;
-  items: OrderItem[];
-  total: number;
-  payment_method: string;
-  created_at: string;
-};
 
 export default function DashboardPage() {
   const [greeting, setGreeting] = useState('');
@@ -71,8 +60,8 @@ export default function DashboardPage() {
         const todayOrdersList = allOrders.filter(o => o.created_at >= startOfToday);
         const monthOrdersList = allOrders.filter(o => o.created_at >= startOfMonth);
 
-        const todayRevenue = todayOrdersList.reduce((acc, o) => acc + o.total, 0);
-        const monthlyRevenue = monthOrdersList.reduce((acc, o) => acc + o.total, 0);
+        const todayRevenue = todayOrdersList.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
+        const monthlyRevenue = monthOrdersList.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
 
         setStats({
           todayRevenue,
@@ -85,10 +74,14 @@ export default function DashboardPage() {
         setRecentBills(allOrders.slice(0, 5).map(o => ({
           bill: o.bill_no,
           customer: o.customer_name || 'Guest',
-          phone: o.customer_phone || '-',
-          items: o.items ? o.items.reduce((acc: number, item: any) => acc + item.qty, 0) : 0,
+          phone: (!o.customer_phone || o.customer_phone === '0000000000') ? '—' : o.customer_phone,
+          items: o.items 
+            ? o.items
+                .filter((item: any) => item.product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:')))
+                .reduce((acc: number, item: any) => acc + (Number(item.qty) || 1), 0)
+            : 0,
           total: o.total,
-          method: o.payment_method.toUpperCase(),
+          method: (o.payment_method || 'CASH').toUpperCase(),
           time: new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
         })));
 
@@ -103,7 +96,7 @@ export default function DashboardPage() {
           
           const dayRevenue = allOrders
             .filter(o => o.created_at >= startOfDay && o.created_at <= endOfDay)
-            .reduce((acc, o) => acc + o.total, 0);
+            .reduce((acc, o) => acc + (Number(o.total) || 0), 0);
             
           chart.push({
             date: days[d.getDay()],
@@ -112,16 +105,20 @@ export default function DashboardPage() {
         }
         setChartData(chart);
 
-        // 4. Top Products (All time from recent fetch)
+        // 4. Top Products (Filtering out meta_staff)
         const productMap: Record<string, { name: string, orders: number, revenue: number }> = {};
         allOrders.forEach(o => {
           if (o.items && Array.isArray(o.items)) {
             o.items.forEach((item: any) => {
-              if (!productMap[item.product_id]) {
-                productMap[item.product_id] = { name: item.name, orders: 0, revenue: 0 };
+              if (item.product_id === 'meta_staff' || (item.name && item.name.startsWith('Billed by:'))) {
+                return;
               }
-              productMap[item.product_id].orders += item.qty;
-              productMap[item.product_id].revenue += item.total;
+              const key = item.product_id || item.name;
+              if (!productMap[key]) {
+                productMap[key] = { name: item.name || 'Product', orders: 0, revenue: 0 };
+              }
+              productMap[key].orders += (Number(item.qty) || 1);
+              productMap[key].revenue += (Number(item.total) || ((Number(item.price) || 0) * (Number(item.qty) || 1)));
             });
           }
         });
@@ -130,14 +127,14 @@ export default function DashboardPage() {
         setTopProducts(sortedProducts);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Error fetching dashboard data:', e);
     } finally {
       setLoading(false);
     }
   };
 
   const statCards = [
-    { label: "Today's Revenue", value: `₹${stats.todayRevenue.toLocaleString('en-IN')}`, change: 'Live', up: true, icon: DollarSign, color: 'var(--color-berry)' },
+    { label: "Today's Revenue", value: `₹${stats.todayRevenue.toLocaleString('en-IN')}`, change: 'Live', up: true, icon: IndianRupee, color: 'var(--color-berry)' },
     { label: "Today's Orders", value: stats.todayOrders.toString(), change: 'Live', up: true, icon: ShoppingCart, color: 'var(--color-gold-dark)' },
     { label: 'Active Customers', value: stats.activeCustomers.toLocaleString('en-IN'), change: 'Total', up: true, icon: Users, color: '#6366f1' },
     { label: 'Monthly Revenue', value: `₹${stats.monthlyRevenue.toLocaleString('en-IN')}`, change: 'This Month', up: true, icon: TrendingUp, color: 'var(--color-success)' },
@@ -145,21 +142,23 @@ export default function DashboardPage() {
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}><span className="spinner"></span></div>;
 
+  const maxRevenue = Math.max(...chartData.map(c => c.revenue), 0);
+
   return (
     <div style={{ maxWidth: 1400 }}>
       {/* Greeting */}
-      <div style={{ marginBottom: 'var(--space-6)' }}>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--color-plum)', letterSpacing: '-0.02em' }}>
+      <div style={{ marginBottom: 'var(--space-5)' }}>
+        <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.35rem, 4vw, 1.75rem)', color: 'var(--color-plum)', letterSpacing: '-0.02em' }}>
           {greeting}, Admin 👋
         </h1>
-        <p style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+        <p style={{ color: 'var(--color-text-secondary)', marginTop: '4px', fontSize: '0.9rem' }}>
           Here&apos;s your Thirst. business summary for today.
         </p>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-4" style={{ marginBottom: 'var(--space-6)', gap: 'var(--space-4)' }}>
-        {statCards.map(({ label, value, change, up, icon: Icon, color }) => (
+        {statCards.map(({ label, value, change, icon: Icon, color }) => (
           <div key={label} className="stat-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
               <div
@@ -205,7 +204,12 @@ export default function DashboardPage() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0e0eb" />
               <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} />
+              <YAxis 
+                tick={{ fontSize: 12, fill: '#9c8490' }} 
+                axisLine={false} 
+                tickLine={false} 
+                tickFormatter={v => v >= 1000 ? `₹${(v / 1000).toFixed(1)}k` : `₹${v}`} 
+              />
               <Tooltip
                 contentStyle={{ background: 'white', border: '1px solid #f0e0eb', borderRadius: 12, fontFamily: 'var(--font-heading)', fontSize: 13 }}
                 formatter={(v: any) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Revenue']}
@@ -239,14 +243,14 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent Bills */}
+      {/* Recent Bills with horizontal scroll wrapper */}
       <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
         <div style={{ padding: 'var(--space-5) var(--space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-lavender)' }}>
           <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1.0625rem' }}>Recent Bills</h3>
-          <Link href="/admin/billing" className="btn btn-secondary btn-sm"><Eye size={14} /> View All</Link>
+          <Link href="/admin/orders" className="btn btn-secondary btn-sm"><Eye size={14} /> View All</Link>
         </div>
-        <div className="table-container" style={{ borderRadius: 0, border: 'none' }}>
-          <table>
+        <div className="table-container" style={{ borderRadius: 0, border: 'none', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ minWidth: 640 }}>
             <thead>
               <tr>
                 <th>Bill No</th>

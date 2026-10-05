@@ -71,32 +71,25 @@ export default function StaffPage() {
       }
       
       try {
+        const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch('/api/staff', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+          },
           body: JSON.stringify(form)
         });
         const data = await res.json();
         
         if (!res.ok) {
-          setError(data.error || 'Failed to create auth account');
-        } else {
-          // Now insert into database using the authenticated admin's session
-          const { data: staffData, error: staffError } = await supabase
-            .from('staff')
-            .insert([{ id: data.userId, name: form.name, phone: form.phone, email: form.email, role: form.role, status: form.status }])
-            .select()
-            .single();
-
-          if (staffError) {
-            setError(staffError.message);
-          } else if (staffData) {
-            setStaff(prev => [staffData as Staff, ...prev]);
-            setShowModal(false);
-          }
+          setError(data.error || 'Failed to create staff account');
+        } else if (data.staff) {
+          setStaff(prev => [data.staff as Staff, ...prev]);
+          setShowModal(false);
         }
-      } catch (err) {
-        setError('Network error');
+      } catch (err: any) {
+        setError(err.message || 'Network error');
       }
     }
     setSaving(false);
@@ -104,19 +97,12 @@ export default function StaffPage() {
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Remove this staff member? This cannot be undone.')) {
-      await supabase.from('staff').delete().eq('id', id);
-      setStaff(prev => prev.filter(s => s.id !== id));
-    }
-  };
-
-  const testInsert = async () => {
-    const { data, error } = await supabase.from('staff').insert([{
-      name: 'Test Staff', phone: '1234567890', email: 'test@example.com', role: 'cashier', status: 'active'
-    }]);
-    if (error) {
-      alert(`Test insert error: ${JSON.stringify(error)}`);
-    } else {
-      alert('Test insert success!');
+      const { error: delError } = await supabase.from('staff').delete().eq('id', id);
+      if (delError) {
+        alert(`Failed to remove staff: ${delError.message}`);
+      } else {
+        setStaff(prev => prev.filter(s => s.id !== id));
+      }
     }
   };
 
@@ -137,8 +123,8 @@ export default function StaffPage() {
       </div>
 
       {/* Table */}
-      <div className="table-container">
-        <table>
+      <div className="table-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ minWidth: 620 }}>
           <thead>
             <tr><th>Name</th><th>Phone</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>
           </thead>

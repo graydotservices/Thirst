@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Package, AlertTriangle, Edit2, Trash2, X, Check } from 'lucide-react';
+import { Plus, Package, AlertTriangle, Edit2, Trash2, X, Check, Search, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 
@@ -11,7 +11,8 @@ type Product = {
   category: string;
   price: number;
   stock: number;
-  threshold: number;
+  threshold?: number;
+  low_stock_threshold?: number;
   image: string;
   is_available: boolean;
 };
@@ -24,6 +25,8 @@ export default function InventoryPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   useEffect(() => {
     fetchProducts();
@@ -36,74 +39,114 @@ export default function InventoryPage() {
     setLoading(false);
   };
 
-  const lowStock = products.filter(p => p.stock <= p.threshold);
+  const getThreshold = (p: Product) => p.low_stock_threshold ?? p.threshold ?? 5;
+  const lowStock = products.filter(p => p.stock <= getThreshold(p));
+
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = (p.name || '').toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const handleSave = async () => {
+    if (!form.name.trim()) {
+      alert('Please enter a product name');
+      return;
+    }
+
     setSaving(true);
     try {
-      let finalImageUrl = form.image;
+      let finalImageUrl = form.image || '/cake-product.png';
 
       // Handle image upload if a file is selected
       if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(fileName, imageFile);
+        try {
+          const fileExt = imageFile.name.split('.').pop();
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
           
-        if (uploadError) {
-          alert(`Image upload failed: ${uploadError.message}`);
-          setSaving(false);
-          return;
+          const { error: uploadError } = await supabase.storage
+            .from('product-images')
+            .upload(fileName, imageFile, { upsert: true });
+            
+          if (uploadError) {
+            console.warn('Image bucket upload error:', uploadError.message);
+            // Non-blocking fallback if bucket is not configured
+          } else {
+            const { data: { publicUrl } } = supabase.storage
+              .from('product-images')
+              .getPublicUrl(fileName);
+            if (publicUrl) finalImageUrl = publicUrl;
+          }
+        } catch (uploadErr) {
+          console.warn('Storage upload failed, keeping existing image', uploadErr);
         }
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(fileName);
-          
-        finalImageUrl = publicUrl;
       }
 
-      const productData = { ...form, image: finalImageUrl };
-      
-      // The database schema does not have a 'threshold' column, so we must remove it before saving
-      const { threshold, ...dbData } = productData;
+      // Build payload with both low_stock_threshold and fallback
+      const payload: Record<string, any> = {
+        name: form.name.trim(),
+        category: form.category,
+        price: Number(form.price) || 0,
+        stock: Number(form.stock) || 0,
+        image: finalImageUrl,
+        low_stock_threshold: Number(form.threshold) || 5,
+      };
 
       if (editing) {
-        const { error } = await supabase
+        let updateRes = await supabase
           .from('products')
-          .update(dbData)
+          .update(payload)
           .eq('id', editing.id);
         
-        if (error) {
-          alert(`Update failed: ${error.message}`);
+        // If column low_stock_threshold doesn't exist on remote yet, retry without it
+        if (updateRes.error && updateRes.error.message.includes('low_stock_threshold')) {
+          delete payload.low_stock_threshold;
+          updateRes = await supabase.from('products').update(payload).eq('id', editing.id);
+        }
+
+        if (updateRes.error) {
+          alert(`Update failed: ${updateRes.error.message}`);
           setSaving(false);
           return;
         }
         
-        setProducts(prev => prev.map(p => p.id === editing.id ? { ...p, ...productData } : p));
+        setProducts(prev => prev.map(p => p.id === editing.id ? { 
+          ...p, 
+          ...payload, 
+          threshold: form.threshold,
+          low_stock_threshold: form.threshold 
+        } : p));
       } else {
-        const { data, error } = await supabase
+        payload.is_available = true;
+        let insertRes = await supabase
           .from('products')
-          .insert([{ ...dbData, is_available: true }])
+          .insert([payload])
           .select()
           .single();
           
-        if (error) {
-          alert(`Insert failed: ${error.message}`);
+        if (insertRes.error && insertRes.error.message.includes('low_stock_threshold')) {
+          delete payload.low_stock_threshold;
+          insertRes = await supabase.from('products').insert([payload]).select().single();
+        }
+
+        if (insertRes.error) {
+          alert(`Insert failed: ${insertRes.error.message}`);
           setSaving(false);
           return;
         }
         
-        if (data) {
-          setProducts(prev => [data as Product, ...prev]);
+        if (insertRes.data) {
+          setProducts(prev => [{ 
+            ...(insertRes.data as Product), 
+            threshold: form.threshold, 
+            low_stock_threshold: form.threshold 
+          }, ...prev]);
         }
       }
       setShowModal(false);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Something went wrong. Please try again.');
+      alert(e?.message || 'Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -119,13 +162,24 @@ export default function InventoryPage() {
   const openEdit = (p: Product) => { 
     setEditing(p); 
     setImageFile(null);
-    setForm({ name: p.name, category: p.category, price: p.price, stock: p.stock, threshold: p.threshold || 5, image: p.image || '/cake-product.png' }); 
+    setForm({ 
+      name: p.name, 
+      category: p.category, 
+      price: p.price, 
+      stock: p.stock, 
+      threshold: getThreshold(p), 
+      image: p.image || '/cake-product.png' 
+    }); 
     setShowModal(true); 
   };
   
   const handleDelete = async (id: string) => { 
     if (confirm('Delete product permanently?')) {
-      await supabase.from('products').delete().eq('id', id);
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) {
+        alert(`Delete failed: ${error.message}`);
+        return;
+      }
       setProducts(prev => prev.filter(p => p.id !== id));
     }
   };
@@ -139,7 +193,7 @@ export default function InventoryPage() {
           <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>Inventory</h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{products.length} products · {lowStock.length} low stock alerts</p>
         </div>
-        <button onClick={openAdd} className="btn btn-primary"><Plus size={18} /> Add Product</button>
+        <button id="btn-add-product" onClick={openAdd} className="btn btn-primary"><Plus size={18} /> Add Product</button>
       </div>
 
       {/* Low Stock Alerts */}
@@ -147,59 +201,108 @@ export default function InventoryPage() {
         <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-4)', marginBottom: 'var(--space-5)', display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
           <AlertTriangle size={20} style={{ color: 'var(--color-warning)', flexShrink: 0, marginTop: 2 }} />
           <div>
-            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: '#92400e', marginBottom: '4px' }}>Low Stock Alert</div>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: '#92400e', marginBottom: '4px' }}>Low Stock Alert ({lowStock.length})</div>
             <div style={{ color: '#78350f', fontSize: '0.875rem' }}>
-              {lowStock.map(p => p.name).join(', ')} — restock needed.
+              {lowStock.map(p => `${p.name} (${p.stock} left)`).join(', ')} — restock needed.
             </div>
           </div>
         </div>
       )}
 
-      {/* Products Grid */}
-      <div className="grid grid-3" style={{ gap: 'var(--space-4)' }}>
-        {products.map(p => (
-          <div key={p.id} className="card" style={{ padding: 0, overflow: 'hidden', border: p.stock <= (p.threshold || 5) ? '2px solid rgba(245,158,11,0.5)' : undefined }}>
-            <div style={{ position: 'relative', height: 160 }}>
-              <Image src={p.image || '/cake-product.png'} alt={p.name} fill style={{ objectFit: 'cover' }} />
-              {p.stock <= (p.threshold || 5) && (
-                <div style={{ position: 'absolute', top: 8, right: 8 }}>
-                  <span className="badge badge-warning" style={{ background: 'rgba(245,158,11,0.9)', color: '#92400e' }}>
-                    <AlertTriangle size={11} /> Low Stock
-                  </span>
-                </div>
-              )}
-            </div>
-            <div style={{ padding: 'var(--space-4)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
-                <div>
-                  <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '0.9375rem' }}>{p.name}</h3>
-                  <span className="badge badge-primary" style={{ marginTop: '4px' }}>
-                    {p.category === 'cakes' ? 'Cake' : p.category === 'ice-cream' ? 'Ice Cream' : 'Special'}
-                  </span>
-                </div>
-                <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-berry)', fontSize: '1.0625rem' }}>₹{p.price}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Package size={16} style={{ color: p.stock <= (p.threshold || 5) ? 'var(--color-warning)' : 'var(--color-success)' }} />
-                  <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: p.stock <= (p.threshold || 5) ? '#d97706' : '#16a34a', fontSize: '0.9rem' }}>
-                    {p.stock} in stock
-                  </span>
-                </div>
-                <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>Min: {p.threshold || 5}</span>
-              </div>
-              {/* Stock bar */}
-              <div style={{ height: 5, background: 'var(--color-lavender)', borderRadius: 3, marginBottom: 'var(--space-3)' }}>
-                <div style={{ height: '100%', borderRadius: 3, background: p.stock <= (p.threshold || 5) ? '#f59e0b' : 'var(--gradient-berry)', width: `${Math.min((p.stock / ((p.threshold || 5) * 4)) * 100, 100)}%`, transition: 'width 0.5s ease' }} />
-              </div>
-              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                <button onClick={() => openEdit(p)} className="btn btn-secondary btn-sm" style={{ flex: 1, justifyContent: 'center' }}><Edit2 size={13} /> Edit</button>
-                <button onClick={() => handleDelete(p.id)} style={{ padding: '8px 12px', borderRadius: 'var(--radius-full)', background: 'rgba(239,68,68,0.1)', color: 'var(--color-error)', border: 'none', cursor: 'pointer' }}><Trash2 size={14} /></button>
-              </div>
-            </div>
-          </div>
-        ))}
+      {/* Filter and Search Bar */}
+      <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-5)', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 240, maxWidth: 360 }}>
+          <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+          <input 
+            className="input" 
+            placeholder="Search products..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+            style={{ paddingLeft: 44, background: 'white' }} 
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '2px', maxWidth: '100%' }}>
+          {[
+            { id: 'all', label: 'All Items' },
+            { id: 'cakes', label: 'Cakes' },
+            { id: 'ice-cream', label: 'Ice Creams' },
+            { id: 'special-desserts', label: 'Specials' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setCategoryFilter(tab.id)}
+              className={`btn btn-sm ${categoryFilter === tab.id ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap' }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Products Grid */}
+      {filteredProducts.length === 0 ? (
+        <div style={{ padding: 'var(--space-12)', textAlign: 'center', background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}>
+          No products found matching &quot;{search}&quot;.
+        </div>
+      ) : (
+        <div className="grid grid-3" style={{ gap: 'var(--space-4)' }}>
+          {filteredProducts.map(p => {
+            const thresh = getThreshold(p);
+            const isLow = p.stock <= thresh;
+
+            return (
+              <div key={p.id} className="card" style={{ padding: 0, overflow: 'hidden', border: isLow ? '2px solid rgba(245,158,11,0.5)' : undefined }}>
+                <div style={{ position: 'relative', height: 160, background: 'var(--color-lavender)' }}>
+                  <Image 
+                    src={p.image || '/cake-product.png'} 
+                    alt={p.name} 
+                    fill 
+                    unoptimized 
+                    style={{ objectFit: 'cover' }} 
+                  />
+                  {isLow && (
+                    <div style={{ position: 'absolute', top: 8, right: 8 }}>
+                      <span className="badge badge-warning" style={{ background: 'rgba(245,158,11,0.95)', color: '#78350f', fontWeight: 700 }}>
+                        <AlertTriangle size={11} /> Low Stock
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div style={{ padding: 'var(--space-4)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
+                    <div>
+                      <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '0.9375rem' }}>{p.name}</h3>
+                      <span className="badge badge-primary" style={{ marginTop: '4px', textTransform: 'capitalize' }}>
+                        {p.category.replace('-', ' ')}
+                      </span>
+                    </div>
+                    <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-berry)', fontSize: '1.0625rem' }}>₹{p.price}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Package size={16} style={{ color: isLow ? 'var(--color-warning)' : 'var(--color-success)' }} />
+                      <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: isLow ? '#d97706' : '#16a34a', fontSize: '0.9rem' }}>
+                        {p.stock} in stock
+                      </span>
+                    </div>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>Min: {thresh}</span>
+                  </div>
+                  {/* Stock bar */}
+                  <div style={{ height: 5, background: 'var(--color-lavender)', borderRadius: 3, marginBottom: 'var(--space-3)' }}>
+                    <div style={{ height: '100%', borderRadius: 3, background: isLow ? '#f59e0b' : 'var(--gradient-berry)', width: `${Math.min((p.stock / Math.max(thresh * 4, 1)) * 100, 100)}%`, transition: 'width 0.5s ease' }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    <button onClick={() => openEdit(p)} className="btn btn-secondary btn-sm" style={{ flex: 1, justifyContent: 'center' }}><Edit2 size={13} /> Edit</button>
+                    <button onClick={() => handleDelete(p.id)} style={{ padding: '8px 12px', borderRadius: 'var(--radius-full)', background: 'rgba(239,68,68,0.1)', color: 'var(--color-error)', border: 'none', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Modal */}
       {showModal && (
@@ -210,7 +313,10 @@ export default function InventoryPage() {
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}><X size={22} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              <div className="input-group"><label className="input-label" htmlFor="inv-name">Product Name</label><input id="inv-name" className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Product name" /></div>
+              <div className="input-group">
+                <label className="input-label" htmlFor="inv-name">Product Name *</label>
+                <input id="inv-name" className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Belgian Chocolate Mousse" />
+              </div>
               
               <div className="input-group">
                 <label className="input-label" htmlFor="inv-img">Upload Image</label>
@@ -227,7 +333,9 @@ export default function InventoryPage() {
                   }} 
                 />
                 {editing && form.image && !imageFile && (
-                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>Current: {form.image.split('/').pop()}</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                    Current image active
+                  </p>
                 )}
               </div>
               
@@ -240,15 +348,15 @@ export default function InventoryPage() {
                     <option value="special-desserts">Special Dessert</option>
                   </select>
                 </div>
-                <div className="input-group"><label className="input-label" htmlFor="inv-price">Price (₹)</label><input id="inv-price" type="number" className="input" value={form.price} onChange={e => setForm(p => ({ ...p, price: Number(e.target.value) }))} /></div>
-                <div className="input-group"><label className="input-label" htmlFor="inv-stock">Current Stock</label><input id="inv-stock" type="number" className="input" value={form.stock} onChange={e => setForm(p => ({ ...p, stock: Number(e.target.value) }))} /></div>
-                <div className="input-group"><label className="input-label" htmlFor="inv-thresh">Low Stock Alert At</label><input id="inv-thresh" type="number" className="input" value={form.threshold} onChange={e => setForm(p => ({ ...p, threshold: Number(e.target.value) }))} /></div>
+                <div className="input-group"><label className="input-label" htmlFor="inv-price">Price (₹)</label><input id="inv-price" type="number" inputMode="numeric" min="0" className="input" value={form.price} onChange={e => setForm(p => ({ ...p, price: Number(e.target.value) }))} /></div>
+                <div className="input-group"><label className="input-label" htmlFor="inv-stock">Current Stock</label><input id="inv-stock" type="number" inputMode="numeric" min="0" className="input" value={form.stock} onChange={e => setForm(p => ({ ...p, stock: Number(e.target.value) }))} /></div>
+                <div className="input-group"><label className="input-label" htmlFor="inv-thresh">Low Stock Alert At</label><input id="inv-thresh" type="number" inputMode="numeric" min="1" className="input" value={form.threshold} onChange={e => setForm(p => ({ ...p, threshold: Number(e.target.value) }))} /></div>
               </div>
-              <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-                <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
-                  {saving ? 'Saving...' : <><Check size={16} /> {editing ? 'Update' : 'Add'}</>}
-                </button>
+              <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
                 <button onClick={() => setShowModal(false)} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
+                <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                  {saving ? 'Saving...' : <><Check size={16} /> {editing ? 'Update Product' : 'Add Product'}</>}
+                </button>
               </div>
             </div>
           </div>
@@ -257,3 +365,4 @@ export default function InventoryPage() {
     </div>
   );
 }
+

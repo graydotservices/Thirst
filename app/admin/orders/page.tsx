@@ -17,12 +17,14 @@ type Order = {
   payment_method: string;
   status: string;
   created_at: string;
-  items: Array<{ name: string; qty: number; price: number; total: number }>;
+  billed_by?: string;
+  items: Array<{ product_id?: string; name: string; qty: number; price: number; total: number }>;
 };
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'cancelled'>('all');
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
@@ -41,10 +43,22 @@ export default function OrdersPage() {
     setLoading(false);
   };
 
-  const deleteOrder = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
-      await supabase.from('orders').delete().eq('id', id);
-      setOrders(orders.filter(o => o.id !== id));
+  const cancelOrder = async (order: Order) => {
+    if (order.status === 'cancelled') {
+      alert('This order is already marked as cancelled.');
+      return;
+    }
+    if (window.confirm(`Are you sure you want to void/cancel Bill #${order.bill_no}? This will mark the order as Cancelled.`)) {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', order.id);
+
+      if (error) {
+        alert(`Failed to update order status: ${error.message}`);
+      } else {
+        setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'cancelled' } : o));
+      }
     }
   };
 
@@ -53,7 +67,12 @@ export default function OrdersPage() {
       alert('No valid phone number found for this customer.');
       return;
     }
-    const regularItems = order.items.filter(item => (item as any).product_id !== 'meta_staff' && !item.name.startsWith('Billed by:'));
+    const rawDigits = order.customer_phone.replace(/[^\d]/g, '');
+    const formattedPhone = rawDigits.length === 10 ? '91' + rawDigits : rawDigits;
+
+    const regularItems = (order.items || []).filter(item => 
+      (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))
+    );
     const itemListText = regularItems.map(item => `- ${item.qty} x ${item.name}`).join('\n');
     const msg = `Hi ${order.customer_name || 'Valued Customer'},\n\nThank you for visiting *Thirst.*!\n\n*Invoice No:* ${order.bill_no}\n*Date:* ${new Date(order.created_at).toLocaleDateString('en-IN')}\n\n*Order Details:*\n${itemListText}\n\n*Total Amount:* ₹${order.total}\n\nHope to see you again! ❤\n\n— Thirst. Team`;
     
@@ -63,7 +82,7 @@ export default function OrdersPage() {
         created_at: order.created_at,
         customer_name: order.customer_name,
         customer_phone: order.customer_phone,
-        items: order.items,
+        items: regularItems,
         subtotal: order.subtotal || order.total,
         discount: order.discount || 0,
         gst: 0,
@@ -85,41 +104,67 @@ export default function OrdersPage() {
           return;
         }
       }
-      window.open(`https://wa.me/${order.customer_phone}?text=${encodeURIComponent(msg)}`, '_blank');
+      window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     } catch (e) {
       console.error('Error sharing:', e);
-      window.open(`https://wa.me/${order.customer_phone}?text=${encodeURIComponent(msg)}`, '_blank');
+      window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     }
   };
 
-  const filtered = orders.filter(o => 
-    o.bill_no.toLowerCase().includes(search.toLowerCase()) ||
-    o.customer_name.toLowerCase().includes(search.toLowerCase()) ||
-    (o.customer_phone && o.customer_phone.includes(search))
-  );
+  const filtered = orders.filter(o => {
+    const matchesSearch = (o.bill_no && o.bill_no.toLowerCase().includes(search.toLowerCase())) ||
+      (o.customer_name && o.customer_name.toLowerCase().includes(search.toLowerCase())) ||
+      (o.customer_phone && o.customer_phone.includes(search));
+    const matchesStatus = statusFilter === 'all'
+      ? true
+      : statusFilter === 'cancelled'
+        ? o.status === 'cancelled'
+        : o.status !== 'cancelled';
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>Order History</h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{orders.length} total orders processed</p>
         </div>
       </div>
 
-      <div style={{ position: 'relative', marginBottom: 'var(--space-6)', maxWidth: 400 }}>
-        <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-        <input 
-          className="input" 
-          placeholder="Search by bill number, name or phone..." 
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ paddingLeft: 44, background: 'white' }}
-        />
+      {/* Search and Status Filters */}
+      <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-5)', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 260, maxWidth: 400 }}>
+          <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+          <input 
+            className="input" 
+            placeholder="Search by bill number, name or phone..." 
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ paddingLeft: 44, background: 'white' }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
+          {[
+            { id: 'all', label: `All (${orders.length})` },
+            { id: 'completed', label: `Completed (${orders.filter(o => o.status !== 'cancelled').length})` },
+            { id: 'cancelled', label: `Voided (${orders.filter(o => o.status === 'cancelled').length})` },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setStatusFilter(t.id as any)}
+              className={`btn btn-sm ${statusFilter === t.id ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ whiteSpace: 'nowrap', fontSize: '0.8125rem' }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="table-container">
-        <table>
+      <div className="table-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ minWidth: 700 }}>
           <thead>
             <tr>
               <th>Bill No.</th>
@@ -138,153 +183,176 @@ export default function OrdersPage() {
             ) : filtered.length === 0 ? (
               <tr><td colSpan={8} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>No orders found.</td></tr>
             ) : filtered.map(order => {
-              const staffMeta = order.items?.find(item => (item as any).product_id === 'meta_staff' || item.name.startsWith('Billed by:'));
+              const staffMeta = (order.items || []).find(item => (item as any).product_id === 'meta_staff' || (item.name && item.name.startsWith('Billed by:')));
+              const billedByText = order.billed_by || (staffMeta ? staffMeta.name : null);
+              const cleanItems = (order.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:')));
+              const totalQty = cleanItems.reduce((acc, item) => acc + (Number(item.qty) || 1), 0);
+
               return (
-              <tr key={order.id} style={{ borderBottom: '1px solid var(--color-lavender)' }}>
-                <td>
-                  <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--color-plum)' }}>{order.bill_no}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                    {new Date(order.created_at).toLocaleString('en-IN', {
-                      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                    })}
-                  </div>
-                  {staffMeta && (
-                    <div style={{ fontSize: '0.7rem', color: 'var(--color-berry)', marginTop: '4px', fontWeight: 600 }}>
-                      {staffMeta.name}
+                <tr key={order.id} style={{ borderBottom: '1px solid var(--color-lavender)' }}>
+                  <td>
+                    <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--color-plum)' }}>{order.bill_no}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      {new Date(order.created_at).toLocaleString('en-IN', {
+                        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                      })}
                     </div>
-                  )}
-                </td>
-                <td>
-                  <div style={{ fontWeight: 600, color: 'var(--color-plum)' }}>{order.customer_name}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{order.customer_phone || '-'}</div>
-                </td>
-                <td style={{ fontSize: '0.875rem' }}>
-                  {(order.items?.length || 0) - (staffMeta ? 1 : 0)} items
-                </td>
-                <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-berry)' }}>
-                  ₹{order.total.toLocaleString('en-IN')}
-                </td>
-                <td>
-                  <span className="badge" style={{ 
-                    background: 'rgba(217,79,138,0.1)', 
-                    color: 'var(--color-berry)', 
-                    textTransform: 'uppercase', 
-                    fontSize: '0.7rem' 
-                  }}>
-                    {order.payment_method}
-                  </span>
-                </td>
-                <td>
-                  <span className="badge badge-success">
-                    {order.status}
-                  </span>
-                </td>
-                <td>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      onClick={() => setSelectedOrder(order)}
-                      className="btn btn-secondary btn-sm" 
-                      style={{ padding: '6px 12px' }}
-                    >
-                      View <ChevronRight size={14} />
-                    </button>
-                    <button 
-                      onClick={() => deleteOrder(order.id)}
-                      className="btn btn-sm" 
-                      style={{ padding: '6px 10px', background: 'rgba(220, 38, 38, 0.1)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.2)' }}
-                      title="Delete Order"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )})}
+                    {billedByText && (
+                      <div style={{ fontSize: '0.7rem', color: 'var(--color-berry)', marginTop: '4px', fontWeight: 600 }}>
+                        {billedByText.startsWith('Billed by:') ? billedByText : `Billed by: ${billedByText}`}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600, color: 'var(--color-plum)' }}>{order.customer_name || 'Walk-in'}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      {(!order.customer_phone || order.customer_phone === '0000000000') ? '—' : order.customer_phone}
+                    </div>
+                  </td>
+                  <td style={{ fontSize: '0.875rem' }}>
+                    {totalQty} {totalQty === 1 ? 'item' : 'items'}
+                  </td>
+                  <td style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-berry)' }}>
+                    ₹{Number(order.total).toLocaleString('en-IN')}
+                  </td>
+                  <td>
+                    <span className="badge" style={{ 
+                      background: 'rgba(217, 79, 138, 0.1)', 
+                      color: 'var(--color-berry)', 
+                      textTransform: 'uppercase', 
+                      fontSize: '0.7rem' 
+                    }}>
+                      {order.payment_method}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`badge ${order.status === 'completed' ? 'badge-success' : order.status === 'cancelled' ? 'badge-error' : 'badge-warning'}`} style={{ textTransform: 'capitalize' }}>
+                      {order.status || 'Completed'}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => setSelectedOrder(order)}
+                        className="btn btn-secondary btn-sm" 
+                        style={{ padding: '6px 12px' }}
+                      >
+                        View <ChevronRight size={14} />
+                      </button>
+                      {order.status !== 'cancelled' ? (
+                        <button 
+                          onClick={() => cancelOrder(order)}
+                          className="btn btn-sm" 
+                          style={{ padding: '6px 10px', background: 'rgba(220, 38, 38, 0.1)', color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.2)', cursor: 'pointer' }}
+                          title="Void / Cancel Order"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', padding: '6px 8px' }}>
+                          Voided
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {/* Order Detail Modal */}
+      {/* Order Details Modal */}
       {selectedOrder && (
         <div className="overlay" onClick={() => setSelectedOrder(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', paddingBottom: 'var(--space-4)', borderBottom: '1px dashed var(--color-lavender-dark)' }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', borderBottom: '1px solid var(--color-lavender)', paddingBottom: 'var(--space-3)' }}>
               <div>
-                <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, color: 'var(--color-plum)', fontSize: '1.25rem' }}>Bill #{selectedOrder.bill_no}</h3>
-                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
-                  {new Date(selectedOrder.created_at).toLocaleString('en-IN', {
-                    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                  })}
-                </p>
+                <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1.25rem' }}>
+                  Invoice Details
+                </h3>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>{selectedOrder.bill_no}</span>
               </div>
-              <button onClick={() => setSelectedOrder(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}><X size={22} /></button>
+              <button onClick={() => setSelectedOrder(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                <X size={20} />
+              </button>
             </div>
 
-            <div style={{ marginBottom: 'var(--space-6)' }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '4px' }}>Customer Info</div>
-              <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.9375rem' }}>
-                <span style={{ fontWeight: 600 }}>Name:</span> {selectedOrder.customer_name}<br/>
-                <span style={{ fontWeight: 600 }}>Phone:</span> {selectedOrder.customer_phone || 'N/A'}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              {/* Customer Info */}
+              <div style={{ background: 'var(--color-lavender)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-plum)', marginBottom: '4px' }}>Customer Info</div>
+                <div style={{ fontSize: '0.875rem' }}>Name: {selectedOrder.customer_name || 'Walk-in'}</div>
+                <div style={{ fontSize: '0.875rem' }}>Phone: {(!selectedOrder.customer_phone || selectedOrder.customer_phone === '0000000000') ? '—' : selectedOrder.customer_phone}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '4px' }}>Date: {new Date(selectedOrder.created_at).toLocaleString('en-IN')}</div>
               </div>
-            </div>
 
-            <div style={{ marginBottom: 'var(--space-6)' }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', marginBottom: 'var(--space-3)' }}>Items Purchased</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                {selectedOrder.items?.filter(item => (item as any).product_id !== 'meta_staff' && !item.name.startsWith('Billed by:')).map((item, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: 'var(--space-3)', background: 'var(--color-lavender)', borderRadius: 'var(--radius-md)' }}>
-                    <div>
-                      <div style={{ fontWeight: 600, color: 'var(--color-plum)', fontSize: '0.9375rem' }}>{item.name}</div>
-                      <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>{item.qty} x ₹{item.price}</div>
-                    </div>
-                    <div style={{ fontWeight: 700, color: 'var(--color-berry)' }}>
-                      ₹{item.total}
-                    </div>
+              {/* Items Purchased */}
+              <div>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-plum)', marginBottom: '8px' }}>Items Purchased</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {(selectedOrder.items || [])
+                    .filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:')))
+                    .map((item, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', borderBottom: '1px dashed var(--color-lavender)', paddingBottom: '4px' }}>
+                        <span>{item.qty} x {item.name}</span>
+                        <span style={{ fontWeight: 600 }}>₹{item.price * item.qty}</span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Payment Summary */}
+              <div style={{ borderTop: '1px solid var(--color-lavender)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                  <span>Subtotal</span>
+                  <span>₹{selectedOrder.subtotal || selectedOrder.total}</span>
+                </div>
+                {selectedOrder.discount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: 'var(--color-success)' }}>
+                    <span>Discount</span>
+                    <span>-₹{selectedOrder.discount}</span>
                   </div>
-                ))}
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.125rem', color: 'var(--color-berry)', marginTop: '4px' }}>
+                  <span>Total</span>
+                  <span>₹{selectedOrder.total}</span>
+                </div>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                  Paid via: <span style={{ textTransform: 'uppercase', fontWeight: 600 }}>{selectedOrder.payment_method}</span>
+                </div>
               </div>
-            </div>
 
-            <div style={{ background: 'var(--color-cream)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '8px' }}>
-                <span>Subtotal</span>
-                <span>₹{selectedOrder.subtotal}</span>
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)' }}>
+                <button 
+                  onClick={() => generateInvoicePDF({
+                    bill_no: selectedOrder.bill_no,
+                    created_at: selectedOrder.created_at,
+                    customer_name: selectedOrder.customer_name,
+                    customer_phone: selectedOrder.customer_phone,
+                    items: (selectedOrder.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
+                    subtotal: selectedOrder.subtotal || selectedOrder.total,
+                    discount: selectedOrder.discount || 0,
+                    gst: 0,
+                    total: selectedOrder.total,
+                    payment_method: selectedOrder.payment_method
+                  })}
+                  className="btn btn-secondary" 
+                  style={{ flex: 1, justifyContent: 'center' }}
+                >
+                  <Download size={16} /> PDF
+                </button>
+                {selectedOrder.customer_phone && selectedOrder.customer_phone !== '0000000000' && (
+                  <button 
+                    onClick={() => handleWhatsApp(selectedOrder)}
+                    className="btn" 
+                    style={{ flex: 1, background: '#25D366', color: 'white', justifyContent: 'center' }}
+                  >
+                    <MessageCircle size={16} /> WhatsApp
+                  </button>
+                )}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--color-lavender-dark)' }}>
-                <span>Discount</span>
-                <span style={{ color: 'var(--color-error)' }}>-₹{selectedOrder.discount}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-heading)', fontWeight: 800, color: 'var(--color-plum)', fontSize: '1.25rem' }}>
-                <span>Total</span>
-                <span>₹{selectedOrder.total}</span>
-              </div>
-            </div>
-            
-            <div style={{ marginTop: 'var(--space-4)', textAlign: 'center', display: 'flex', gap: 'var(--space-3)', justifyContent: 'center', flexDirection: 'column', alignItems: 'center' }}>
-               {selectedOrder.items?.find(item => (item as any).product_id === 'meta_staff' || item.name.startsWith('Billed by:')) && (
-                 <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', fontWeight: 600 }}>
-                   {selectedOrder.items?.find(item => (item as any).product_id === 'meta_staff' || item.name.startsWith('Billed by:'))?.name}
-                 </div>
-               )}
-               <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-                 <span className="badge" style={{ background: 'rgba(217,79,138,0.1)', color: 'var(--color-berry)', textTransform: 'uppercase', padding: '8px 16px', fontSize: '0.875rem' }}>
-                    Paid via {selectedOrder.payment_method}
-                 </span>
-                 <button 
-                   onClick={() => generateInvoicePDF(selectedOrder)}
-                   className="btn btn-secondary btn-sm"
-                   style={{ padding: '8px 16px' }}
-                 >
-                   <Download size={16} /> Download Bill
-                 </button>
-                 <button 
-                   onClick={() => handleWhatsApp(selectedOrder)}
-                   className="btn btn-sm"
-                   style={{ padding: '8px 16px', background: '#25D366', color: 'white', borderColor: '#25D366' }}
-                 >
-                   <MessageCircle size={16} /> WhatsApp
-                 </button>
-               </div>
             </div>
           </div>
         </div>

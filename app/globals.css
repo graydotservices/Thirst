@@ -834,6 +834,8 @@ textarea.input {
 
 .admin-sidebar {
   width: 260px;
+  height: 100vh;
+  max-height: 100vh;
   background: var(--gradient-dark);
   color: var(--color-white);
   display: flex;
@@ -841,10 +843,56 @@ textarea.input {
   position: fixed;
   top: 0;
   left: 0;
-  height: 100vh;
-  overflow-y: auto;
-  z-index: var(--z-sticky);
+  bottom: 0;
+  z-index: 200;
+  overflow: hidden;
   transition: transform var(--transition-base);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+}
+
+/* Dedicated scrollable navigation menu */
+.admin-sidebar-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(217, 79, 138, 0.4) transparent;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(217, 79, 138, 0.35);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 79, 138, 0.7);
+}
+
+.admin-sidebar-header {
+  flex-shrink: 0;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-sidebar-footer {
+  flex-shrink: 0;
+  padding: 12px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 6, 14, 0.4);
 }
 
 .admin-main {
@@ -861,9 +909,41 @@ textarea.input {
   }
   .admin-sidebar.open {
     transform: translateX(0);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
   }
   .admin-main {
     margin-left: 0;
+  }
+}
+
+.admin-header {
+  height: 64px;
+  background: white;
+  border-bottom: 1px solid var(--color-lavender-dark);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-6);
+  gap: var(--space-4);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-content {
+  flex: 1;
+  padding: var(--space-6);
+  background: #f9f4f7;
+}
+
+@media (max-width: 768px) {
+  .admin-header {
+    height: 58px;
+    padding: 0 var(--space-3);
+    gap: var(--space-2);
+  }
+  .admin-content {
+    padding: 14px 12px 28px;
   }
 }
 
@@ -876,6 +956,12 @@ textarea.input {
   transition: all var(--transition-base);
 }
 
+@media (max-width: 480px) {
+  .stat-card {
+    padding: var(--space-4);
+  }
+}
+
 .stat-card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
@@ -886,9 +972,11 @@ textarea.input {
    ============================================================ */
 .table-container {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-lavender-dark);
   background: var(--color-white);
+  scrollbar-width: thin;
 }
 
 table {
@@ -1060,6 +1148,18 @@ tr:hover td {
     grid-template-columns: 1fr;
     height: auto;
   }
+  .pos-mobile-nav {
+    display: flex !important;
+  }
+  .pos-left.mobile-hidden {
+    display: none !important;
+  }
+  .pos-right.mobile-hidden {
+    display: none !important;
+  }
+  .pos-floating-bar {
+    display: flex !important;
+  }
 }
 
 /* ============================================================
@@ -1079,41 +1179,7 @@ tr:hover td {
   background: #f9f4f7;
 }
 
-.admin-sidebar {
-  width: 260px;
-  min-height: 100vh;
-  background: var(--gradient-dark);
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  z-index: 200;
-  transition: transform var(--transition-base);
-  overflow: hidden;
-}
 
-.admin-main {
-  margin-left: 260px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-@media (max-width: 1024px) {
-  .admin-sidebar {
-    transform: translateX(-100%);
-  }
-  .admin-sidebar.open {
-    transform: translateX(0);
-    box-shadow: var(--shadow-xl);
-  }
-  .admin-main {
-    margin-left: 0;
-  }
-}
 
 /* ============================================================
    TABLES
@@ -1194,6 +1260,18 @@ tr:hover td {
 
 .modal-lg {
   max-width: 720px;
+}
+
+@media (max-width: 640px) {
+  .overlay {
+    padding: var(--space-3);
+  }
+  .modal {
+    padding: var(--space-5) var(--space-4);
+    max-height: 92vh;
+    border-radius: var(--radius-lg);
+    width: 100%;
+  }
 }
 
 @keyframes scaleIn {

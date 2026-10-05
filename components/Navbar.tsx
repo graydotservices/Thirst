@@ -200,7 +200,25 @@ export default function Navbar() {
               </Link>
             </li>
           ))}
-
+          <li style={{ paddingTop: '12px' }}>
+            <Link
+              href="/admin/login"
+              onClick={() => setIsOpen(false)}
+              style={{
+                display: 'block',
+                textAlign: 'center',
+                background: 'var(--color-plum)',
+                color: 'white',
+                padding: '10px 16px',
+                borderRadius: 'var(--radius-full)',
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                textDecoration: 'none'
+              }}
+            >
+              Staff / Admin Portal →
+            </Link>
+          </li>
         </ul>
       </div>
 

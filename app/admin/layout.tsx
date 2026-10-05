@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard,
@@ -44,6 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const [role, setRole] = useState<string | null>(null);
+  const [staffInfo, setStaffInfo] = useState<{ name: string; email: string; role: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,14 +58,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         router.push('/admin/login');
         return;
       }
+
       const { data: staffData } = await supabase
         .from('staff')
-        .select('role')
+        .select('name, role, status')
         .eq('email', session.user.email)
         .single();
         
-      const userRole = staffData?.role || 'cashier';
+      if (!staffData || staffData.status === 'inactive') {
+        // Not a registered active staff member
+        await supabase.auth.signOut();
+        router.push('/admin/login?error=unauthorized');
+        return;
+      }
+
+      const userRole = staffData.role;
       setRole(userRole);
+      setStaffInfo({
+        name: staffData.name || 'Admin',
+        email: session.user.email || '',
+        role: userRole
+      });
       
       // Protect routes for cashiers
       if (userRole === 'cashier' && pathname !== '/admin/billing') {
@@ -73,8 +86,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
       setLoading(false);
     };
+
     checkRole();
   }, [pathname, router]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.replace('/admin/login');
+  };
 
   if (pathname === '/admin' || pathname === '/admin/login') return <>{children}</>;
   
@@ -93,9 +112,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
             zIndex: 199,
-            display: 'none',
           }}
           className="mobile-overlay"
         />
@@ -103,22 +123,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Sidebar */}
       <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        {/* Logo */}
-        <div style={{ padding: 'var(--space-6)', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ position: 'relative', width: 36, height: 36 }}>
+        {/* Logo - Fixed Top */}
+        <div className="admin-sidebar-header">
+          <div style={{ position: 'relative', width: 34, height: 34, flexShrink: 0 }}>
             <Image src="/logo-v2.png" alt="Thirst." fill style={{ objectFit: 'contain' }} />
           </div>
           <div>
-            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.25rem', color: 'white' }}>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.25rem', color: 'white', lineHeight: 1.2 }}>
               Thirst<span style={{ color: 'var(--color-berry)' }}>.</span>
             </div>
             <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>Admin Panel</div>
           </div>
         </div>
 
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: 'var(--space-4)', overflowY: 'auto' }}>
-          <ul style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {/* Nav - Dedicated Scrollable Area */}
+        <nav className="admin-sidebar-nav">
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
             {visibleNavItems.map(({ href, label, icon: Icon }) => {
               const active = pathname.startsWith(href);
               return (
@@ -129,21 +149,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 'var(--space-3)',
-                      padding: '11px 14px',
+                      gap: '12px',
+                      padding: '9px 12px',
                       borderRadius: 'var(--radius-md)',
-                      color: active ? 'white' : 'rgba(255,255,255,0.6)',
+                      color: active ? 'white' : 'rgba(255,255,255,0.65)',
                       background: active ? 'rgba(217,79,138,0.25)' : 'transparent',
                       borderLeft: active ? '3px solid var(--color-berry)' : '3px solid transparent',
                       fontFamily: 'var(--font-heading)',
                       fontWeight: active ? 600 : 400,
-                      fontSize: '0.9rem',
+                      fontSize: '0.875rem',
                       transition: 'all var(--transition-fast)',
                       textDecoration: 'none',
                     }}
                   >
-                    <Icon size={18} style={{ flexShrink: 0 }} />
-                    {label}
+                    <Icon size={17} style={{ flexShrink: 0, color: active ? 'var(--color-berry)' : 'inherit' }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
                   </Link>
                 </li>
               );
@@ -151,76 +171,110 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </ul>
         </nav>
 
-        {/* Footer */}
-        <div style={{ padding: 'var(--space-4)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          <Link
-            href="/admin/login"
+        {/* Footer with Real Logout - Fixed Bottom */}
+        <div className="admin-sidebar-footer">
+          <button
+            onClick={handleSignOut}
             style={{
+              width: '100%',
               display: 'flex',
               alignItems: 'center',
-              gap: 'var(--space-3)',
-              padding: '11px 14px',
+              gap: '12px',
+              padding: '9px 12px',
               borderRadius: 'var(--radius-md)',
-              color: 'rgba(255,255,255,0.6)',
+              color: 'rgba(255,255,255,0.85)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
               fontFamily: 'var(--font-heading)',
               fontWeight: 500,
-              fontSize: '0.9rem',
+              fontSize: '0.875rem',
               transition: 'all var(--transition-fast)',
-              textDecoration: 'none',
+              textAlign: 'left',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = '#fca5a5';
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
+              e.currentTarget.style.background = 'transparent';
             }}
           >
-            <LogOut size={18} />
-            Sign Out
-          </Link>
+            <LogOut size={17} style={{ flexShrink: 0 }} />
+            <span>Sign Out</span>
+          </button>
         </div>
       </aside>
 
       {/* Main */}
       <div className="admin-main">
         {/* Top Bar */}
-        <header style={{
-          height: 64,
-          background: 'white',
-          borderBottom: '1px solid var(--color-lavender-dark)',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 var(--space-6)',
-          gap: 'var(--space-4)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          boxShadow: 'var(--shadow-sm)',
-        }}>
+        <header className="admin-header">
           {/* Hamburger (mobile) */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            style={{ display: 'none', padding: 8, borderRadius: 'var(--radius-md)', color: 'var(--color-plum)' }}
+            style={{
+              display: 'none',
+              width: 40,
+              height: 40,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--color-plum)',
+              background: 'var(--color-lavender)',
+              border: 'none',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
             className="sidebar-toggle"
             aria-label="Toggle sidebar"
           >
-            {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          <div style={{ flex: 1 }}>
-            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--color-plum)', fontSize: '1rem' }}>
+          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+            <span style={{
+              fontFamily: 'var(--font-heading)',
+              fontWeight: 700,
+              color: 'var(--color-plum)',
+              fontSize: '1rem',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: 'block'
+            }}>
               {visibleNavItems.find(n => pathname.startsWith(n.href))?.label || 'Admin'}
             </span>
           </div>
 
           {/* Admin Info */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, color: 'var(--color-plum)', fontSize: '0.875rem' }}>Admin</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Thirst. HQ</div>
+              <div style={{
+                fontFamily: 'var(--font-heading)',
+                fontWeight: 600,
+                color: 'var(--color-plum)',
+                fontSize: '0.8125rem',
+                maxWidth: 120,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>
+                {staffInfo?.name || 'Admin'}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', textTransform: 'capitalize' }}>
+                {staffInfo?.role || 'Staff'}
+              </div>
             </div>
-            <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--gradient-berry)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700 }}>
-              A
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--gradient-berry)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.85rem', flexShrink: 0 }}>
+              {(staffInfo?.name || 'A')[0].toUpperCase()}
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main style={{ flex: 1, padding: 'var(--space-6)', background: '#f9f4f7' }}>
+        <main className="admin-content">
           {children}
         </main>
       </div>
@@ -228,7 +282,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <style jsx>{`
         @media (max-width: 1024px) {
           .sidebar-toggle { display: flex !important; }
-          .mobile-overlay { display: block !important; }
         }
       `}</style>
     </div>

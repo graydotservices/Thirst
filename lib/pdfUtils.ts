@@ -1,4 +1,4 @@
-﻿import jsPDF from 'jspdf';
+import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
 type OrderData = {
@@ -12,6 +12,8 @@ type OrderData = {
   gst: number;
   total: number;
   payment_method: string;
+  billed_by?: string;
+  tax?: number;
 };
 
 export const generateInvoiceImage = async (order: OrderData): Promise<Blob | null> => {
@@ -90,6 +92,7 @@ export const generateInvoiceImage = async (order: OrderData): Promise<Blob | nul
       <div style="text-align: center; font-size: 14px; color: #d94f8a; font-weight: bold; margin-bottom: 5px;">
         Thank you for indulging with Thirst!
       </div>
+      ${order.billed_by ? `<div style="text-align: center; font-size: 12px; color: #787878; margin-bottom: 4px;">Served by: ${order.billed_by}</div>` : ''}
       <div style="text-align: center; font-size: 12px; color: #787878;">
         Paid via ${order.payment_method.toUpperCase()}
       </div>
@@ -307,8 +310,9 @@ export const generateInvoicePDF = async (order: OrderData, autoDownload = true) 
   doc.setFontSize(8);
   doc.setTextColor(...colors.gray);
   
-  if (staffMeta) {
-    doc.text(`Served with love by ${staffMeta.name.replace('Billed by: ', '')}`, pageWidth / 2, footerY + 15, { align: 'center' });
+  const serverName = order.billed_by || (staffMeta ? staffMeta.name.replace('Billed by: ', '') : '');
+  if (serverName) {
+    doc.text(`Served with love by ${serverName}`, pageWidth / 2, footerY + 15, { align: 'center' });
   }
   
   doc.text('Follow us @thirst_fresh  |  Visit us at www.thirstcafe.in', pageWidth / 2, footerY + 28, { align: 'center' });
