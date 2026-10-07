@@ -133,17 +133,17 @@ export default function FranchiseAdminPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 'var(--space-5)' }}>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>
+      <div style={{ marginBottom: 'var(--space-4)' }}>
+        <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)' }}>
           Franchise Applications & Investment Budgets
         </h1>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
           {apps.filter(a => a.status === 'pending').length} pending · {apps.filter(a => a.status === 'reviewing').length} under review
         </p>
       </div>
 
       {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '2px', marginBottom: 'var(--space-5)' }}>
+      <div className="admin-tab-bar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '4px', marginBottom: 'var(--space-5)' }}>
         {[
           { id: 'all', label: `All (${apps.length})` },
           { id: 'pending', label: `Pending (${apps.filter(a => a.status === 'pending').length})` },
@@ -155,7 +155,7 @@ export default function FranchiseAdminPage() {
             key={t.id}
             onClick={() => setStatusFilter(t.id)}
             className={`btn btn-sm ${statusFilter === t.id ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap' }}
+            style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap', padding: '7px 14px' }}
           >
             {t.label}
           </button>

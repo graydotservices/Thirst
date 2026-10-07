@@ -486,7 +486,17 @@ export default function BillingPage() {
             />
           </div>
 
-          <div className="grid grid-3" style={{ gap: 'var(--space-3)', maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', paddingRight: '4px' }}>
+          <div 
+            className="pos-products-grid" 
+            style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))', 
+              gap: 'var(--space-3)', 
+              maxHeight: 'calc(100vh - 220px)', 
+              overflowY: 'auto', 
+              paddingRight: '4px' 
+            }}
+          >
             {filteredProducts.map(p => (
               <div
                 key={p.id}
@@ -886,6 +896,48 @@ export default function BillingPage() {
           </div>
         </div>
       </div>
+      {/* Floating Bottom Cart Bar for Mobile when browsing menu */}
+      {activeMobileTab === 'menu' && cart.length > 0 && (
+        <div
+          onClick={() => setActiveMobileTab('cart')}
+          className="pos-mobile-floating-pill"
+          style={{
+            position: 'fixed',
+            bottom: '16px',
+            left: '12px',
+            right: '12px',
+            background: 'var(--color-plum)',
+            color: 'white',
+            padding: '12px 18px',
+            borderRadius: 'var(--radius-full)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            zIndex: 150,
+            display: 'none',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ background: 'var(--color-berry)', color: 'white', padding: '2px 8px', borderRadius: '50px', fontSize: '0.8rem', fontWeight: 800 }}>
+              {cart.reduce((s, c) => s + c.qty, 0)} items
+            </span>
+            <span style={{ fontWeight: 800, fontSize: '1rem' }}>₹{total}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.85rem', color: 'var(--color-gold)' }}>
+            Checkout →
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @media (max-width: 1024px) {
+          .pos-mobile-nav { display: flex !important; }
+          .pos-menu-col { grid-column: span 3 !important; }
+          .pos-cart-col { grid-column: span 3 !important; height: auto !important; position: static !important; }
+          .pos-mobile-floating-pill { display: flex !important; }
+        }
+      `}</style>
     </div>
   );
 }

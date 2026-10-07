@@ -124,16 +124,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
         {/* Logo - Fixed Top */}
-        <div className="admin-sidebar-header">
-          <div style={{ position: 'relative', width: 34, height: 34, flexShrink: 0 }}>
-            <Image src="/logo-v2.png" alt="Thirst." fill style={{ objectFit: 'contain' }} />
-          </div>
-          <div>
-            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.25rem', color: 'white', lineHeight: 1.2 }}>
-              Thirst<span style={{ color: 'var(--color-berry)' }}>.</span>
+        <div className="admin-sidebar-header" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ position: 'relative', width: 34, height: 34, flexShrink: 0 }}>
+              <Image src="/logo-v2.png" alt="Thirst." fill style={{ objectFit: 'contain' }} />
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>Admin Panel</div>
+            <div>
+              <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.25rem', color: 'white', lineHeight: 1.2 }}>
+                Thirst<span style={{ color: 'var(--color-berry)' }}>.</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>Admin Panel</div>
+            </div>
           </div>
+          {/* Mobile close button inside drawer */}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="sidebar-close-btn"
+            style={{
+              display: 'none',
+              width: 34,
+              height: 34,
+              borderRadius: '8px',
+              background: 'rgba(255,255,255,0.1)',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            aria-label="Close sidebar"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         {/* Nav - Dedicated Scrollable Area */}
@@ -250,7 +272,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {/* Admin Info */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
-            <div style={{ textAlign: 'right' }}>
+            <div className="admin-user-info" style={{ textAlign: 'right' }}>
               <div style={{
                 fontFamily: 'var(--font-heading)',
                 fontWeight: 600,
@@ -282,6 +304,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <style jsx>{`
         @media (max-width: 1024px) {
           .sidebar-toggle { display: flex !important; }
+          .sidebar-close-btn { display: flex !important; }
+        }
+        @media (max-width: 480px) {
+          .admin-user-info { display: none !important; }
         }
       `}</style>
     </div>

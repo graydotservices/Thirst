@@ -155,23 +155,23 @@ export default function ReportsPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>Reports & Analytics</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Business performance and financial insights</p>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)' }}>Reports & Analytics</h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Business performance and financial insights</p>
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Range Toggle */}
-          <div style={{ display: 'flex', background: 'white', borderRadius: 'var(--radius-full)', padding: '4px', border: '1px solid var(--color-lavender-dark)' }}>
+          <div className="admin-tab-bar" style={{ display: 'flex', background: 'white', borderRadius: 'var(--radius-full)', padding: '3px', border: '1px solid var(--color-lavender-dark)' }}>
             {ranges.map(r => (
               <button
                 key={r}
                 onClick={() => setRange(r)}
                 style={{
-                  padding: '7px clamp(8px, 2.5vw, 16px)', borderRadius: 'var(--radius-full)', border: 'none',
+                  padding: '6px clamp(8px, 2.5vw, 14px)', borderRadius: 'var(--radius-full)', border: 'none',
                   background: range === r ? 'var(--color-berry)' : 'transparent',
                   color: range === r ? 'white' : 'var(--color-text-secondary)',
-                  fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.8125rem',
+                  fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.8rem',
                   cursor: 'pointer', transition: 'all var(--transition-fast)',
                 }}
               >
@@ -179,39 +179,39 @@ export default function ReportsPage() {
               </button>
             ))}
           </div>
-          <button id="btn-export-reports" onClick={exportCSV} className="btn btn-secondary btn-sm">
+          <button id="btn-export-reports" onClick={exportCSV} className="btn btn-secondary btn-sm" style={{ padding: '7px 14px' }}>
             <Download size={14} /> Export CSV
           </button>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-4" style={{ marginBottom: 'var(--space-6)', gap: 'var(--space-4)' }}>
+      <div className="grid grid-4" style={{ marginBottom: 'var(--space-5)', gap: 'var(--space-3)' }}>
         {[
-          { label: `Total Revenue`, value: `₹${totals.revenue.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'var(--color-berry)', subtitle: 'All-time gross sales' },
+          { label: `Total Revenue`, value: `₹${totals.revenue.toLocaleString('en-IN')}`, icon: IndianRupee, color: 'var(--color-berry)', subtitle: 'Gross sales' },
           { label: `Total Orders`, value: totals.orders.toLocaleString('en-IN'), icon: ShoppingCart, color: '#6366f1', subtitle: 'Completed bills' },
-          { label: 'Avg. Order Value', value: `₹${totals.orders > 0 ? Math.round(totals.revenue / totals.orders).toLocaleString('en-IN') : 0}`, icon: TrendingUp, color: 'var(--color-gold-dark)', subtitle: 'Revenue per transaction' },
-          { label: 'Unique Customers', value: totals.newCustomers.toLocaleString('en-IN'), icon: Users, color: 'var(--color-success)', subtitle: 'Distinct patrons' },
+          { label: 'Avg. Order', value: `₹${totals.orders > 0 ? Math.round(totals.revenue / totals.orders).toLocaleString('en-IN') : 0}`, icon: TrendingUp, color: 'var(--color-gold-dark)', subtitle: 'Per transaction' },
+          { label: 'Customers', value: totals.newCustomers.toLocaleString('en-IN'), icon: Users, color: 'var(--color-success)', subtitle: 'Patrons' },
         ].map(({ label, value, icon: Icon, color, subtitle }) => (
-          <div key={label} className="stat-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-3)' }}>
-              <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
-                <Icon size={20} />
+          <div key={label} className="stat-card" style={{ padding: 'clamp(12px, 3vw, 18px)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)' }}>
+              <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
+                <Icon size={18} />
               </div>
-              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', background: 'var(--color-lavender)', padding: '3px 8px', borderRadius: 'var(--radius-full)' }}>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.7rem', background: 'var(--color-lavender)', padding: '2px 7px', borderRadius: 'var(--radius-full)', fontWeight: 600 }}>
                 {range}
               </span>
             </div>
-            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.625rem', color: 'var(--color-plum)' }}>{value}</div>
-            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>{label}</div>
-            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.72rem', marginTop: '2px' }}>{subtitle}</div>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.15rem, 4vw, 1.5rem)', color: 'var(--color-plum)', marginBottom: '2px', lineHeight: 1.15 }}>{value}</div>
+            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>{label}</div>
+            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.7rem', marginTop: '2px', opacity: 0.8 }}>{subtitle}</div>
           </div>
         ))}
       </div>
 
       {/* Revenue Chart */}
-      <div className="card" style={{ padding: 'var(--space-6)', marginBottom: 'var(--space-5)' }}>
-        <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', marginBottom: 'var(--space-5)' }}>
+      <div className="card" style={{ padding: 'clamp(16px, 3vw, 24px)', marginBottom: 'var(--space-5)', minWidth: 0, overflow: 'hidden' }}>
+        <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', marginBottom: 'var(--space-4)', fontSize: '1rem' }}>
           Revenue & Orders — {range}
         </h3>
         {loading ? (

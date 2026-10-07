@@ -264,35 +264,35 @@ export default function AdminLocationsPage() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)' }}>
             Address & Store Management
           </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
             Update official company address, billing identity, and retail store locations
           </p>
         </div>
 
         {activeTab === 'outlets' && (
-          <button id="btn-add-location" onClick={openAddLoc} className="btn btn-primary">
+          <button id="btn-add-location" onClick={openAddLoc} className="btn btn-primary" style={{ padding: '10px 18px' }}>
             <Plus size={18} /> Add Branch Outlet
           </button>
         )}
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '2px solid var(--color-border)', marginBottom: 'var(--space-6)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div className="admin-tab-bar" style={{ display: 'flex', gap: '8px', borderBottom: '2px solid var(--color-border)', marginBottom: 'var(--space-5)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <button
           onClick={() => setActiveTab('company')}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '12px 20px',
+            padding: '10px 16px',
             fontFamily: 'var(--font-heading)',
             fontWeight: 700,
-            fontSize: '0.95rem',
+            fontSize: '0.875rem',
             background: 'none',
             border: 'none',
             borderBottom: activeTab === 'company' ? '3px solid var(--color-berry)' : '3px solid transparent',
@@ -302,8 +302,8 @@ export default function AdminLocationsPage() {
             whiteSpace: 'nowrap'
           }}
         >
-          <Building2 size={18} />
-          Official Company Address & HQ Profile
+          <Building2 size={16} />
+          Company Address & HQ
         </button>
         <button
           onClick={() => setActiveTab('outlets')}
@@ -311,10 +311,10 @@ export default function AdminLocationsPage() {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '12px 20px',
+            padding: '10px 16px',
             fontFamily: 'var(--font-heading)',
             fontWeight: 700,
-            fontSize: '0.95rem',
+            fontSize: '0.875rem',
             background: 'none',
             border: 'none',
             borderBottom: activeTab === 'outlets' ? '3px solid var(--color-berry)' : '3px solid transparent',
@@ -324,8 +324,8 @@ export default function AdminLocationsPage() {
             whiteSpace: 'nowrap'
           }}
         >
-          <MapPin size={18} />
-          Store Branches & Outlets ({locs.length})
+          <MapPin size={16} />
+          Branches & Outlets ({locs.length})
         </button>
       </div>
 

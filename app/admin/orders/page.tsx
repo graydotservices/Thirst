@@ -134,7 +134,7 @@ export default function OrdersPage() {
 
       {/* Search and Status Filters */}
       <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-5)', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: 260, maxWidth: 400 }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 'min(100%, 260px)', maxWidth: 440 }}>
           <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
           <input 
             className="input" 
@@ -145,7 +145,7 @@ export default function OrdersPage() {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
+        <div className="admin-tab-bar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
           {[
             { id: 'all', label: `All (${orders.length})` },
             { id: 'completed', label: `Completed (${orders.filter(o => o.status !== 'cancelled').length})` },
@@ -155,7 +155,7 @@ export default function OrdersPage() {
               key={t.id}
               onClick={() => setStatusFilter(t.id as any)}
               className={`btn btn-sm ${statusFilter === t.id ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ whiteSpace: 'nowrap', fontSize: '0.8125rem' }}
+              style={{ whiteSpace: 'nowrap', fontSize: '0.8125rem', padding: '7px 14px' }}
             >
               {t.label}
             </button>

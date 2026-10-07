@@ -829,13 +829,20 @@ textarea.input {
 .admin-layout {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
   background: #f9f4f7;
+  position: relative;
 }
 
 .admin-sidebar {
   width: 260px;
+  max-width: 84vw;
   height: 100vh;
-  max-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   background: var(--gradient-dark);
   color: var(--color-white);
   display: flex;
@@ -846,7 +853,7 @@ textarea.input {
   bottom: 0;
   z-index: 200;
   overflow: hidden;
-  transition: transform var(--transition-base);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
 }
 
@@ -881,7 +888,7 @@ textarea.input {
 
 .admin-sidebar-header {
   flex-shrink: 0;
-  padding: 18px 20px;
+  padding: 16px 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
@@ -891,6 +898,7 @@ textarea.input {
 .admin-sidebar-footer {
   flex-shrink: 0;
   padding: 12px 14px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(18, 6, 14, 0.4);
 }
@@ -898,9 +906,14 @@ textarea.input {
 .admin-main {
   margin-left: 260px;
   flex: 1;
+  min-width: 0;
+  width: calc(100% - 260px);
+  max-width: 100vw;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
 }
 
 @media (max-width: 1024px) {
@@ -913,12 +926,17 @@ textarea.input {
   }
   .admin-main {
     margin-left: 0;
+    width: 100%;
+    max-width: 100vw;
+    min-width: 0;
   }
 }
 
 .admin-header {
   height: 64px;
-  background: white;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--color-lavender-dark);
   display: flex;
   align-items: center;
@@ -927,38 +945,49 @@ textarea.input {
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 3px rgba(62, 39, 35, 0.05);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .admin-content {
   flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   padding: var(--space-6);
   background: #f9f4f7;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 @media (max-width: 768px) {
   .admin-header {
-    height: 58px;
-    padding: 0 var(--space-3);
-    gap: var(--space-2);
+    height: 56px;
+    padding: 0 12px;
+    gap: 8px;
   }
   .admin-content {
-    padding: 14px 12px 28px;
+    padding: 14px 12px 36px;
   }
 }
 
 .stat-card {
   background: var(--color-white);
   border-radius: var(--radius-lg);
-  padding: var(--space-6);
+  padding: var(--space-5) var(--space-6);
   box-shadow: var(--shadow-sm);
-  border: 1px solid rgba(248, 236, 247, 0.8);
+  border: 1px solid var(--color-lavender-dark);
   transition: all var(--transition-base);
+  min-width: 0;
+  overflow: hidden;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .stat-card {
-    padding: var(--space-4);
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
   }
 }
 
@@ -1171,25 +1200,19 @@ tr:hover td {
 }
 
 /* ============================================================
-   ADMIN LAYOUT
-   ============================================================ */
-.admin-layout {
-  display: flex;
-  min-height: 100vh;
-  background: #f9f4f7;
-}
-
-
-
-/* ============================================================
    TABLES
    ============================================================ */
 .table-container {
   background: white;
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   border: 1px solid var(--color-lavender-dark);
   box-shadow: var(--shadow-sm);
+  width: 100%;
+  max-width: 100%;
+  position: relative;
 }
 
 table {
@@ -1203,7 +1226,7 @@ thead {
 }
 
 th {
-  padding: 14px 16px;
+  padding: 12px 14px;
   text-align: left;
   font-family: var(--font-heading);
   font-weight: 700;
@@ -1215,10 +1238,21 @@ th {
 }
 
 td {
-  padding: 14px 16px;
+  padding: 12px 14px;
   color: var(--color-text-secondary);
   border-bottom: 1px solid var(--color-lavender);
   vertical-align: middle;
+}
+
+@media (max-width: 640px) {
+  th {
+    padding: 10px 10px;
+    font-size: 0.72rem;
+  }
+  td {
+    padding: 10px 10px;
+    font-size: 0.8125rem;
+  }
 }
 
 tr:last-child td {
@@ -1236,26 +1270,29 @@ tr:hover td {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(26, 10, 18, 0.7);
+  background: rgba(26, 10, 18, 0.72);
   z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-6);
   animation: fadeIn 0.2s ease;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 .modal {
   background: white;
   border-radius: var(--radius-xl);
-  padding: var(--space-8);
+  padding: var(--space-6);
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
+  max-height: 90dvh;
   overflow-y: auto;
   box-shadow: var(--shadow-xl);
   animation: scaleIn 0.2s ease;
+  box-sizing: border-box;
 }
 
 .modal-lg {
@@ -1264,36 +1301,21 @@ tr:hover td {
 
 @media (max-width: 640px) {
   .overlay {
-    padding: var(--space-3);
+    padding: 10px;
+    align-items: flex-end;
   }
   .modal {
-    padding: var(--space-5) var(--space-4);
-    max-height: 92vh;
-    border-radius: var(--radius-lg);
+    padding: 20px 16px;
+    max-height: 88dvh;
+    border-radius: 20px 20px 14px 14px;
     width: 100%;
+    max-width: 100%;
   }
 }
 
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.94) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-/* ============================================================
-   STAT CARD
-   ============================================================ */
-.stat-card {
-  background: white;
-  border-radius: var(--radius-lg);
-  padding: var(--space-5) var(--space-6);
-  border: 1px solid var(--color-lavender-dark);
-  box-shadow: var(--shadow-sm);
-  transition: all var(--transition-base);
-}
-
-.stat-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
 }
 
 /* ============================================================
@@ -1359,20 +1381,42 @@ tr:hover td {
 
 @media (max-width: 768px) {
   .grid-3 {
-    grid-template-columns: repeat(1, 1fr);
+    grid-template-columns: 1fr;
   }
   .grid-2 {
     grid-template-columns: 1fr;
   }
   .grid-4 {
     grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 }
 
 @media (max-width: 480px) {
   .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .grid-4 {
     grid-template-columns: 1fr;
   }
+}
+
+/* Custom Admin Tab Scroll */
+.admin-tab-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+  max-width: 100%;
+}
+.admin-tab-bar::-webkit-scrollbar {
+  display: none;
 }
 
 /* ============================================================

@@ -135,12 +135,12 @@ export default function NotificationsAdminPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>Notifications</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Broadcast customer & banner announcements</p>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)' }}>Notifications</h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Broadcast customer & banner announcements</p>
         </div>
-        <button id="btn-add-notif" onClick={() => { setErrorMessage(''); setShowModal(true); }} className="btn btn-primary">
+        <button id="btn-add-notif" onClick={() => { setErrorMessage(''); setShowModal(true); }} className="btn btn-primary" style={{ padding: '10px 18px' }}>
           <Plus size={18} /> New Notification
         </button>
       </div>
@@ -156,11 +156,11 @@ export default function NotificationsAdminPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {notifs.map(n => (
-            <div key={n.id} className="card" style={{ padding: 'var(--space-4)', display: 'flex', alignItems: 'flex-start', gap: 'var(--space-4)', opacity: n.isActive ? 1 : 0.6, flexWrap: 'wrap' }}>
-              <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)', background: typeBg[n.type] || 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: typeColors[n.type] || '#6366f1', flexShrink: 0 }}>
-                <Bell size={20} />
+            <div key={n.id} className="card" style={{ padding: 'clamp(12px, 3vw, 18px)', display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)', opacity: n.isActive ? 1 : 0.6, flexWrap: 'wrap' }}>
+              <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-md)', background: typeBg[n.type] || 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: typeColors[n.type] || '#6366f1', flexShrink: 0 }}>
+                <Bell size={18} />
               </div>
-              <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ flex: 1, minWidth: 'min(100%, 200px)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap', gap: '6px' }}>
                   <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '0.9375rem' }}>{n.title}</h3>
                   <span style={{ padding: '3px 12px', borderRadius: 'var(--radius-full)', background: typeBg[n.type] || 'rgba(99,102,241,0.1)', color: typeColors[n.type] || '#6366f1', fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.75rem', textTransform: 'capitalize' }}>

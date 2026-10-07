@@ -108,16 +108,16 @@ export default function StaffPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>Staff Management</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{staff.filter(s => s.status === 'active').length} active staff members</p>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)' }}>Staff Management</h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>{staff.filter(s => s.status === 'active').length} active staff members</p>
         </div>
-        <button onClick={openAdd} className="btn btn-primary"><UserPlus size={18} /> Add Staff</button>
+        <button onClick={openAdd} className="btn btn-primary" style={{ padding: '10px 18px' }}><UserPlus size={18} /> Add Staff</button>
       </div>
 
       {/* Search */}
-      <div style={{ position: 'relative', marginBottom: 'var(--space-5)', maxWidth: 400 }}>
+      <div style={{ position: 'relative', marginBottom: 'var(--space-4)', maxWidth: 440, width: '100%' }}>
         <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
         <input id="staff-search" className="input" placeholder="Search by name, phone, role..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 44, background: 'white' }} />
       </div>

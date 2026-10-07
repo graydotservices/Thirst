@@ -167,15 +167,16 @@ export default function AdminGalleryPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>Gallery Manager</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{items.filter(i => i.is_active).length} active images on showcase</p>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)' }}>Gallery Manager</h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>{items.filter(i => i.is_active).length} active images on showcase</p>
         </div>
         <button 
           id="btn-upload-gallery"
           onClick={() => fileInputRef.current?.click()} 
           className="btn btn-primary"
+          style={{ padding: '10px 18px' }}
         >
           <Upload size={18} /> Upload Image
         </button>
@@ -192,13 +193,13 @@ export default function AdminGalleryPage() {
       {/* Upload drop zone */}
       <div 
         onClick={() => fileInputRef.current?.click()} 
-        style={{ border: '2px dashed var(--color-soft-pink)', borderRadius: 'var(--radius-xl)', padding: 'var(--space-8)', textAlign: 'center', marginBottom: 'var(--space-6)', background: 'rgba(246,183,210,0.06)', cursor: 'pointer', transition: 'background 0.2s ease' }}
+        style={{ border: '2px dashed var(--color-soft-pink)', borderRadius: 'var(--radius-xl)', padding: 'clamp(20px, 4vw, 32px)', textAlign: 'center', marginBottom: 'var(--space-5)', background: 'rgba(246,183,210,0.06)', cursor: 'pointer', transition: 'background 0.2s ease' }}
         onMouseEnter={e => e.currentTarget.style.background = 'rgba(246,183,210,0.12)'}
         onMouseLeave={e => e.currentTarget.style.background = 'rgba(246,183,210,0.06)'}
       >
-        <Upload size={32} style={{ color: 'var(--color-berry)', margin: '0 auto var(--space-3)' }} />
-        <p style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '4px' }}>Click or drop dessert photos here</p>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>Supports PNG, JPG, WebP up to 5MB</p>
+        <Upload size={28} style={{ color: 'var(--color-berry)', margin: '0 auto 8px' }} />
+        <p style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '4px', fontSize: '0.95rem' }}>Click or drop dessert photos here</p>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>Supports PNG, JPG, WebP up to 5MB</p>
       </div>
 
       {/* Gallery Grid */}
@@ -211,7 +212,7 @@ export default function AdminGalleryPage() {
           No images in gallery yet. Click upload to showcase your desserts!
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 'var(--space-4)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 'var(--space-3)' }}>
           {items.map(item => (
             <div key={item.id} className="card" style={{ padding: 0, overflow: 'hidden', opacity: item.is_active ? 1 : 0.65 }}>
               <div style={{ position: 'relative', paddingBottom: '100%', background: 'var(--color-lavender)' }}>

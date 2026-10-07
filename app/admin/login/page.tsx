@@ -54,13 +54,13 @@ export default function AdminLoginPage() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        minHeight: '100dvh',
         background: '#0f0c29', // Fallback
         backgroundImage: 'linear-gradient(135deg, #240b36 0%, #c31432 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 'var(--space-4)',
+        padding: 'clamp(12px, 3vw, 24px)',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -95,7 +95,7 @@ export default function AdminLoginPage() {
         style={{
           width: '100%',
           maxWidth: 420,
-          padding: '40px 32px',
+          padding: 'clamp(28px, 6vw, 40px) clamp(16px, 5vw, 32px)',
           background: 'rgba(20, 10, 20, 0.4)',
           borderRadius: '24px',
           boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255,255,255,0.1)',

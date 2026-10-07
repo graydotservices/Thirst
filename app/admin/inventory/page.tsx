@@ -188,12 +188,12 @@ export default function InventoryPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>Inventory</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{products.length} products · {lowStock.length} low stock alerts</p>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)' }}>Inventory</h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>{products.length} products · {lowStock.length} low stock alerts</p>
         </div>
-        <button id="btn-add-product" onClick={openAdd} className="btn btn-primary"><Plus size={18} /> Add Product</button>
+        <button id="btn-add-product" onClick={openAdd} className="btn btn-primary" style={{ padding: '10px 18px' }}><Plus size={18} /> Add Product</button>
       </div>
 
       {/* Low Stock Alerts */}
@@ -202,7 +202,7 @@ export default function InventoryPage() {
           <AlertTriangle size={20} style={{ color: 'var(--color-warning)', flexShrink: 0, marginTop: 2 }} />
           <div>
             <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: '#92400e', marginBottom: '4px' }}>Low Stock Alert ({lowStock.length})</div>
-            <div style={{ color: '#78350f', fontSize: '0.875rem' }}>
+            <div style={{ color: '#78350f', fontSize: '0.85rem' }}>
               {lowStock.map(p => `${p.name} (${p.stock} left)`).join(', ')} — restock needed.
             </div>
           </div>
@@ -211,7 +211,7 @@ export default function InventoryPage() {
 
       {/* Filter and Search Bar */}
       <div style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-5)', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: 240, maxWidth: 360 }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 'min(100%, 240px)', maxWidth: 380 }}>
           <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
           <input 
             className="input" 
@@ -222,7 +222,7 @@ export default function InventoryPage() {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '2px', maxWidth: '100%' }}>
+        <div className="admin-tab-bar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '2px', maxWidth: '100%' }}>
           {[
             { id: 'all', label: 'All Items' },
             { id: 'cakes', label: 'Cakes' },
@@ -233,7 +233,7 @@ export default function InventoryPage() {
               key={tab.id}
               onClick={() => setCategoryFilter(tab.id)}
               className={`btn btn-sm ${categoryFilter === tab.id ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap' }}
+              style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap', padding: '7px 14px' }}
             >
               {tab.label}
             </button>
@@ -247,7 +247,7 @@ export default function InventoryPage() {
           No products found matching &quot;{search}&quot;.
         </div>
       ) : (
-        <div className="grid grid-3" style={{ gap: 'var(--space-4)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 'var(--space-4)' }}>
           {filteredProducts.map(p => {
             const thresh = getThreshold(p);
             const isLow = p.stock <= thresh;

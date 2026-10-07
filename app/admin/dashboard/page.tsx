@@ -157,28 +157,29 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-4" style={{ marginBottom: 'var(--space-6)', gap: 'var(--space-4)' }}>
+      <div className="grid grid-4" style={{ marginBottom: 'var(--space-5)', gap: 'var(--space-3)' }}>
         {statCards.map(({ label, value, change, icon: Icon, color }) => (
-          <div key={label} className="stat-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
+          <div key={label} className="stat-card" style={{ padding: 'clamp(12px, 3vw, 20px)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
               <div
                 style={{
-                  width: 48, height: 48, borderRadius: 'var(--radius-md)',
+                  width: 40, height: 40, borderRadius: 'var(--radius-md)',
                   background: `${color}18`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', color,
+                  flexShrink: 0
                 }}
               >
-                <Icon size={22} />
+                <Icon size={20} />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-success)', fontSize: '0.8125rem', fontWeight: 600 }}>
-                <ArrowUpRight size={14} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-success)', fontSize: '0.75rem', fontWeight: 700 }}>
+                <ArrowUpRight size={13} />
                 {change}
               </div>
             </div>
-            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.75rem', color: 'var(--color-plum)', letterSpacing: '-0.02em', marginBottom: '2px' }}>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.75rem)', color: 'var(--color-plum)', letterSpacing: '-0.02em', marginBottom: '2px', lineHeight: 1.15 }}>
               {value}
             </div>
-            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>{label}</div>
+            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem', fontWeight: 500 }}>{label}</div>
           </div>
         ))}
       </div>
@@ -186,42 +187,44 @@ export default function DashboardPage() {
       {/* Chart + Top Products */}
       <div className="grid grid-chart" style={{ gap: 'var(--space-5)', marginBottom: 'var(--space-6)' }}>
         {/* Revenue Chart */}
-        <div className="card" style={{ padding: 'var(--space-6)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
+        <div className="card" style={{ padding: 'clamp(16px, 3vw, 24px)', minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
             <div>
-              <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1.0625rem' }}>Last 7 Days Revenue</h3>
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>Rolling Window</p>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1rem' }}>Last 7 Days Revenue</h3>
+              <p style={{ color: 'var(--color-text-muted)', fontSize: '0.78rem' }}>Rolling Window</p>
             </div>
             <span className="badge badge-primary">Live</span>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#D94F8A" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#D94F8A" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0e0eb" />
-              <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} />
-              <YAxis 
-                tick={{ fontSize: 12, fill: '#9c8490' }} 
-                axisLine={false} 
-                tickLine={false} 
-                tickFormatter={v => v >= 1000 ? `₹${(v / 1000).toFixed(1)}k` : `₹${v}`} 
-              />
-              <Tooltip
-                contentStyle={{ background: 'white', border: '1px solid #f0e0eb', borderRadius: 12, fontFamily: 'var(--font-heading)', fontSize: 13 }}
-                formatter={(v: any) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Revenue']}
-              />
-              <Area type="monotone" dataKey="revenue" stroke="#D94F8A" strokeWidth={2.5} fill="url(#revenueGrad)" dot={{ fill: '#D94F8A', r: 4, strokeWidth: 0 }} activeDot={{ r: 6 }} />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div style={{ width: '100%', height: 210, minWidth: 0 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#D94F8A" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#D94F8A" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0e0eb" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9c8490' }} axisLine={false} tickLine={false} />
+                <YAxis 
+                  tick={{ fontSize: 11, fill: '#9c8490' }} 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tickFormatter={v => v >= 1000 ? `₹${(v / 1000).toFixed(1)}k` : `₹${v}`} 
+                />
+                <Tooltip
+                  contentStyle={{ background: 'white', border: '1px solid #f0e0eb', borderRadius: 12, fontFamily: 'var(--font-heading)', fontSize: 12 }}
+                  formatter={(v: any) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Revenue']}
+                />
+                <Area type="monotone" dataKey="revenue" stroke="#D94F8A" strokeWidth={2.5} fill="url(#revenueGrad)" dot={{ fill: '#D94F8A', r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Top Products */}
-        <div className="card" style={{ padding: 'var(--space-6)' }}>
-          <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1.0625rem', marginBottom: 'var(--space-5)' }}>
+        <div className="card" style={{ padding: 'clamp(16px, 3vw, 24px)' }}>
+          <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1rem', marginBottom: 'var(--space-4)' }}>
             Top Products (Last 30 Days)
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>

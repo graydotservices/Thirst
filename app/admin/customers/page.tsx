@@ -321,12 +321,12 @@ export default function CustomersPage() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)' }}>
             Customer CRM
           </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
             {customers.length} registered customers · Loyalty tracking & purchase history
           </p>
         </div>
@@ -334,16 +334,17 @@ export default function CustomersPage() {
           id="btn-add-customer" 
           onClick={() => { setAddError(''); setFormData({ name: '', phone: '', email: '', birthday: '' }); setShowAddModal(true); }} 
           className="btn btn-primary"
+          style={{ padding: '10px 18px' }}
         >
           <UserPlus size={18} /> Add Customer
         </button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-4" style={{ marginBottom: 'var(--space-6)', gap: 'var(--space-4)' }}>
+      <div className="grid grid-4" style={{ marginBottom: 'var(--space-5)', gap: 'var(--space-3)' }}>
         {[
           { label: 'Total Customers', value: customers.length, icon: UserPlus, color: 'var(--color-berry)' },
-          { label: 'Total Loyalty Points', value: customers.reduce((s, c) => s + (c.loyalty_points || 0), 0).toLocaleString('en-IN'), icon: Star, color: 'var(--color-gold-dark)' },
+          { label: 'Loyalty Points', value: customers.reduce((s, c) => s + (c.loyalty_points || 0), 0).toLocaleString('en-IN'), icon: Star, color: 'var(--color-gold-dark)' },
           { 
             label: 'Total Revenue', 
             value: (() => {
@@ -352,16 +353,16 @@ export default function CustomersPage() {
             })(), 
             icon: ShoppingBag, color: '#6366f1' 
           },
-          { label: 'Avg. Spend / Customer', value: customers.length > 0 ? `₹${Math.round(customers.reduce((s, c) => s + Number(c.total_purchase || 0), 0) / customers.length).toLocaleString('en-IN')}` : '₹0', icon: Calendar, color: 'var(--color-success)' },
+          { label: 'Avg Spend / Cust', value: customers.length > 0 ? `₹${Math.round(customers.reduce((s, c) => s + Number(c.total_purchase || 0), 0) / customers.length).toLocaleString('en-IN')}` : '₹0', icon: Calendar, color: 'var(--color-success)' },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="stat-card">
+          <div key={label} className="stat-card" style={{ padding: 'clamp(12px, 3vw, 18px)' }}>
             <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
-              <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
-                <Icon size={20} />
+              <div style={{ width: 38, height: 38, borderRadius: 'var(--radius-md)', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
+                <Icon size={18} />
               </div>
-              <div>
-                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.375rem', color: 'var(--color-plum)' }}>{value}</div>
-                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem' }}>{label}</div>
+              <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.15rem, 4vw, 1.375rem)', color: 'var(--color-plum)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value}</div>
+                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
               </div>
             </div>
           </div>
@@ -369,7 +370,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Search Input */}
-      <div style={{ position: 'relative', marginBottom: 'var(--space-5)', maxWidth: 440 }}>
+      <div style={{ position: 'relative', marginBottom: 'var(--space-4)', maxWidth: 440, width: '100%' }}>
         <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
         <input 
           id="customer-search" 

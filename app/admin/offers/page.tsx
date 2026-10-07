@@ -194,12 +194,12 @@ export default function AdminOffersPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>Offers & Discounts</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{offers.filter(o => o.isActive).length} active promotional offers</p>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)' }}>Offers & Discounts</h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>{offers.filter(o => o.isActive).length} active promotional offers</p>
         </div>
-        <button id="btn-add-offer" onClick={openAdd} className="btn btn-primary">
+        <button id="btn-add-offer" onClick={openAdd} className="btn btn-primary" style={{ padding: '10px 18px' }}>
           <Plus size={18} /> New Offer
         </button>
       </div>
@@ -215,9 +215,9 @@ export default function AdminOffersPage() {
       ) : (
         <div className="grid grid-3" style={{ gap: 'var(--space-4)' }}>
           {offers.map(o => (
-            <div key={o.id} className="card" style={{ padding: 'var(--space-5)', border: o.isActive ? '2px solid rgba(217,79,138,0.3)' : '1px solid var(--color-lavender-dark)', opacity: o.isActive ? 1 : 0.65, display: 'flex', flexDirection: 'column' }}>
+            <div key={o.id} className="card" style={{ padding: 'clamp(14px, 3vw, 20px)', border: o.isActive ? '2px solid rgba(217,79,138,0.3)' : '1px solid var(--color-lavender-dark)', opacity: o.isActive ? 1 : 0.65, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-3)' }}>
-                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: '2.5rem', color: 'var(--color-plum)', lineHeight: 1 }}>
+                <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 900, fontSize: 'clamp(2rem, 6vw, 2.5rem)', color: 'var(--color-plum)', lineHeight: 1 }}>
                   {o.discount}%<span style={{ fontSize: '1rem', color: 'var(--color-berry)' }}> OFF</span>
                 </div>
                 <button 
