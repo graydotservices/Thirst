@@ -1,7 +1,6 @@
 -- ============================================================
 -- THIRST. CAFE — DATABASE AUDIT FIXES & MIGRATION SCRIPT
--- Run this in your Supabase SQL Editor:
--- https://supabase.com/dashboard/project/ecmwqikinlmmrsgjdbbd/sql
+-- Run this in your Supabase SQL Editor (Project Settings > SQL Editor)
 -- ============================================================
 
 -- 1. Add low_stock_threshold to products table if missing

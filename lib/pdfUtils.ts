@@ -44,7 +44,7 @@ export function formatWhatsAppBillMessage(order: OrderData, customSettings?: Com
 
   return `*${(settings.name || 'THIRST.').toUpperCase()} — LUXURY DESSERTS* 🍰
 📍 ${getFormattedAddress(settings) || 'Thiruvallur Flagship'}
-📞 Tel: ${settings.phone || '+91 87548 81546'}
+📞 Tel: ${settings.phone || ''}
 ${settings.gstin ? `GSTIN: ${settings.gstin}` : ''}
 ───────────────────────────
 🧾 *TAX INVOICE*
@@ -184,7 +184,7 @@ export function printThermalReceipt(order: OrderData, paperWidth: '80mm' | '58mm
           ${settings.city || 'Thiruvallur'}${settings.pincode ? ` - ${settings.pincode}` : ''}
         </div>
         <div style="font-size: ${is58mm ? '9px' : '10px'}; margin-top: 2px;">
-          Tel: ${settings.phone || '+91 87548 81546'}
+          Tel: ${settings.phone || ''}
         </div>
         ${settings.gstin ? `<div style="font-size: ${is58mm ? '9px' : '10px'};">GSTIN: ${settings.gstin}</div>` : ''}
         ${settings.fssai ? `<div style="font-size: ${is58mm ? '9px' : '10px'};">FSSAI: ${settings.fssai}</div>` : ''}
@@ -348,7 +348,7 @@ export const generateInvoiceImage = async (order: OrderData, customSettings?: Co
       <div style="text-align: center; margin-bottom: 20px;">
         <h1 style="color: #d94f8a; margin: 0; font-size: 28px; font-weight: 800;">${settings.name || 'Thirst.'}</h1>
         <div style="font-size: 12px; color: #787878; margin-top: 5px;">${getFormattedAddress(settings)}</div>
-        <div style="font-size: 12px; color: #787878;">Tel: ${settings.phone || '+91 87548 81546'}</div>
+        <div style="font-size: 12px; color: #787878;">Tel: ${settings.phone || ''}</div>
       </div>
       
       <div style="border-top: 1px dashed #d94f8a; border-bottom: 1px dashed #d94f8a; padding: 10px 0; margin-bottom: 20px;">
@@ -488,9 +488,9 @@ export const generateInvoicePDF = async (order: OrderData, autoDownload = true, 
   doc.setTextColor(...colors.gray);
   doc.text(`Flagship: ${settings.address_line1 || 'NO.01, Siva Vishnu kovil street'}`, addrOffset, 95);
   doc.text(`${settings.address_line2 ? `${settings.address_line2}, ` : ''}${settings.city || 'Thiruvallur'} - ${settings.pincode || '602001'}`, addrOffset, 110);
-  doc.text(`Phone: ${settings.phone || '+91 87548 81546'}  |  Email: ${settings.email || 'thirst.freshchennai@gmail.com'}`, addrOffset, 125);
+  doc.text(`Phone: ${settings.phone || ''}  |  Email: ${settings.email || ''}`, addrOffset, 125);
   if (settings.gstin) {
-    doc.text(`GSTIN: ${settings.gstin}  |  FSSAI: ${settings.fssai || '22425478001152'}`, addrOffset, 138);
+    doc.text(`GSTIN: ${settings.gstin}  |  FSSAI: ${settings.fssai || ''}`, addrOffset, 138);
   }
 
   // Invoice Title & Details (Right)

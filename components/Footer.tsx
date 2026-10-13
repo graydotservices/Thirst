@@ -77,8 +77,8 @@ export default function Footer() {
 
   const contactItems = [
     { icon: MapPin, text: formattedAddress || 'NO.01, Siva Vishnu kovil street, kakkalur, Thiruvallur - 602001' },
-    { icon: Phone, text: phoneDisplay || settings.phone || '+91 87548 81546' },
-    { icon: Mail, text: settings.email || 'thirst.freshchennai@gmail.com' },
+    { icon: Phone, text: phoneDisplay || settings.phone || '' },
+    { icon: Mail, text: settings.email || '' },
     { icon: Clock, text: settings.opening_hours || 'Mon–Sun: 2:00 PM – 12:00 AM' },
   ];
 
@@ -146,9 +146,9 @@ export default function Footer() {
           <div>
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', marginBottom: '8px' }}>&copy; {new Date().getFullYear()} {settings.name || 'Thirst.'} All rights reserved.</p>
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '4px 8px' }}>
-              <span style={{ whiteSpace: 'nowrap' }}>FSSAI: {settings.fssai || '22425478001152'}</span>
+              <span style={{ whiteSpace: 'nowrap' }}>FSSAI: {settings.fssai || ''}</span>
               <span className="hide-mobile">|</span>
-              <span style={{ whiteSpace: 'nowrap' }}>GSTIN: {settings.gstin || '33AABCT0000A1Z5'}</span>
+              <span style={{ whiteSpace: 'nowrap' }}>GSTIN: {settings.gstin || ''}</span>
               <span className="hide-mobile">|</span>
               <span style={{ whiteSpace: 'nowrap' }}>Udyam: UDYAM-TN-24-0161809</span>
             </div>
