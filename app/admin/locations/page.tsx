@@ -39,36 +39,6 @@ type Location = {
   isActive: boolean; 
 };
 
-const defaultDemoLocations: Location[] = [
-  { 
-    id: '1', 
-    name: 'Thirst. Thiruvallur — Flagship', 
-    address: 'NO.01, Siva Vishnu kovil street, kakkalur', 
-    city: 'Thiruvallur', 
-    phone: '+91 87548 81546', 
-    hours: '2:00 PM – 12:00 AM', 
-    isActive: true 
-  },
-  { 
-    id: '2', 
-    name: 'Thirst. Anna Nagar', 
-    address: '2nd Avenue, Anna Nagar East', 
-    city: 'Chennai', 
-    phone: '+91 87548 81547', 
-    hours: '1:00 PM – 11:30 PM', 
-    isActive: true 
-  },
-  { 
-    id: '3', 
-    name: 'Thirst. Koramangala', 
-    address: '7th Block, 80 Feet Road, Koramangala', 
-    city: 'Bangalore', 
-    phone: '+91 98765 43213', 
-    hours: '12:00 PM – 11:00 PM', 
-    isActive: false 
-  },
-];
-
 export default function AdminLocationsPage() {
   const [activeTab, setActiveTab] = useState<'company' | 'outlets'>('company');
 
@@ -82,7 +52,7 @@ export default function AdminLocationsPage() {
   // Synchronize company form with settings hook
   useEffect(() => {
     if (settings) {
-      setCompanyForm(settings);
+      void Promise.resolve().then(() => setCompanyForm(settings));
     }
   }, [settings]);
 
@@ -102,7 +72,7 @@ export default function AdminLocationsPage() {
     isActive: true 
   });
 
-  const fetchLocations = async () => {
+  async function fetchLocations() {
     setLoadingLocs(true);
     try {
       const { data, error } = await supabase
@@ -111,9 +81,9 @@ export default function AdminLocationsPage() {
         .order('created_at', { ascending: false });
 
       if (error || !data || data.length === 0) {
-        setLocs(defaultDemoLocations);
+        setLocs([]);
       } else {
-        const mapped = data.map((l: any) => ({
+        const mapped = data.map((l) => ({
           id: l.id,
           name: l.name || '',
           address: l.address || '',
@@ -125,14 +95,14 @@ export default function AdminLocationsPage() {
         setLocs(mapped);
       }
     } catch {
-      setLocs(defaultDemoLocations);
+      setLocs([]);
     } finally {
       setLoadingLocs(false);
     }
-  };
+  }
 
   useEffect(() => {
-    fetchLocations();
+    void Promise.resolve().then(fetchLocations);
   }, []);
 
   const handleSaveCompanySettings = async (e: React.FormEvent) => {
@@ -150,8 +120,8 @@ export default function AdminLocationsPage() {
       } else {
         setCompanyErrorMsg(res.error || 'Failed to update company settings');
       }
-    } catch (err: any) {
-      setCompanyErrorMsg(err?.message || 'Unexpected error occurred');
+    } catch (err: unknown) {
+      setCompanyErrorMsg((err instanceof Error ? err.message : '') || 'Unexpected error occurred');
     } finally {
       setSavingCompany(false);
     }
@@ -184,10 +154,10 @@ export default function AdminLocationsPage() {
         const { error } = await supabase
           .from('store_locations')
           .update(payload)
-          .eq('id', editingLoc.id);
+          .eq('id', editingLoc.id).select('id').single();
 
         if (error) {
-          console.warn('Supabase store_locations update warning:', error.message);
+          throw new Error('Unable to save this location.');
         }
 
         setLocs(prev => prev.map(l => l.id === editingLoc.id ? { ...l, ...locForm } : l));
@@ -199,8 +169,7 @@ export default function AdminLocationsPage() {
           .single();
 
         if (error) {
-          console.warn('Supabase store_locations insert warning, saving locally:', error.message);
-          setLocs(prev => [{ ...locForm, id: Date.now().toString() }, ...prev]);
+          throw new Error('Unable to save this location.');
         } else if (data) {
           setLocs(prev => [{
             id: data.id,
@@ -215,8 +184,8 @@ export default function AdminLocationsPage() {
       }
 
       setShowLocModal(false);
-    } catch (err: any) {
-      setLocErrorMessage(err?.message || 'Failed to save location.');
+    } catch (err: unknown) {
+      setLocErrorMessage((err instanceof Error ? err.message : '') || 'Failed to save location.');
     } finally {
       setSavingLoc(false);
     }
@@ -251,14 +220,10 @@ export default function AdminLocationsPage() {
   };
 
   const handleDeleteLoc = async (id: string) => {
-    if (confirm('Delete this store location?')) {
-      setLocs(prev => prev.filter(x => x.id !== id));
-      try {
-        await supabase.from('store_locations').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Failed to delete store location from Supabase', e);
-      }
-    }
+    if (!confirm('Delete this store location?')) return;
+    const { error } = await supabase.from('store_locations').delete().eq('id', id).select('id').single();
+    if (error) { alert('Unable to delete this location.'); return; }
+    setLocs(prev => prev.filter(x => x.id !== id));
   };
 
   return (

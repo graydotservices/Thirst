@@ -1,111 +1,52 @@
-import { supabase } from '@/lib/supabase';
-import { NextRequest } from 'next/server';
+import { apiError, json, jsonBody, requireStaff } from '@/lib/security/server';
+import { MANAGERS } from '@/lib/security/roles';
+import { orderInput } from '@/lib/security/orders';
+import { date, HttpError, uuid } from '@/lib/security/validation';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const body = await request.json();
-
-    // Clean and normalize phone number
-    const normalizedPhone = body.customer_phone ? body.customer_phone.replace(/[^\d+]/g, '').trim() : '';
-
-    // Upsert customer (update if phone exists)
-    let customer = null;
-    if (normalizedPhone) {
-      const { data } = await supabase
-        .from('customers')
-        .upsert(
-          {
-            phone: normalizedPhone,
-            name: body.customer_name || 'Walk-in Customer',
-            last_visit: new Date().toISOString(),
-          },
-          { onConflict: 'phone', ignoreDuplicates: false }
-        )
-        .select()
-        .single();
-      customer = data;
+    const { client } = await requireStaff(request);
+    const body = await jsonBody(request, ['items','customer_name','customer_phone','discount_percent','payment_method','request_id']);
+    const { data, error } = await client.rpc('place_order_atomic', orderInput(body));
+    if (error) {
+      if (error.code === '42501') throw new HttpError(403, 'Billing access denied');
+      if (['22023','22P02'].includes(error.code)) throw new HttpError(400, 'Invalid order details');
+      if (error.code === 'P0001') throw new HttpError(409, 'Stock or price changed. Refresh the menu and try again.');
+      throw error;
     }
-
-    // Create order
-    const billNo = body.bill_no || `TH-${Date.now().toString().slice(-8)}`;
-    const { data: order, error } = await supabase
-      .from('orders')
-      .insert([{
-        ...body,
-        customer_phone: normalizedPhone || body.customer_phone,
-        bill_no: billNo,
-        customer_id: customer?.id || null,
-        status: 'completed',
-      }])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Update loyalty points (1 point per ?100 spent)
-    if (customer?.id) {
-      const pointsEarned = Math.floor((body.total || 0) / 100);
-      await supabase
-        .from('customers')
-        .update({
-          loyalty_points: (customer.loyalty_points || 0) + pointsEarned,
-          total_purchase: (customer.total_purchase || 0) + (body.total || 0),
-        })
-        .eq('id', customer.id);
-    }
-
-    // Decrement stock for purchased items
-    if (body.items && Array.isArray(body.items)) {
-      await Promise.all(
-        body.items.map(async (item: { product_id?: string; qty?: number }) => {
-          if (!item.product_id || item.product_id === 'meta_staff') return;
-
-          const { data: product } = await supabase
-            .from('products')
-            .select('stock')
-            .eq('id', item.product_id)
-            .single();
-
-          if (product && typeof product.stock === 'number') {
-            await supabase
-              .from('products')
-              .update({ stock: Math.max(0, product.stock - (item.qty || 1)) })
-              .eq('id', item.product_id);
-          }
-        })
-      );
-    }
-
-    return Response.json({ success: true, order, billNo }, { status: 201 });
-  } catch (err) {
-    console.error('Order API error:', err);
-    return Response.json({ error: 'Failed to create order' }, { status: 500 });
-  }
+    if (!data?.id) throw new Error('Order was not confirmed');
+    return json({ success: true, order: data, billNo: data.bill_no }, 201);
+  } catch (error) { return apiError(error); }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const date = searchParams.get('date');
-
-    let query = supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (date) {
-      query = query
-        .gte('created_at', `${date}T00:00:00`)
-        .lte('created_at', `${date}T23:59:59`);
+    const { client } = await requireStaff(request, MANAGERS);
+    const params = new URL(request.url).searchParams;
+    const limit = Number(params.get('limit') || 50);
+    const offset = Number(params.get('offset') || 0);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100 || !Number.isInteger(offset) || offset < 0 || offset > 1000000) throw new HttpError(400, 'Invalid pagination');
+    let query = client.from('orders').select('*').order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+    if (params.has('date')) {
+      const day = date(params.get('date'));
+      if (!day) throw new HttpError(400, 'Invalid date');
+      const start = new Date(`${day}T00:00:00+05:30`);
+      query = query.gte('created_at', start.toISOString()).lt('created_at', new Date(start.getTime() + 86400000).toISOString());
     }
-
     const { data, error } = await query;
     if (error) throw error;
+    return json(data);
+  } catch (error) { return apiError(error); }
+}
 
-    return Response.json(data);
-  } catch (err) {
-    return Response.json({ error: 'Failed to fetch orders' }, { status: 500 });
-  }
+export async function PATCH(request: Request) {
+  try {
+    const { client } = await requireStaff(request, MANAGERS);
+    const body = await jsonBody(request, ['id','status']);
+    if (body.status !== 'cancelled') throw new HttpError(400, 'Only cancellation is supported');
+    const { data, error } = await client.rpc('cancel_order_atomic', { p_order_id: uuid(body.id) });
+    if (error?.code === 'P0002') throw new HttpError(404, 'Order not found');
+    if (error) throw error;
+    return json({ success: true, order: data });
+  } catch (error) { return apiError(error); }
 }

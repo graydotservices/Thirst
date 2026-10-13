@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Upload, Trash2, Eye, X, Loader2, Plus, Check, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { validateImageUpload } from '@/lib/imageUpload';
 
 type GalleryItem = { 
   id: string; 
@@ -12,18 +13,11 @@ type GalleryItem = {
   is_active: boolean; 
 };
 
-const defaultDemo: GalleryItem[] = [
-  { id: '1', image_url: '/cake-product.png', caption: 'Rose Velvet Cake', is_active: true },
-  { id: '2', image_url: '/icecream-product.png', caption: 'Berry Artisan Ice Cream', is_active: true },
-  { id: '3', image_url: '/special-dessert.png', caption: 'Gold Parfait', is_active: true },
-  { id: '4', image_url: '/hero-bg.png', caption: 'Premium Dessert Collection', is_active: false },
-];
-
 export default function AdminGalleryPage() {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<GalleryItem | null>(null);
-  
+
   // Upload modal state
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -33,7 +27,7 @@ export default function AdminGalleryPage() {
   const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchGallery = async () => {
+  async function fetchGallery() {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -42,9 +36,9 @@ export default function AdminGalleryPage() {
         .order('created_at', { ascending: false });
 
       if (error || !data || data.length === 0) {
-        setItems(defaultDemo);
+        setItems([]);
       } else {
-        const mapped = data.map((g: any) => ({
+        const mapped = data.map((g) => ({
           id: g.id,
           image_url: g.image_url || '/cake-product.png',
           caption: g.caption || 'Thirst Special Dessert',
@@ -53,14 +47,14 @@ export default function AdminGalleryPage() {
         setItems(mapped);
       }
     } catch {
-      setItems(defaultDemo);
+      setItems([]);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    fetchGallery();
+    void Promise.resolve().then(fetchGallery);
   }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +81,7 @@ export default function AdminGalleryPage() {
       let finalUrl = '/cake-product.png';
 
       if (selectedFile) {
-        const fileExt = selectedFile.name.split('.').pop();
+        const fileExt = await validateImageUpload(selectedFile);
         const fileName = `gallery-${Date.now()}.${fileExt}`;
         
         const { error: uploadErr } = await supabase.storage
@@ -95,8 +89,7 @@ export default function AdminGalleryPage() {
           .upload(fileName, selectedFile, { upsert: true });
 
         if (uploadErr) {
-          console.warn('Bucket upload error, falling back to local object:', uploadErr.message);
-          finalUrl = filePreviewUrl;
+          throw new Error('The image could not be uploaded. Please try again.');
         } else {
           const { data: { publicUrl } } = supabase.storage
             .from('product-images')
@@ -116,14 +109,7 @@ export default function AdminGalleryPage() {
         .single();
 
       if (error) {
-        console.warn('Database insert warning, saving locally:', error.message);
-        const localItem: GalleryItem = {
-          id: Date.now().toString(),
-          image_url: finalUrl,
-          caption: caption.trim() || 'Thirst Special',
-          is_active: true
-        };
-        setItems(prev => [localItem, ...prev]);
+        throw new Error('The photo could not be published. Please try again.');
       } else if (data) {
         setItems(prev => [{
           id: data.id,
@@ -137,32 +123,26 @@ export default function AdminGalleryPage() {
       setSelectedFile(null);
       setFilePreviewUrl('');
       setCaption('');
-    } catch (err: any) {
-      setUploadError(err?.message || 'Upload failed.');
+    } catch (err: unknown) {
+      setUploadError((err instanceof Error ? err.message : '') || 'Upload failed.');
     } finally {
       setUploading(false);
     }
   };
 
+  useEffect(() => () => { if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl); }, [filePreviewUrl]);
+
   const toggleVisibility = async (item: GalleryItem) => {
     const next = !item.is_active;
+    const { error } = await supabase.from('gallery').update({ is_active: next }).eq('id', item.id).select('id').single();
+    if (error) { alert('Unable to update image visibility.'); return; }
     setItems(prev => prev.map(x => x.id === item.id ? { ...x, is_active: next } : x));
-    try {
-      await supabase.from('gallery').update({ is_active: next }).eq('id', item.id);
-    } catch (e) {
-      console.warn('Failed to update visibility in Supabase', e);
-    }
   };
-
   const handleDelete = async (id: string) => {
-    if (confirm('Delete this gallery photo?')) {
-      setItems(prev => prev.filter(x => x.id !== id));
-      try {
-        await supabase.from('gallery').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Failed to delete item from Supabase', e);
-      }
-    }
+    if (!confirm('Delete this gallery photo?')) return;
+    const { error } = await supabase.from('gallery').delete().eq('id', id).select('id').single();
+    if (error) { alert('Unable to delete this photo.'); return; }
+    setItems(prev => prev.filter(x => x.id !== id));
   };
 
   return (
@@ -186,7 +166,7 @@ export default function AdminGalleryPage() {
         type="file" 
         ref={fileInputRef} 
         onChange={handleFileChange} 
-        accept="image/*" 
+        accept="image/png,image/jpeg,image/webp"
         style={{ display: 'none' }} 
       />
 

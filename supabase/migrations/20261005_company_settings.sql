@@ -44,5 +44,4 @@ ALTER TABLE company_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public read company settings" ON company_settings;
 CREATE POLICY "Public read company settings" ON company_settings FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Admins can update company settings" ON company_settings;
-CREATE POLICY "Admins can update company settings" ON company_settings FOR ALL USING (true);
+-- Administrative writes are granted by 20261013_production_security.sql.

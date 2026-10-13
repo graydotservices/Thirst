@@ -6,14 +6,15 @@ const getSupabaseUrl = () => {
     new URL(url);
     if (!url.startsWith('http')) throw new Error('Must start with http');
     return url;
-  } catch (e) {
+  } catch {
     return 'https://placeholder.supabase.co';
   }
 };
 
 export const supabase = createClient(
   getSupabaseUrl(),
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
+  { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } }
 );
 
 export type Database = {

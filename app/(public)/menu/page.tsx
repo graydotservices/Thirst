@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Sparkles, Coffee } from 'lucide-react';
+import { Search, Sparkles, Coffee, type LucideIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 type MenuItem = {
@@ -19,7 +19,7 @@ type MenuItem = {
 
 export default function MenuPage() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<{ id: string; label: string; icon: any }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; label: string; icon: LucideIcon }[]>([]);
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -206,7 +206,7 @@ export default function MenuPage() {
               </div>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', color: 'var(--color-plum)', marginBottom: '8px' }}>No items found</h3>
               <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem' }}>
-                We couldn't find anything matching your search. Try a different term.
+                We couldn&apos;t find anything matching your search. Try a different term.
               </p>
             </div>
           ) : (

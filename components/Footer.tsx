@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useCompanySettings, createWhatsAppUrl } from '@/lib/companySettings';
 
-const InstagramIcon = ({ size = 24, color = "currentColor", className = "" }: any) => (
+const InstagramIcon = ({ size = 24, color = "currentColor", className = "" }: { size?: number; color?: string; className?: string }) => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 
     width={size} height={size} viewBox="0 0 24 24" fill="none" 
@@ -28,7 +28,7 @@ const InstagramIcon = ({ size = 24, color = "currentColor", className = "" }: an
   </svg>
 );
 
-const YoutubeIcon = ({ size = 24, color = "currentColor", className = "" }: any) => (
+const YoutubeIcon = ({ size = 24, color = "currentColor", className = "" }: { size?: number; color?: string; className?: string }) => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 
     width={size} height={size} viewBox="0 0 24 24" fill="none" 
@@ -40,7 +40,7 @@ const YoutubeIcon = ({ size = 24, color = "currentColor", className = "" }: any)
   </svg>
 );
 
-const WhatsappIcon = ({ size = 24, color = "currentColor", className = "" }: any) => (
+const WhatsappIcon = ({ size = 24, color = "currentColor", className = "" }: { size?: number; color?: string; className?: string }) => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 
     width={size} height={size} viewBox="0 0 24 24" fill="none" 

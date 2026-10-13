@@ -444,7 +444,7 @@ export default function HomePage() {
                   {[...Array(reviews[activeReview].rating)].map((_, i) => <Star key={i} size={24} fill="var(--color-gold)" color="var(--color-gold)" />)}
                 </div>
                 <p style={{ fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontFamily: 'var(--font-heading)', color: 'var(--color-plum)', lineHeight: 1.4, marginBottom: '32px', fontStyle: 'italic' }}>
-                  "{reviews[activeReview].text}"
+                  &quot;{reviews[activeReview].text}&quot;
                 </p>
                 <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-berry)' }}>
                   — {reviews[activeReview].name}
@@ -481,7 +481,7 @@ export default function HomePage() {
               Own a Piece of <span style={{ color: 'var(--color-gold)' }}>Luxury.</span>
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.2rem', lineHeight: 1.8, marginBottom: '40px' }}>
-              Join India's fastest-growing premium dessert brand. High ROI, comprehensive support, and a brand loved by millions.
+              Join India&apos;s fastest-growing premium dessert brand. High ROI, comprehensive support, and a brand loved by millions.
             </p>
             <div className="flex-col-mobile" style={{ display: 'flex' }}>
               <Link href="/franchise" className="btn text-center-mobile" style={{ background: 'var(--color-gold)', color: 'var(--color-plum)', padding: '16px 24px', fontSize: '1.1rem', borderRadius: '50px', fontWeight: 700, boxShadow: '0 0 40px rgba(244,201,93,0.3)', justifyContent: 'center', maxWidth: '100%' }}>

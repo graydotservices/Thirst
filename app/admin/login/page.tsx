@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { adminApi } from '@/lib/adminApi';
+import { type StaffRole } from '@/lib/security/roles';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -23,25 +25,12 @@ export default function AdminLoginPage() {
       if (authError) {
         setError('Invalid email or password. Please try again.');
       } else if (authData.user) {
-        const { data: staffData, error: staffError } = await supabase
-          .from('staff')
-          .select('role, status')
-          .eq('email', authData.user.email)
-          .single();
-
-        if (staffError || !staffData) {
-          setError('User role not found. Please contact an administrator.');
+        try {
+          const staff = await adminApi<{ role: StaffRole }>('/api/auth/me');
+          router.replace(staff.role === 'cashier' ? '/admin/billing' : '/admin/dashboard');
+        } catch {
+          setError('Your account is not authorized or access could not be verified. Please contact an administrator.');
           await supabase.auth.signOut();
-        } else if (staffData.status === 'inactive') {
-          setError('Your account has been deactivated.');
-          await supabase.auth.signOut();
-        } else {
-          // Route based on role
-          if (staffData.role === 'cashier') {
-            router.push('/admin/billing');
-          } else {
-            router.push('/admin/dashboard');
-          }
         }
       }
     } catch {

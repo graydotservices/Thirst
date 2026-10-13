@@ -13,12 +13,6 @@ type Notif = {
   createdAt?: string;
 };
 
-const defaultDemo: Notif[] = [
-  { id: '1', title: 'Weekend Special Offer!', message: 'Buy 2 scoops and get 1 free this Saturday & Sunday!', type: 'offer', isActive: true },
-  { id: '2', title: 'New Branch Opening', message: 'Thirst. is now open in Koramangala, Bangalore!', type: 'success', isActive: true },
-  { id: '3', title: 'Temporary Closure', message: 'Bandra outlet closed for renovation on 30th July.', type: 'warning', isActive: false },
-];
-
 const typeColors = { info: '#6366f1', success: '#22c55e', warning: '#f59e0b', offer: 'var(--color-berry)' };
 const typeBg = { info: 'rgba(99,102,241,0.1)', success: 'rgba(34,197,94,0.1)', warning: 'rgba(245,158,11,0.1)', offer: 'rgba(217,79,138,0.1)' };
 
@@ -30,7 +24,7 @@ export default function NotificationsAdminPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [form, setForm] = useState({ title: '', message: '', type: 'info' as Notif['type'], isActive: true });
 
-  const fetchNotifs = async () => {
+  async function fetchNotifs() {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -39,9 +33,9 @@ export default function NotificationsAdminPage() {
         .order('created_at', { ascending: false });
 
       if (error || !data || data.length === 0) {
-        setNotifs(defaultDemo);
+        setNotifs([]);
       } else {
-        const mapped = data.map((n: any) => ({
+        const mapped = data.map((n) => ({
           id: n.id,
           title: n.title || '',
           message: n.message || '',
@@ -52,35 +46,27 @@ export default function NotificationsAdminPage() {
         setNotifs(mapped);
       }
     } catch {
-      setNotifs(defaultDemo);
+      setNotifs([]);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    fetchNotifs();
+    void Promise.resolve().then(fetchNotifs);
   }, []);
 
   const handleToggle = async (n: Notif) => {
     const nextState = !n.isActive;
+    const { error } = await supabase.from('notifications').update({ is_active: nextState }).eq('id', n.id).select('id').single();
+    if (error) { alert('Unable to update the notification.'); return; }
     setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, isActive: nextState } : x));
-    try {
-      await supabase.from('notifications').update({ is_active: nextState }).eq('id', n.id);
-    } catch (e) {
-      console.warn('Failed to update notification in Supabase', e);
-    }
   };
-
   const handleDelete = async (id: string) => {
-    if (confirm('Delete this notification?')) {
-      setNotifs(prev => prev.filter(x => x.id !== id));
-      try {
-        await supabase.from('notifications').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Failed to delete notification from Supabase', e);
-      }
-    }
+    if (!confirm('Delete this notification?')) return;
+    const { error } = await supabase.from('notifications').delete().eq('id', id).select('id').single();
+    if (error) { alert('Unable to delete the notification.'); return; }
+    setNotifs(prev => prev.filter(x => x.id !== id));
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -111,8 +97,7 @@ export default function NotificationsAdminPage() {
         .single();
 
       if (error) {
-        console.warn('Supabase notification insert warning, saving locally:', error.message);
-        setNotifs(prev => [{ ...form, id: Date.now().toString() }, ...prev]);
+        throw new Error('Unable to publish the notification.');
       } else if (data) {
         setNotifs(prev => [{
           id: data.id,
@@ -126,8 +111,8 @@ export default function NotificationsAdminPage() {
 
       setShowModal(false);
       setForm({ title: '', message: '', type: 'info', isActive: true });
-    } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to publish notification.');
+    } catch (err: unknown) {
+      setErrorMessage((err instanceof Error ? err.message : '') || 'Failed to publish notification.');
     } finally {
       setSaving(false);
     }
