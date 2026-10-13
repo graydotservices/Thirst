@@ -59,7 +59,6 @@ const founders = [
     name: 'V Meenakshi',
     role: 'Founder & Chief Pastry Innovator',
     badge: 'Culinary Visionary',
-    image: '/founder-meenakshi.jpg',
     bio: 'A master culinary artist with profound expertise in pastry architecture, chocolate temperance, and artisanal dessert science. Meenakshi pioneered Thirst\'s signature Belgian Hot Chocolate formulations and decadent multi-layered cake collections. With an uncompromising dedication to sensory balance, she oversees every single formulation, ingredient standard, and presentation guideline that emerges from the Thirst. confectionery kitchen.',
     quote: 'Dessert is not just a dish — it is an intimate expression of joy, comfort, and celebration. At Thirst., every creation is crafted to feel like a warm embrace of pure luxury.',
     skills: ['Patisserie Architecture', 'Belgian Chocolate Tempering', 'Flavor Innovation', 'Sensory Aesthetics']
@@ -68,7 +67,6 @@ const founders = [
     name: 'Yuvaraj',
     role: 'Co-Founder & Head of Operations & Growth',
     badge: 'Growth & Hospitality Strategist',
-    image: '/founder-yuvaraj.jpg',
     bio: 'An entrepreneurial leader committed to scaling craft hospitality with mathematical precision and heartfelt warmth. Yuvaraj oversees brand expansion, boutique site architecture, cold-chain logistics, franchise partnerships, and guest hospitality benchmarks. Under his operational stewardship, Thirst. has maintained zero-compromise product consistency while expanding its footprint from a local flagship to a high-demand regional brand.',
     quote: 'True luxury lies in the consistency of the smallest details. Our mission is to ensure that whether you visit our flagship or any franchise partner, the magic of Thirst. is unmistakable.',
     skills: ['Boutique Expansion', 'Supply Chain Precision', 'Franchise Development', 'Guest Experience']
@@ -346,50 +344,29 @@ export default function AboutPage() {
                 <div style={{ position: 'absolute', top: 0, right: 0, width: 100, height: 100, background: 'radial-gradient(circle at top right, var(--color-gold) 0%, transparent 70%)', opacity: 0.6, pointerEvents: 'none' }} />
 
                 <div>
-                  {/* Photo & Header Row */}
-                  <div className="flex-col-mobile" style={{ display: 'flex', gap: '24px', alignItems: 'center', marginBottom: '24px' }}>
-                    <div style={{
-                      position: 'relative',
-                      width: 140,
-                      height: 140,
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      border: '4px solid var(--color-plum)',
-                      boxShadow: '0 8px 24px rgba(45,30,47,0.18)',
-                      flexShrink: 0,
-                      background: 'var(--color-cream)'
+                  {/* Header Row */}
+                  <div style={{ marginBottom: '24px' }}>
+                    <div style={{ 
+                      display: 'inline-block',
+                      background: 'rgba(217,79,138,0.12)', 
+                      color: 'var(--color-berry)', 
+                      padding: '4px 12px', 
+                      borderRadius: '20px', 
+                      fontSize: '0.75rem', 
+                      fontWeight: 800, 
+                      letterSpacing: '1px', 
+                      textTransform: 'uppercase', 
+                      marginBottom: '10px',
+                      border: '1px solid rgba(217,79,138,0.3)'
                     }}>
-                      <Image 
-                        src={founder.image} 
-                        alt={founder.name} 
-                        fill 
-                        style={{ objectFit: 'cover' }} 
-                        sizes="140px"
-                      />
+                      {founder.badge}
                     </div>
-                    <div>
-                      <div style={{ 
-                        display: 'inline-block',
-                        background: 'rgba(217,79,138,0.12)', 
-                        color: 'var(--color-berry)', 
-                        padding: '4px 12px', 
-                        borderRadius: '20px', 
-                        fontSize: '0.75rem', 
-                        fontWeight: 800, 
-                        letterSpacing: '1px', 
-                        textTransform: 'uppercase', 
-                        marginBottom: '8px',
-                        border: '1px solid rgba(217,79,138,0.3)'
-                      }}>
-                        {founder.badge}
-                      </div>
-                      <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '2rem', color: 'var(--color-plum)', lineHeight: 1.15, marginBottom: '6px' }}>
-                        {founder.name}
-                      </h3>
-                      <p style={{ color: 'var(--color-berry)', fontWeight: 800, fontSize: '0.95rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        {founder.role}
-                      </p>
-                    </div>
+                    <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '2.2rem', color: 'var(--color-plum)', lineHeight: 1.15, marginBottom: '6px' }}>
+                      {founder.name}
+                    </h3>
+                    <p style={{ color: 'var(--color-berry)', fontWeight: 800, fontSize: '0.95rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {founder.role}
+                    </p>
                   </div>
 
                   {/* Bio */}
