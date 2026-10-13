@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Lilita_One, Nunito } from "next/font/google";
 import "./globals.css";
 import { headers } from 'next/headers';
@@ -55,6 +55,15 @@ export const metadata: Metadata = {
     title: "Thirst. — One For Living",
     description: "Premium luxury desserts and cafe experiences.",
     images: ["https://thirstcafe.in/dream-cake.png"],
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icon.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   metadataBase: new URL("https://thirstcafe.in"),
 };
