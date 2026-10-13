@@ -95,7 +95,7 @@ export default function Footer() {
           <div>
             <Link href="/" className="text-center-mobile" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
               <div style={{ position: 'relative', width: 48, height: 48, background: 'var(--color-cream)', borderRadius: '50%', border: '2px solid var(--color-gold)', overflow: 'hidden' }}>
-                <Image src="/logo-v2.png" alt="Thirst." fill style={{ objectFit: 'contain', transform: 'scale(1.1)' }} />
+                <Image src="/logo-v2.png" alt="Thirst." fill sizes="48px" style={{ objectFit: 'contain', transform: 'scale(1.1)' }} />
               </div>
               <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.02em' }}>{settings.name || 'Thirst'}<span style={{ color: 'var(--color-gold)' }}>.</span></span>
             </Link>

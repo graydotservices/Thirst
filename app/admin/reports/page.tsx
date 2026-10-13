@@ -1,158 +1,71 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend,
-} from 'recharts';
+import dynamic from 'next/dynamic';
+import type { SalesSummary } from '@/lib/analytics';
+const RevenueChart = dynamic(() => import('@/components/admin/RevenueChart'), { loading: () => <div style={{ height: 280 }} /> });
 import { Download, TrendingUp, ShoppingCart, Users, IndianRupee, Loader2 } from 'lucide-react';
-import { supabase, type OrderItem } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { csvCell } from '@/lib/security/csv';
 
 const ranges = ['Daily', 'Weekly', 'Monthly', 'Yearly'] as const;
 
 export default function ReportsPage() {
   const [range, setRange] = useState<typeof ranges[number]>('Weekly');
-  const [orders, setOrders] = useState<{ id: string; bill_no: string; created_at: string; customer_phone: string; customer_id?: string; payment_method: string; subtotal: number; discount: number; gst: number; total: number; items: OrderItem[] }[]>([]);
+  const [summary, setSummary] = useState<SalesSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    async function fetchOrders() {
-      setLoading(true);
-      const { data } = await supabase.from('orders').select('*').eq('status', 'completed').order('created_at', { ascending: true });
-      if (data) setOrders(data);
-      setLoading(false);
-    }
-    void Promise.resolve().then(fetchOrders);
-  }, []);
-
-  const getChartData = () => {
-    const dataMap = new Map<string, { revenue: number, orders: number }>();
-    const now = new Date();
-
-    if (range === 'Daily') {
-      // 24 hours of today
-      for (let h = 8; h <= 23; h++) {
-        const hourLabel = `${h.toString().padStart(2, '0')}:00`;
-        dataMap.set(hourLabel, { revenue: 0, orders: 0 });
-      }
-
-      orders.forEach(o => {
-        const d = new Date(o.created_at);
-        if (
-          d.getDate() === now.getDate() &&
-          d.getMonth() === now.getMonth() &&
-          d.getFullYear() === now.getFullYear()
-        ) {
-          const hourKey = `${d.getHours().toString().padStart(2, '0')}:00`;
-          const curr = dataMap.get(hourKey) || { revenue: 0, orders: 0 };
-          dataMap.set(hourKey, { revenue: curr.revenue + (o.total || 0), orders: curr.orders + 1 });
-        }
-      });
-    } else if (range === 'Weekly') {
-      // Rolling 7 days
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const past7Dates: { key: string, dateStr: string }[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(now.getDate() - i);
-        const dayName = days[d.getDay()];
-        const key = `${dayName} (${d.getDate()}/${d.getMonth() + 1})`;
-        past7Dates.push({ key, dateStr: d.toISOString().split('T')[0] });
-        dataMap.set(key, { revenue: 0, orders: 0 });
-      }
-
-      orders.forEach(o => {
-        const orderDateStr = new Date(o.created_at).toISOString().split('T')[0];
-        const match = past7Dates.find(p => p.dateStr === orderDateStr);
-        if (match) {
-          const curr = dataMap.get(match.key) || { revenue: 0, orders: 0 };
-          dataMap.set(match.key, { revenue: curr.revenue + (o.total || 0), orders: curr.orders + 1 });
-        }
-      });
-    } else if (range === 'Monthly') {
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      months.forEach(m => dataMap.set(m, { revenue: 0, orders: 0 }));
-
-      orders.forEach(o => {
-        const d = new Date(o.created_at);
-        if (d.getFullYear() === now.getFullYear()) {
-          const mKey = months[d.getMonth()];
-          const curr = dataMap.get(mKey) || { revenue: 0, orders: 0 };
-          dataMap.set(mKey, { revenue: curr.revenue + (o.total || 0), orders: curr.orders + 1 });
-        }
-      });
-    } else if (range === 'Yearly') {
-      const currentYear = now.getFullYear();
-      [currentYear - 2, currentYear - 1, currentYear].forEach(yr => {
-        dataMap.set(yr.toString(), { revenue: 0, orders: 0 });
-      });
-
-      orders.forEach(o => {
-        const yr = new Date(o.created_at).getFullYear().toString();
-        if (dataMap.has(yr)) {
-          const curr = dataMap.get(yr) || { revenue: 0, orders: 0 };
-          dataMap.set(yr, { revenue: curr.revenue + (o.total || 0), orders: curr.orders + 1 });
-        }
-      });
-    }
-
-    return Array.from(dataMap.entries()).map(([date, stats]) => ({ date, ...stats }));
-  };
-
-  const getTopProducts = () => {
-    const productMap = new Map<string, { orders: number, revenue: number }>();
-    orders.forEach(o => {
-      o.items?.forEach((item: OrderItem) => {
-        if (!item || item.product_id === 'meta_staff' || (item.name && item.name.startsWith('Billed by:'))) return;
-        const curr = productMap.get(item.name) || { orders: 0, revenue: 0 };
-        productMap.set(item.name, { orders: curr.orders + (item.qty || 1), revenue: curr.revenue + (item.total || 0) });
-      });
+    let active = true;
+    const controller = new AbortController();
+    void Promise.resolve().then(async () => {
+      setLoading(true); setSummary(null); setLoadError('');
+      try {
+        const { data, error } = await supabase.rpc('sales_summary', { p_range: range.toLowerCase() }).abortSignal(controller.signal);
+        if (!active) return;
+        if (error || !data) throw error || new Error('No report response');
+        setSummary(data as SalesSummary);
+      } catch {
+        if (active) setLoadError('Unable to load reports. Check the connection and database migrations.');
+      } finally { if (active) setLoading(false); }
     });
-    
-    return Array.from(productMap.entries())
-      .map(([name, stats]) => ({ name, ...stats }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
+    return () => { active = false; controller.abort(); };
+  }, [range]);
+
+  const exportCSV = async () => {
+    if (!summary || exporting) return;
+    if (summary.totalOrders > 100_000) { setLoadError('Select a smaller period to export more than 100,000 bills.'); return; }
+    setExporting(true); setLoadError('');
+    try {
+      const rows: string[] = ['Bill No,Date,Customer Phone,Payment Method,Subtotal (INR),Discount (INR),Tax (INR),Total (INR)'];
+      for (let offset = 0; ; offset += 500) {
+        const { data, error } = await supabase.from('orders')
+          .select('id,bill_no,created_at,customer_phone,payment_method,subtotal,discount,gst,total')
+          .eq('status','completed').gte('created_at',summary.periodStart).lt('created_at',summary.periodEnd)
+          .order('created_at').order('id').range(offset,offset + 499);
+        if (error) throw error;
+        for (const order of data || []) rows.push([
+          order.bill_no || order.id, new Date(order.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+          order.customer_phone, order.payment_method, order.subtotal, order.discount, order.gst, order.total,
+        ].map(csvCell).join(','));
+        if (!data || data.length < 500) break;
+        if (offset >= 99_500) throw new Error('Export limit reached');
+      }
+      const url = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a'); link.href = url;
+      link.download = 'thirst_sales_report_' + range.toLowerCase() + '.csv';
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch { setLoadError('Unable to export this period. Please check the connection and try again.'); }
+    finally { setExporting(false); }
   };
 
-  const exportCSV = () => {
-    if (orders.length === 0) {
-      alert('No orders available to export.');
-      return;
-    }
+  const data = summary?.chartData || [];
+  const topProducts = (summary?.topProducts || []).slice(0,5);
+  const totals = { revenue: summary?.totalRevenue || 0, orders: summary?.totalOrders || 0, newCustomers: summary?.uniqueCustomers || 0 };
 
-    const headers = ['Bill No', 'Date', 'Customer Phone', 'Payment Method', 'Subtotal (INR)', 'Discount (INR)', 'Tax (INR)', 'Total (INR)'];
-    const rows = orders.map(o => [
-      o.bill_no || o.id,
-      new Date(o.created_at).toLocaleString('en-IN'),
-      o.customer_phone || 'Walk-in',
-      o.payment_method || 'Cash',
-      o.subtotal || 0,
-      o.discount || 0,
-      o.gst || 0,
-      o.total || 0
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.map(csvCell).join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `thirst_sales_report_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const data = getChartData();
-  const topProducts = getTopProducts();
-  const uniqueCustomers = new Set(orders.map(o => o.customer_phone || o.customer_id).filter(Boolean)).size;
-
-  const totals = {
-    revenue: orders.reduce((s, o) => s + (Number(o.total) || 0), 0),
-    orders: orders.length,
-    newCustomers: uniqueCustomers
-  };
 
   return (
     <div>
@@ -180,12 +93,13 @@ export default function ReportsPage() {
               </button>
             ))}
           </div>
-          <button id="btn-export-reports" onClick={exportCSV} className="btn btn-secondary btn-sm" style={{ padding: '7px 14px' }}>
-            <Download size={14} /> Export CSV
+          <button id="btn-export-reports" onClick={exportCSV} disabled={loading || exporting || !summary} className="btn btn-secondary btn-sm" style={{ padding: '7px 14px' }}>
+            <Download size={14} /> {exporting ? 'Exporting…' : 'Export CSV'}
           </button>
         </div>
       </div>
 
+      {loadError && <p role="alert" style={{ color: 'var(--color-error)', marginBottom: 16 }}>{loadError}</p>}
       {/* KPI Cards */}
       <div className="grid grid-4" style={{ marginBottom: 'var(--space-5)', gap: 'var(--space-3)' }}>
         {[
@@ -220,37 +134,7 @@ export default function ReportsPage() {
             <Loader2 className="animate-spin" size={24} />
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={data}>
-              <defs>
-                <linearGradient id="rg2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#D94F8A" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#D94F8A" stopOpacity={0.02} />
-                </linearGradient>
-                <linearGradient id="og2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#F4C95D" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#F4C95D" stopOpacity={0.02} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0e0eb" />
-              <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} />
-              <YAxis 
-                yAxisId="left" 
-                tick={{ fontSize: 12, fill: '#9c8490' }} 
-                axisLine={false} 
-                tickLine={false} 
-                tickFormatter={v => v >= 1000 ? `₹${(v/1000).toFixed(0)}k` : `₹${v}`} 
-              />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} />
-              <Tooltip 
-                formatter={(val, name) => [name === 'Revenue (₹)' ? `₹${Number(val).toLocaleString('en-IN')}` : val, name]}
-                contentStyle={{ background: 'white', border: '1px solid #f0e0eb', borderRadius: 12, fontFamily: 'var(--font-heading)', fontSize: 12 }} 
-              />
-              <Legend />
-              <Area yAxisId="left" type="monotone" dataKey="revenue" name="Revenue (₹)" stroke="#D94F8A" strokeWidth={2} fill="url(#rg2)" />
-              <Area yAxisId="right" type="monotone" dataKey="orders" name="Orders" stroke="#F4C95D" strokeWidth={2} fill="url(#og2)" />
-            </AreaChart>
-          </ResponsiveContainer>
+          <RevenueChart data={data} showOrders />
         )}
       </div>
 

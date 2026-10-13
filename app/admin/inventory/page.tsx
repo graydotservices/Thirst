@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Package, AlertTriangle, Edit2, Trash2, X, Check, Search, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
-import { validateImageUpload } from '@/lib/imageUpload';
+import { validateImageUpload, canOptimizeImage } from '@/lib/imageUpload';
 
 type Product = {
   id: string;
@@ -247,7 +247,8 @@ export default function InventoryPage() {
                     src={p.image || '/cake-product.png'} 
                     alt={p.name} 
                     fill 
-                    unoptimized 
+                    sizes="(max-width: 768px) 45vw, 220px"
+                    unoptimized={!canOptimizeImage(p.image || '/cake-product.png')}
                     style={{ objectFit: 'cover' }} 
                   />
                   {isLow && (

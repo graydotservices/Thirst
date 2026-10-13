@@ -1,6 +1,4 @@
 import { escapeHtml } from './security/html';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { getCachedCompanySettings, CompanySettings, getFormattedAddress, formatIndianPhoneDisplay, getWhatsAppPhone } from './companySettings';
 
 export type OrderData = {
@@ -324,6 +322,7 @@ export function printThermalReceipt(order: OrderData, paperWidth: '80mm' | '58mm
  * Generate Invoice Image for Social Sharing
  */
 export const generateInvoiceImage = async (order: OrderData, customSettings?: CompanySettings): Promise<Blob | null> => {
+  const { default: html2canvas } = await import('html2canvas');
   order = htmlOrder(order);
   const settings = htmlSettings(customSettings || getCachedCompanySettings());
 
@@ -419,7 +418,12 @@ export const generateInvoiceImage = async (order: OrderData, customSettings?: Co
   });
 };
 
-const loadLogoAsBase64 = async (): Promise<string> => {
+let logoRequest: Promise<string> | null = null;
+const loadLogoAsBase64 = (): Promise<string> => {
+  logoRequest ??= fetchLogoAsBase64();
+  return logoRequest;
+};
+const fetchLogoAsBase64 = async (): Promise<string> => {
   try {
     const response = await fetch('/logo-v2.png');
     const blob = await response.blob();
@@ -437,6 +441,7 @@ const loadLogoAsBase64 = async (): Promise<string> => {
  * Generate A4 PDF Invoice with dynamic company details
  */
 export const generateInvoicePDF = async (order: OrderData, autoDownload = true, customSettings?: CompanySettings) => {
+  const { default: jsPDF } = await import('jspdf');
   const settings = customSettings || getCachedCompanySettings();
   const doc = new jsPDF('p', 'pt', 'a4'); 
   const pageWidth = doc.internal.pageSize.getWidth();

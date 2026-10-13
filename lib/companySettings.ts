@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from './supabase';
 
 export type CompanySettings = {
   id?: string;
@@ -40,6 +39,11 @@ export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
 
 const STORAGE_KEY = 'thirst_company_settings_cache';
 const UPDATE_EVENT_KEY = 'thirst_company_settings_updated';
+// This is public business identity only. Private records and staff access are never cached here.
+let settingsCache: CompanySettings | null = null;
+let settingsFetchedAt = 0;
+let settingsRequest: Promise<CompanySettings> | null = null;
+let settingsVersion = 0;
 
 /**
  * Returns formatted full address string
@@ -124,17 +128,33 @@ export function getCachedCompanySettings(): CompanySettings {
  * Fetch company settings from Supabase, syncing with localStorage
  */
 export async function fetchCompanySettings(): Promise<CompanySettings> {
+  if (settingsCache && Date.now() - settingsFetchedAt < 60_000) return settingsCache;
+  if (settingsRequest) return settingsRequest;
+  const version = settingsVersion;
+  settingsRequest = loadCompanySettings().then(settings => {
+    if (version !== settingsVersion) return settingsCache || settings;
+    settingsCache = settings;
+    settingsFetchedAt = Date.now();
+    return settings;
+  }).finally(() => { settingsRequest = null; });
+  return settingsRequest;
+}
+
+async function loadCompanySettings(): Promise<CompanySettings> {
   const fallback = getCachedCompanySettings();
   try {
-    const { data, error } = await supabase
-      .from('company_settings')
-      .select('*')
-      .eq('id', 'primary')
-      .maybeSingle();
-
-    if (error || !data) {
-      return fallback;
-    }
+    const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!base?.startsWith('https://') || !key) return fallback;
+    // Public identity needs no Auth SDK/session lock. Staff writes still use the
+    // authenticated client below; this read always uses the anonymous identity.
+    const url = new URL('/rest/v1/company_settings?select=*&id=eq.primary&limit=1', base);
+    const response = await fetch(url, { headers: { apikey: key, Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(15_000) });
+    if (!response.ok) return fallback;
+    const rows = await response.json() as Partial<CompanySettings>[];
+    const data = rows[0];
+    if (!data) return fallback;
 
     const merged: CompanySettings = {
       ...DEFAULT_COMPANY_SETTINGS,
@@ -157,6 +177,7 @@ export async function fetchCompanySettings(): Promise<CompanySettings> {
  */
 export async function saveCompanySettings(updates: Partial<CompanySettings>): Promise<{ success: boolean; data?: CompanySettings; error?: string }> {
   try {
+    const { supabase } = await import('./supabase');
     const current = getCachedCompanySettings();
     const payload: CompanySettings = {
       ...current,
@@ -174,6 +195,9 @@ export async function saveCompanySettings(updates: Partial<CompanySettings>): Pr
 
     if (error || !data) return { success: false, error: 'Company settings could not be saved. Administrator access is required.' };
     const finalData: CompanySettings = { ...payload, ...data };
+    settingsVersion++;
+    settingsCache = finalData;
+    settingsFetchedAt = Date.now();
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(finalData));

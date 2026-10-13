@@ -47,6 +47,56 @@ const checkout = (db, request, qty=1, extra={}) => db.query(
   'SELECT public.place_order_atomic($1::jsonb,$2,$3,$4,$5,$6) AS sale',
   [JSON.stringify([{product_id:ids.product,qty,price:100,...extra}]),'Customer','9876543210',0,'cash',request]);
 
+test('analytics return complete small summaries beyond 1,000 rows with IST boundaries and live role checks', async () => {
+  const db = await database();
+  try {
+    await db.exec(`
+      INSERT INTO public.orders(customer_name,customer_phone,items,subtotal,total,payment_method,bill_no,created_at)
+      SELECT 'Customer','9'||lpad(n::TEXT,9,'0'),
+        '[{"name":"Cake","qty":1,"total":100,"price":100},{"product_id":"meta_staff","name":"Billed by: Admin","qty":1,"total":999}]'::JSONB,
+        100,100,'cash','TEST-'||n,((now() AT TIME ZONE 'Asia/Kolkata')::DATE::TIMESTAMP + interval '1 minute') AT TIME ZONE 'Asia/Kolkata'
+      FROM generate_series(1,1505) n;
+      INSERT INTO public.orders(customer_name,customer_phone,items,subtotal,total,payment_method,bill_no,created_at,status) VALUES
+        ('Yesterday','9876543210','[]',50,50,'cash','BEFORE-MIDNIGHT',((now() AT TIME ZONE 'Asia/Kolkata')::DATE::TIMESTAMP AT TIME ZONE 'Asia/Kolkata')-interval '1 second','completed'),
+        ('Cancelled','9876543210','[]',50,50,'cash','CANCELLED',now(),'cancelled'),
+        ('Future','9876543210','[]',50,50,'cash','FUTURE',now()+interval '2 days','completed'),
+        ('Old','9876543210','[]',50,50,'cash','OLD',date_trunc('year',now())-interval '3 years','completed');
+      INSERT INTO public.customers(name,phone,loyalty_points,total_purchase) VALUES ('A','9876543210',10,100),('B','9876543211',20,200);
+    `);
+    await as(db,'authenticated',ids.manager,async () => {
+      for (const range of ['daily','weekly','monthly','yearly']) {
+        const summary = (await db.query('SELECT public.sales_summary($1) AS summary',[range])).rows[0].summary;
+        assert.equal(summary.totalOrders, range === 'daily' ? 1505 : (range === 'weekly' || range === 'yearly' ? 1506 :
+          (await db.query("SELECT count(*)::int AS n FROM public.orders WHERE status='completed' AND created_at >= date_trunc('year',now() AT TIME ZONE 'Asia/Kolkata') AT TIME ZONE 'Asia/Kolkata' AND created_at < ((now() AT TIME ZONE 'Asia/Kolkata')::DATE+1)::TIMESTAMP AT TIME ZONE 'Asia/Kolkata'")).rows[0].n));
+        assert.equal(summary.chartData.length, {daily:24,weekly:7,monthly:12,yearly:3}[range]);
+        assert.equal(summary.chartData.reduce((sum,row)=>sum+row.revenue,0),summary.totalRevenue);
+        assert.equal(summary.topProducts.length,1);
+        assert.equal(summary.topProducts[0].revenue,150500);
+        assert.equal(summary.topProducts[0].orders,1505);
+        assert(new Date(summary.periodStart) < new Date(summary.periodEnd));
+        assert(JSON.stringify(summary).length < 6000);
+      }
+      const dashboard = (await db.query('SELECT public.dashboard_summary() AS summary')).rows[0].summary;
+      assert.equal(dashboard.stats.todayOrders,1505);
+      assert.equal(dashboard.stats.todayRevenue,150500);
+      assert.equal(dashboard.stats.activeCustomers,2);
+      assert.equal(dashboard.chartData.length,7);
+      assert.equal(dashboard.recentBills.length,5);
+      assert.deepEqual((await db.query('SELECT public.customer_summary() AS summary')).rows[0].summary,{count:2,loyaltyPoints:30,revenue:300});
+      await assert.rejects(db.query("SELECT public.sales_summary('all-time')"),/Invalid range/);
+    });
+    for (const [role,user] of [['anon',null],['authenticated',ids.cashier],['authenticated',ids.outsider],['authenticated',ids.inactive]]) {
+      await as(db,role,user,async () => {
+        for (const fn of ['sales_summary','dashboard_summary','customer_summary']) await assert.rejects(db.query(`SELECT public.${fn}()`));
+      });
+    }
+    await db.query("UPDATE public.staff SET status='inactive' WHERE id=$1",[ids.manager]);
+    await as(db,'authenticated',ids.manager,async()=>{await assert.rejects(db.query('SELECT public.dashboard_summary()'),/Management access required/);});
+    // Existing projects can apply the performance migration repeatedly after security.
+    await db.exec(readFileSync(new URL('../supabase/migrations/20261013_performance.sql',import.meta.url),'utf8'));
+  } finally { await db.close(); }
+});
+
 test('fresh schema installs and anonymous/non-staff/inactive users cannot access private data or checkout', async () => {
   const db=await database();
   try {

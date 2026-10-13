@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   Check, 
   X, 
@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { createWhatsAppUrl, formatIndianPhoneDisplay } from '@/lib/companySettings';
+import { useTablePage } from '@/lib/useTablePage';
+import Pagination from '@/components/admin/Pagination';
 
 type App = { 
   id: string; 
@@ -39,8 +41,6 @@ const statusColors: Record<string, string> = {
 };
 
 export default function FranchiseAdminPage() {
-  const [apps, setApps] = useState<App[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<App | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -51,28 +51,10 @@ export default function FranchiseAdminPage() {
   const [presetBudgetVal, setPresetBudgetVal] = useState('18-28 Lakhs');
   const [savingBudget, setSavingBudget] = useState(false);
 
-  async function fetchApps() {
-    setLoading(true);
-    try {
-      const { data } = await supabase
-        .from('franchise_applications')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (data && data.length > 0) {
-        setApps(data as App[]);
-      } else {
-        setApps([]);
-      }
-    } catch {
-      setApps([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void Promise.resolve().then(fetchApps);
-  }, []);
+  const { rows: apps, setRows: setApps, total, loading, error, page, pageSize, setPage, reload } = useTablePage<App>({
+    table: 'franchise_applications', columns: 'id,name,phone,email,city,budget,experience,message,status,created_at',
+    search: '', searchColumns: [], filterColumn: 'status', filterValue: statusFilter,
+  });
 
 
 
@@ -80,6 +62,7 @@ export default function FranchiseAdminPage() {
     const { error } = await supabase.from('franchise_applications').update({ status }).eq('id', id).select('id').single();
     if (error) { alert('Unable to update this application.'); return; }
     setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    reload();
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status } : null);
   };
 
@@ -124,18 +107,18 @@ export default function FranchiseAdminPage() {
           Franchise Applications & Investment Budgets
         </h1>
         <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-          {apps.filter(a => a.status === 'pending').length} pending · {apps.filter(a => a.status === 'reviewing').length} under review
+          {total.toLocaleString('en-IN')} matching applications
         </p>
       </div>
 
       {/* Filter Tabs */}
       <div className="admin-tab-bar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '4px', marginBottom: 'var(--space-5)' }}>
         {[
-          { id: 'all', label: `All (${apps.length})` },
-          { id: 'pending', label: `Pending (${apps.filter(a => a.status === 'pending').length})` },
-          { id: 'reviewing', label: `Reviewing (${apps.filter(a => a.status === 'reviewing').length})` },
-          { id: 'approved', label: `Approved (${apps.filter(a => a.status === 'approved').length})` },
-          { id: 'rejected', label: `Rejected (${apps.filter(a => a.status === 'rejected').length})` },
+          { id: 'all', label: 'All' },
+          { id: 'pending', label: 'Pending' },
+          { id: 'reviewing', label: 'Reviewing' },
+          { id: 'approved', label: 'Approved' },
+          { id: 'rejected', label: 'Rejected' },
         ].map(t => (
           <button
             key={t.id}
@@ -148,6 +131,7 @@ export default function FranchiseAdminPage() {
         ))}
       </div>
 
+      {error && <p role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={reload}>Retry</button></p>}
       {/* Applications Table */}
       <div className="table-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <table style={{ minWidth: 720 }}>
@@ -260,6 +244,7 @@ export default function FranchiseAdminPage() {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} pageSize={pageSize} total={total} loading={loading} onChange={setPage} />
 
       {/* EDIT BUDGET MODAL */}
       {editingBudgetApp && (

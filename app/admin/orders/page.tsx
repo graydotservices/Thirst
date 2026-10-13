@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useState } from 'react';
+import { useTablePage } from '@/lib/useTablePage';
+import Pagination from '@/components/admin/Pagination';
 import { adminApi } from '@/lib/adminApi';
 import { Search, Receipt, Calendar, CreditCard, ChevronRight, X, Download, Trash2, MessageCircle, Printer } from 'lucide-react';
 import { generateInvoicePDF, generateInvoiceImage, printThermalReceipt, sendBillViaWhatsApp, OrderData } from '@/lib/pdfUtils';
@@ -23,26 +24,14 @@ type Order = {
 };
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'cancelled'>('all');
-  const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  async function fetchOrders() {
-    setLoading(true);
-    const { data } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (data) setOrders(data as Order[]);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    void Promise.resolve().then(fetchOrders);
-  }, []);
+  const { rows: orders, setRows: setOrders, total, loading, error, page, pageSize, setPage, reload } = useTablePage<Order>({
+    table: 'orders', columns: 'id,bill_no,customer_name,customer_phone,subtotal,discount,gst,total,payment_method,status,created_at,billed_by,items',
+    search, searchColumns: ['bill_no','customer_name','customer_phone'], filterColumn: 'status', filterValue: statusFilter,
+  });
 
 
 
@@ -56,6 +45,7 @@ export default function OrdersPage() {
         await adminApi('/api/orders', { method: 'PATCH', body: JSON.stringify({ id: order.id, status: 'cancelled' }) });
         setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'cancelled' } : o));
         if (selectedOrder?.id === order.id) setSelectedOrder(prev => prev ? { ...prev, status: 'cancelled' } : null);
+        reload();
       } catch (error) { alert(error instanceof Error ? error.message : 'Unable to cancel order'); }
     }
   };
@@ -109,24 +99,14 @@ export default function OrdersPage() {
     }
   };
 
-  const filtered = orders.filter(o => {
-    const matchesSearch = (o.bill_no && o.bill_no.toLowerCase().includes(search.toLowerCase())) ||
-      (o.customer_name && o.customer_name.toLowerCase().includes(search.toLowerCase())) ||
-      (o.customer_phone && o.customer_phone.includes(search));
-    const matchesStatus = statusFilter === 'all'
-      ? true
-      : statusFilter === 'cancelled'
-        ? o.status === 'cancelled'
-        : o.status !== 'cancelled';
-    return matchesSearch && matchesStatus;
-  });
+  const filtered = orders;
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.5rem', color: 'var(--color-plum)' }}>Order History</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{orders.length} total orders processed</p>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>{total.toLocaleString('en-IN')} matching orders</p>
         </div>
       </div>
 
@@ -145,9 +125,9 @@ export default function OrdersPage() {
 
         <div className="admin-tab-bar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 2 }}>
           {[
-            { id: 'all', label: `All (${orders.length})` },
-            { id: 'completed', label: `Completed (${orders.filter(o => o.status !== 'cancelled').length})` },
-            { id: 'cancelled', label: `Voided (${orders.filter(o => o.status === 'cancelled').length})` },
+            { id: 'all', label: 'All' },
+            { id: 'completed', label: 'Completed' },
+            { id: 'cancelled', label: 'Voided' },
           ].map(t => (
             <button
               key={t.id}
@@ -161,6 +141,7 @@ export default function OrdersPage() {
         </div>
       </div>
 
+      {error && <p role="alert">{error} <button className="btn btn-secondary btn-sm" onClick={reload}>Retry</button></p>}
       <div className="table-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <table style={{ minWidth: 700 }}>
           <thead>
@@ -279,6 +260,7 @@ export default function OrdersPage() {
         </table>
       </div>
 
+      <Pagination page={page} pageSize={pageSize} total={total} loading={loading} onChange={setPage} />
       {/* Order Details Modal */}
       {selectedOrder && (
         <div className="overlay" onClick={() => setSelectedOrder(null)}>

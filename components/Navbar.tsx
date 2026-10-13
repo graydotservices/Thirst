@@ -22,7 +22,7 @@ export default function Navbar() {
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -59,6 +59,7 @@ export default function Navbar() {
                 src="/logo-v2.png"
                 alt="Thirst. Logo"
                 fill
+                sizes="64px"
                 style={{ objectFit: 'contain' }}
                 priority
               />

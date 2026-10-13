@@ -11,12 +11,15 @@ const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname,'..');
 const staffId='10000000-0000-0000-0000-000000000001';
 const token='valid-test-token-123456789';
-function context({role='admin',status='active',valid=true,rate=true,configured=true,globals={}}={}) {
-  const cache=new Map(); const calls=[];
+function context({role='admin',status='active',valid=true,rate=true,configured=true,globals={},tableData={}}={}) {
+  const cache=new Map(); const calls=[]; const queries=[];
   const sdk={createClient(url,key,options){
     calls.push({url,key,options});
     return {auth:{getUser:async()=>({data:{user:valid?{id:staffId,email:'admin@test.invalid',email_confirmed_at:'2026-01-01'}:null},error:valid?null:{}})},
-      from(table){return {select(){return this},eq(){return this},single:async()=>({data:{id:staffId,auth_user_id:staffId,name:'Admin',email:'admin@test.invalid',role,status},error:null})}},
+      from(table){queries.push(table);let data=tableData[table] || {id:staffId,auth_user_id:staffId,name:'Admin',email:'admin@test.invalid',role,status};return {
+        select(){return this},eq(){return this},upsert(payload){data={...data,...payload};return this},
+        single:async()=>({data,error:null}),maybeSingle:async()=>({data,error:null}),
+      }},
       rpc:async(name)=>({data:name==='consume_api_rate_limit'?rate:null,error:null})};
   }};
   function load(file) {
@@ -31,12 +34,51 @@ function context({role='admin',status='active',valid=true,rate=true,configured=t
       if(name.startsWith('.'))return load(path.relative(root,path.resolve(path.dirname(full),name))+'.ts');
       return require(name);
     };
-    vm.runInNewContext(code,{module:testModule,exports:testModule.exports,require:localRequire,Request,Response,Headers,URL,TextDecoder,Uint8Array,Buffer,crypto:webcrypto,
+    vm.runInNewContext(code,{module:testModule,exports:testModule.exports,require:localRequire,Request,Response,Headers,URL,URLSearchParams,AbortSignal,AbortController,TextDecoder,Uint8Array,Buffer,crypto:webcrypto,
       process:{env:configured?{NEXT_PUBLIC_SUPABASE_URL:'https://project.supabase.co',NEXT_PUBLIC_SUPABASE_ANON_KEY:'test-anon',SUPABASE_SERVICE_ROLE_KEY:'test-service'}:{}},console,...globals},{filename:file});
     return testModule.exports;
   }
-  return {load,calls};
+  return {load,calls,queries};
 }
+
+test('public catalog uses only anonymous credentials and caches only available menu data',async()=>{
+  const requests=[];
+  const env=context({globals:{fetch:async(url,options)=>{requests.push({url,options});return Response.json([{id:staffId,name:'Cake'}]);}}});
+  const catalog=await env.load('lib/publicCatalog.ts').publicCatalog();
+  assert.equal(catalog.items.length,1);assert.equal(catalog.error,'');
+  assert.equal(requests.length,1);
+  assert.equal(requests[0].options.headers.apikey,'test-anon');
+  assert.equal(requests[0].options.headers.Authorization,'Bearer test-anon');
+  assert.equal(requests[0].options.next.revalidate,60);
+  assert.equal(requests[0].url.searchParams.get('is_available'),'eq.true');
+  assert.equal(requests[0].url.searchParams.get('stock'),'gt.0');
+  assert.equal(requests[0].url.searchParams.get('limit'),'500');
+  const missing=context({configured:false});
+  assert.equal((await missing.load('lib/publicCatalog.ts').publicCatalog()).items.length,0);
+});
+
+test('company settings coalesce concurrent public reads and immediately reflect saved changes',async()=>{
+  let reads=0;
+  const env=context({globals:{fetch:async()=>{reads++;return Response.json([{id:'primary',name:'Cached business'}]);}},tableData:{company_settings:{id:'primary',name:'Cached business'}}});
+  const settings=env.load('lib/companySettings.ts');
+  const results=await Promise.all([settings.fetchCompanySettings(),settings.fetchCompanySettings(),settings.fetchCompanySettings()]);
+  assert(results.every(result=>result.name==='Cached business'));
+  assert.equal(reads,1);assert.equal(env.queries.length,0);
+  assert.equal((await settings.saveCompanySettings({name:'Updated business'})).success,true);
+  assert.equal((await settings.fetchCompanySettings()).name,'Updated business');
+  assert.equal(env.queries.length,1);assert.equal(reads,1);
+});
+
+test('request cancellation and deadlines also work in browsers without AbortSignal.any',()=>{
+  for (const cause of ['caller','deadline']) {
+    const caller = new AbortController(), deadline = new AbortController();
+    const env = context({globals:{AbortSignal:{timeout:()=>deadline.signal}}});
+    const combined = env.load('lib/requestSignal.ts').requestSignal(caller.signal);
+    assert.equal(combined.aborted,false);
+    (cause==='caller' ? caller : deadline).abort(cause);
+    assert.equal(combined.aborted,true); assert.equal(combined.reason,cause);
+  }
+});
 function request(method='GET',body,headers={}) {
   return new Request('https://shop.test/api/test',{method,headers:{Authorization:`Bearer ${token}`,...(body===undefined?{}:{'Content-Type':'application/json'}),...headers},body:body===undefined?undefined:JSON.stringify(body)});
 }

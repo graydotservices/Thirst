@@ -6,10 +6,9 @@ import {
   TrendingUp, ShoppingCart, Users, IndianRupee,
   ArrowUpRight, Clock, BarChart3, Eye,
 } from 'lucide-react';
-import {
-  XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, AreaChart, Area,
-} from 'recharts';
+import dynamic from 'next/dynamic';
+import type { DashboardSummary } from '@/lib/analytics';
+const RevenueChart = dynamic(() => import('@/components/admin/RevenueChart'), { loading: () => <div style={{ height: 210 }} /> });
 import { supabase } from '@/lib/supabase';
 import { OrderItem } from '@/lib/supabase';
 
@@ -25,101 +24,26 @@ export default function DashboardPage() {
   const [recentBills, setRecentBills] = useState<{ bill: string; customer: string; phone: string; items: number; total: number; method: string; time: string }[]>([]);
   const [topProducts, setTopProducts] = useState<{ name: string; orders: number; revenue: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   async function fetchDashboardData() {
     try {
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(now.getDate() - 30);
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-
-      // Fetch customers count
-      const { count: customersCount } = await supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true });
-
-      // Fetch orders (last 30 days for safety)
-      const { data: allOrders } = await supabase
-        .from('orders')
-        .select('*')
-        .gte('created_at', thirtyDaysAgo.toISOString())
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false });
-
-      if (allOrders) {
-        // 1. KPI Stats
-        const todayOrdersList = allOrders.filter(o => o.created_at >= startOfToday);
-        const monthOrdersList = allOrders.filter(o => o.created_at >= startOfMonth);
-
-        const todayRevenue = todayOrdersList.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-        const monthlyRevenue = monthOrdersList.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-
-        setStats({
-          todayRevenue,
-          todayOrders: todayOrdersList.length,
-          activeCustomers: customersCount || 0,
-          monthlyRevenue,
-        });
-
-        // 2. Recent Bills (Latest 5)
-        setRecentBills(allOrders.slice(0, 5).map(o => ({
-          bill: o.bill_no,
-          customer: o.customer_name || 'Guest',
-          phone: (!o.customer_phone || o.customer_phone === '0000000000') ? '—' : o.customer_phone,
-          items: o.items 
-            ? o.items
-                .filter((item: OrderItem) => item.product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:')))
-                .reduce((acc: number, item: OrderItem) => acc + (Number(item.qty) || 1), 0)
-            : 0,
-          total: o.total,
-          method: (o.payment_method || 'CASH').toUpperCase(),
-          time: new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
-        })));
-
-        // 3. Chart Data (Last 7 Days)
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const chart = [];
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date();
-          d.setDate(now.getDate() - i);
-          const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
-          const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).toISOString();
-          
-          const dayRevenue = allOrders
-            .filter(o => o.created_at >= startOfDay && o.created_at <= endOfDay)
-            .reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-            
-          chart.push({
-            date: days[d.getDay()],
-            revenue: dayRevenue
-          });
-        }
-        setChartData(chart);
-
-        // 4. Top Products (Filtering out meta_staff)
-        const productMap: Record<string, { name: string, orders: number, revenue: number }> = {};
-        allOrders.forEach(o => {
-          if (o.items && Array.isArray(o.items)) {
-            o.items.forEach((item: OrderItem) => {
-              if (item.product_id === 'meta_staff' || (item.name && item.name.startsWith('Billed by:'))) {
-                return;
-              }
-              const key = item.product_id || item.name;
-              if (!productMap[key]) {
-                productMap[key] = { name: item.name || 'Product', orders: 0, revenue: 0 };
-              }
-              productMap[key].orders += (Number(item.qty) || 1);
-              productMap[key].revenue += (Number(item.total) || ((Number(item.price) || 0) * (Number(item.qty) || 1)));
-            });
-          }
-        });
-        
-        const sortedProducts = Object.values(productMap).sort((a, b) => b.revenue - a.revenue).slice(0, 4);
-        setTopProducts(sortedProducts);
-      }
+      const { data, error } = await supabase.rpc('dashboard_summary');
+      if (error || !data) throw error || new Error('No dashboard response');
+      const summary = data as DashboardSummary;
+      setStats(summary.stats);
+      setChartData(summary.chartData);
+      setTopProducts(summary.topProducts);
+      setRecentBills(summary.recentBills.map(o => ({
+        bill: o.bill_no, customer: o.customer_name || 'Guest',
+        phone: (!o.customer_phone || o.customer_phone === '0000000000') ? '—' : o.customer_phone,
+        items: (o.items || []).filter((item: OrderItem) => item.product_id !== 'meta_staff' && !item.name?.startsWith('Billed by:'))
+          .reduce((sum, item) => sum + (Number(item.qty) || 1), 0),
+        total: o.total, method: (o.payment_method || 'cash').toUpperCase(),
+        time: new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }),
+      })));
     } catch (e) {
-      console.error('Error fetching dashboard data:', e);
+      setLoadError('Unable to load dashboard. Check the connection and database migrations.');
     } finally {
       setLoading(false);
     }
@@ -146,6 +70,8 @@ export default function DashboardPage() {
   ];
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}><span className="spinner"></span></div>;
+
+  if (loadError) return <div role="alert"><p>{loadError}</p><button className="btn btn-secondary" onClick={() => location.reload()}>Retry</button></div>;
 
   const maxRevenue = Math.max(...chartData.map(c => c.revenue), 0);
 
@@ -201,29 +127,7 @@ export default function DashboardPage() {
             <span className="badge badge-primary">Live</span>
           </div>
           <div style={{ width: '100%', height: 210, minWidth: 0 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#D94F8A" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#D94F8A" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0e0eb" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#9c8490' }} axisLine={false} tickLine={false} />
-                <YAxis 
-                  tick={{ fontSize: 11, fill: '#9c8490' }} 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tickFormatter={v => v >= 1000 ? `₹${(v / 1000).toFixed(1)}k` : `₹${v}`} 
-                />
-                <Tooltip
-                  contentStyle={{ background: 'white', border: '1px solid #f0e0eb', borderRadius: 12, fontFamily: 'var(--font-heading)', fontSize: 12 }}
-                  formatter={(v) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Revenue']}
-                />
-                <Area type="monotone" dataKey="revenue" stroke="#D94F8A" strokeWidth={2.5} fill="url(#revenueGrad)" dot={{ fill: '#D94F8A', r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} />
-              </AreaChart>
-            </ResponsiveContainer>
+            <RevenueChart data={chartData} />
           </div>
         </div>
 

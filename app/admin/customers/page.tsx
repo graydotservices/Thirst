@@ -21,6 +21,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useTablePage } from '@/lib/useTablePage';
+import Pagination from '@/components/admin/Pagination';
 import { 
   useCompanySettings, 
   formatIndianPhoneDisplay, 
@@ -61,8 +63,6 @@ type OrderRecord = {
 
 export default function CustomersPage() {
   const { settings } = useCompanySettings();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Customer | null>(null);
   const [customerOrders, setCustomerOrders] = useState<OrderRecord[]>([]);
@@ -90,27 +90,23 @@ export default function CustomersPage() {
     birthday: '',
   });
 
-  async function fetchCustomers() {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .order('last_visit', { ascending: false, nullsFirst: false });
-      
-      if (error) throw error;
-      setCustomers((data || []) as Customer[]);
-    } catch {
-      setCustomers([]);
-      setAddError('Unable to load customers. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
+  const { rows: customers, setRows: setCustomers, total, loading, error: listError, page, pageSize, setPage, reload } = useTablePage<Customer>({
+    table: 'customers', columns: 'id,name,phone,email,birthday,loyalty_points,total_purchase,last_visit',
+    search, searchColumns: ['name','phone','email'], sort: 'last_visit',
+  });
+  const [summary, setSummary] = useState<{count:number;loyaltyPoints:number;revenue:number} | null>(null);
+  const [summaryVersion, setSummaryVersion] = useState(0);
+  const [summaryError, setSummaryError] = useState('');
   useEffect(() => {
-    void Promise.resolve().then(fetchCustomers);
-  }, []);
+    let active = true;
+    void Promise.resolve().then(async () => {
+      const { data, error } = await supabase.rpc('customer_summary');
+      if (!active) return;
+      if (error || !data) { setSummaryError('Unable to load customer totals. Check the connection and database migrations.'); return; }
+      setSummary(data); setSummaryError('');
+    });
+    return () => { active = false; };
+  }, [summaryVersion]);
 
   // Fetch recent orders when customer modal opens
   useEffect(() => {
@@ -186,6 +182,7 @@ export default function CustomersPage() {
 
       if (data) {
         setCustomers(prev => [data as Customer, ...prev]);
+        reload(); setSummaryVersion(value => value + 1);
         setShowAddModal(false);
         setFormData({ name: '', phone: '', email: '', birthday: '' });
       }
@@ -254,6 +251,7 @@ export default function CustomersPage() {
       }
 
       setEditingCustomer(null);
+      reload(); setSummaryVersion(value => value + 1);
     } catch (err: unknown) {
       setEditError((err instanceof Error ? err.message : '') || 'Failed to update customer');
     } finally {
@@ -261,15 +259,7 @@ export default function CustomersPage() {
     }
   };
 
-  const filtered = customers.filter(c => {
-    const q = search.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      (c.name || '').toLowerCase().includes(q) ||
-      (c.phone || '').includes(q) ||
-      (c.email || '').toLowerCase().includes(q)
-    );
-  });
+  const filtered = customers;
 
   return (
     <div>
@@ -280,7 +270,7 @@ export default function CustomersPage() {
             Customer CRM
           </h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-            {customers.length} registered customers · Loyalty tracking & purchase history
+            {summary?.count ?? total} registered customers · Loyalty tracking & purchase history
           </p>
         </div>
         <button 
@@ -296,17 +286,18 @@ export default function CustomersPage() {
       {/* Stats Cards */}
       <div className="grid grid-4" style={{ marginBottom: 'var(--space-5)', gap: 'var(--space-3)' }}>
         {[
-          { label: 'Total Customers', value: customers.length, icon: UserPlus, color: 'var(--color-berry)' },
-          { label: 'Loyalty Points', value: customers.reduce((s, c) => s + (c.loyalty_points || 0), 0).toLocaleString('en-IN'), icon: Star, color: 'var(--color-gold-dark)' },
+          { label: 'Total Customers', value: summary?.count ?? '—', icon: UserPlus, color: 'var(--color-berry)' },
+          { label: 'Loyalty Points', value: summary?.loyaltyPoints.toLocaleString('en-IN') ?? '—', icon: Star, color: 'var(--color-gold-dark)' },
           { 
             label: 'Total Revenue', 
             value: (() => {
-              const total = customers.reduce((s, c) => s + Number(c.total_purchase || 0), 0);
+              if (!summary) return '—';
+              const total = summary.revenue;
               return total >= 100000 ? `₹${(total / 100000).toFixed(1)}L` : `₹${total.toLocaleString('en-IN')}`;
             })(), 
             icon: ShoppingBag, color: '#6366f1' 
           },
-          { label: 'Avg Spend / Cust', value: customers.length > 0 ? `₹${Math.round(customers.reduce((s, c) => s + Number(c.total_purchase || 0), 0) / customers.length).toLocaleString('en-IN')}` : '₹0', icon: Calendar, color: 'var(--color-success)' },
+          { label: 'Avg Spend / Cust', value: summary ? (summary.count > 0 ? `₹${Math.round(summary.revenue / summary.count).toLocaleString('en-IN')}` : '₹0') : '—', icon: Calendar, color: 'var(--color-success)' },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="stat-card" style={{ padding: 'clamp(12px, 3vw, 18px)' }}>
             <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
@@ -335,6 +326,7 @@ export default function CustomersPage() {
         />
       </div>
 
+      {(listError || summaryError) && <p role="alert">{listError || summaryError} <button className="btn btn-secondary btn-sm" onClick={() => { reload(); setSummaryVersion(value => value + 1); }}>Retry</button></p>}
       {/* Customers Table */}
       <div className="table-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
         <table style={{ minWidth: '750px' }}>
@@ -439,6 +431,7 @@ export default function CustomersPage() {
           </tbody>
         </table>
       </div>
+      <Pagination page={page} pageSize={pageSize} total={total} loading={loading} onChange={setPage} />
 
       {/* ADD CUSTOMER MODAL */}
       {showAddModal && (

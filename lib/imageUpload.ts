@@ -8,3 +8,13 @@ export async function validateImageUpload(file: File) {
   if (!types[file.type]) throw new Error('Choose a valid PNG, JPEG, or WebP image');
   return file.type === 'image/png' ? 'png' : file.type === 'image/jpeg' ? 'jpg' : 'webp';
 }
+
+export function canOptimizeImage(src: string): boolean {
+  if (src.startsWith('/') && !src.startsWith('//')) return true;
+  try {
+    const image = new URL(src);
+    const storage = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '');
+    return image.protocol === 'https:' && image.origin === storage.origin
+      && image.pathname.startsWith('/storage/v1/object/public/product-images/') && !image.search;
+  } catch { return false; }
+}

@@ -33,8 +33,13 @@ try {
     const id=++nextId;pending.set(id,response=>response.error?reject(new Error(response.error.message)):resolve(response.result));socket.send(JSON.stringify({id,method,params}));
   });
   await send('Runtime.enable');await send('Log.enable');await send('Page.enable');await send('Page.bringToFront');
-  await send('Page.navigate',{url:base+'/admin/login'});await delay(4000);
+  await send('Page.navigate',{url:base+'/admin/login'});
   const evaluate=async expression=>(await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true})).result.value;
+  // Wait for hydration instead of assuming a fixed workstation/network speed.
+  for(let i=0;i<100;i++) {
+    if(await evaluate('(()=>{const b=document.querySelector("button[aria-label=\\"Show password\\"]");return !!b&&Object.keys(b).some(key=>key.startsWith("__reactProps"))})()'))break;
+    await delay(150);
+  }
   assert.equal(await evaluate('document.querySelector("#admin-password")?.type'),'password');
   const box=await evaluate('(()=>{const b=document.querySelector("button[aria-label=\\"Show password\\"]").getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2}})()');
   await send('Input.dispatchMouseEvent',{type:'mousePressed',...box,button:'left',clickCount:1});

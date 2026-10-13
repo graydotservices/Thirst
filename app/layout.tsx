@@ -1,19 +1,18 @@
 ﻿import type { Metadata } from "next";
-import { Lilita_One, Nunito } from "next/font/google";
+import { Poppins, Inter } from "next/font/google";
 import "./globals.css";
 import { headers } from 'next/headers';
 
-const lilita = Lilita_One({
-  weight: "400",
+const headingFont = Poppins({
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
   subsets: ["latin"],
-  variable: "--font-heading",
+  variable: "--font-thirst-heading",
   display: "swap",
 });
 
-const nunito = Nunito({
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
+const bodyFont = Inter({
   subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-thirst-body",
   display: "swap",
 });
 
@@ -59,8 +58,6 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://thirstcafe.in"),
 };
 
-import Preloader from "@/components/Preloader";
-
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -72,7 +69,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${lilita.variable} ${nunito.variable}`}
+      className={`${headingFont.variable} ${bodyFont.variable}`}
     >
       <body suppressHydrationWarning>
         <script
@@ -105,7 +102,6 @@ export default async function RootLayout({
             })
           }}
         />
-        <Preloader />
         {children}
       </body>
     </html>

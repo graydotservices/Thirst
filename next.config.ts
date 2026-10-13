@@ -5,6 +5,9 @@ const storageHost = storageUrl ? new URL(storageUrl).hostname : null;
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // The shared stylesheet is ~32 KB before compression. Deliver it with HTML
+  // so streamed content never paints with default browser margins/layout.
+  experimental: { inlineCss: true },
   images: {
     dangerouslyAllowSVG: false,
     dangerouslyAllowLocalIP: false,

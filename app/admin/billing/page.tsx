@@ -34,6 +34,7 @@ import {
 } from '@/lib/companySettings';
 import { supabase } from '@/lib/supabase';
 import { adminApi, ApiRequestError } from '@/lib/adminApi';
+import { useStaff } from '@/lib/staffContext';
 
 type CartItem = {
   id: string;
@@ -62,6 +63,7 @@ type CustomerItem = {
 
 export default function BillingPage() {
   const { settings } = useCompanySettings();
+  const staff = useStaff();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -80,7 +82,7 @@ export default function BillingPage() {
   const [billGenerated, setBillGenerated] = useState(false);
   const [billNo, setBillNo] = useState('');
   const [completedOrderData, setCompletedOrderData] = useState<OrderData | null>(null);
-  const [cashierName, setCashierName] = useState('');
+  const cashierName = staff?.name || '';
   const requestIdRef = useRef<string | null>(null);
   const savingRef = useRef(false);
   const pendingRequestRef = useRef<string | null>(null);
@@ -94,7 +96,7 @@ export default function BillingPage() {
     async function fetchProducts() {
       const { data } = await supabase
         .from('products')
-        .select('*')
+        .select('id,name,price,category,image,stock')
         .eq('is_available', true);
       
       if (data) {
@@ -102,17 +104,12 @@ export default function BillingPage() {
       }
     }
     
-    async function fetchStaff() {
-      try { const staff = await adminApi<{ name: string }>('/api/auth/me'); setCashierName(staff.name); }
-      catch { /* The layout handles access failures. */ }
-    }
     async function fetchCustomers() {
       const { data, error } = await supabase.rpc('billing_customers');
       if (!error && data) setExistingCustomers(data as CustomerItem[]);
     }
 
     void Promise.resolve().then(fetchProducts);
-    void Promise.resolve().then(fetchStaff);
     void Promise.resolve().then(fetchCustomers);
   }, []);
 
@@ -225,10 +222,10 @@ export default function BillingPage() {
       setBillNo(result.billNo);
       setBillGenerated(true);
       setCheckoutUncertain(false);
-      try {
-        const { data } = await supabase.from('products').select('*').eq('is_available', true);
+      // Confirm the sale immediately; catalogue refresh is independent of printing/new sale.
+      void supabase.from('products').select('id,name,price,category,image,stock').eq('is_available', true).then(({ data }) => {
         if (data) setProducts(data as Product[]);
-      } catch { /* A catalogue refresh failure must not change a confirmed sale. */ }
+      }, () => { /* A catalogue refresh failure must not change a confirmed sale. */ });
     } catch (error) {
       // Keep both the cart and key. Retry the exact sale after a connection failure.
       const rejected = error instanceof ApiRequestError && [400,401,403,409,422,429].includes(error.status);
@@ -236,11 +233,12 @@ export default function BillingPage() {
       if (rejected) {
         requestIdRef.current = null;
         pendingRequestRef.current = null;
-        const { data } = await supabase.from('products').select('*').eq('is_available', true);
+        void supabase.from('products').select('id,name,price,category,image,stock').eq('is_available', true).then(({ data }) => {
         if (data) {
           setProducts(data as Product[]);
           setCart(prev => prev.map(item => { const product = data.find(p => p.id === item.id); return product ? { ...item, price: product.price, name: product.name } : item; }));
         }
+        }, () => { /* The next checkout still validates current stock/prices. */ });
       }
       alert(error instanceof Error ? error.message : 'Unable to confirm the bill. Retry this sale.');
     } finally { savingRef.current = false; setSaving(false); }
@@ -383,7 +381,7 @@ export default function BillingPage() {
                 onMouseLeave={e => { if (p.stock > 0) e.currentTarget.style.transform = 'translateY(0)'; }}
               >
                 <div style={{ position: 'relative', height: 110, background: 'var(--color-lavender)', width: '100%' }}>
-                  <Image src={p.image || '/hot-chocolate.png'} alt={p.name} fill style={{ objectFit: 'cover' }} />
+                  <Image src={p.image || '/hot-chocolate.png'} alt={p.name} fill sizes="(max-width: 768px) 45vw, 180px" style={{ objectFit: 'cover' }} />
                   {p.stock <= 0 ? (
                     <span style={{ position: 'absolute', top: 6, right: 6, background: '#ef4444', color: 'white', fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: 'var(--radius-full)' }}>
                       Out of Stock

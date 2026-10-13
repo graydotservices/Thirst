@@ -35,10 +35,13 @@ export async function requireStaff(request: Request, roles: readonly StaffRole[]
   const { data: { user }, error } = await client.auth.getUser(token);
   if (error || !user) throw new HttpError(401, 'Sign in to continue');
   if (!user.email_confirmed_at) throw new HttpError(403, 'A confirmed staff account is required');
-  const { data: staff, error: staffError } = await client.from('staff')
-    .select('id, auth_user_id, name, email, role, status').eq('auth_user_id', user.id).single();
+  // Both reads use the verified identity; run independent database checks together.
+  // The rate RPC also checks current staff status, so no permission is cached.
+  const [{ data: staff, error: staffError }, { data: allowed, error: rateError }] = await Promise.all([
+    client.from('staff').select('id, auth_user_id, name, email, role, status').eq('auth_user_id', user.id).single(),
+    client.rpc('consume_api_rate_limit', { p_action: request.method === 'GET' ? 'read' : 'write' }),
+  ]);
   if (staffError || !staff || staff.status !== 'active' || !roles.includes(staff.role)) throw new HttpError(403, 'You do not have access to this action');
-  const { data: allowed, error: rateError } = await client.rpc('consume_api_rate_limit', { p_action: request.method === 'GET' ? 'read' : 'write' });
   if (rateError) throw new HttpError(503, 'Security configuration is not ready');
   if (!allowed) throw new HttpError(429, 'Too many requests. Please try again shortly.');
   return { client, user, staff: staff as { id: string; auth_user_id: string; name: string; email: string; role: StaffRole; status: string } };

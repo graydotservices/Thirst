@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { requestSignal } from './requestSignal';
 
 const getSupabaseUrl = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -14,7 +15,18 @@ const getSupabaseUrl = () => {
 export const supabase = createClient(
   getSupabaseUrl(),
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
-  { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } }
+  {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+    global: {
+      fetch: (input, init) => {
+        if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+          return Promise.reject(new Error('Supabase is not configured'));
+        }
+        const signal = requestSignal(init?.signal);
+        return fetch(input, { ...init, signal });
+      },
+    },
+  }
 );
 
 export type Database = {

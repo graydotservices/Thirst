@@ -3,8 +3,6 @@
    Brand: Premium Luxury Dessert & Cafe
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
-
 /* ============================================================
    RESPONSIVE UTILITIES
    ============================================================ */
@@ -98,8 +96,8 @@
   --space-24: 96px;
 
   /* Typography */
-  --font-heading: 'Poppins', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-heading: var(--font-thirst-heading), sans-serif;
+  --font-body: var(--font-thirst-body), sans-serif;
 
   /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);

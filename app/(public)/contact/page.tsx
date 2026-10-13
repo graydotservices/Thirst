@@ -9,9 +9,10 @@ export default function ContactPage() {
   const [form, setForm] = useState({ name: '', phone: '', email: '', subject: '', message: '' });
   const [sent, setSent] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    await new Promise(r => setTimeout(r, 800));
+    const body = `Name: ${form.name}\nPhone: ${form.phone}\nEmail: ${form.email}\n\n${form.message}`;
+    window.location.href = `mailto:${encodeURIComponent(settings.email)}?subject=${encodeURIComponent(form.subject || 'Thirst inquiry')}&body=${encodeURIComponent(body)}`;
     setSent(true);
   };
 
@@ -125,8 +126,8 @@ export default function ContactPage() {
               {sent ? (
                 <div style={{ textAlign: 'center', padding: '40px' }}>
                   <div style={{ fontSize: '4rem', marginBottom: '24px' }}>✉️</div>
-                  <h4 style={{ fontFamily: 'var(--font-heading)', fontWeight: 400, color: 'var(--color-plum)', marginBottom: '16px', fontSize: '2rem' }}>Message Sent!</h4>
-                  <p style={{ color: 'var(--color-text-secondary)', fontWeight: 600, fontSize: '1.1rem' }}>We&apos;ll get back to you within 24 hours. Thank you!</p>
+                  <h4 style={{ fontFamily: 'var(--font-heading)', fontWeight: 400, color: 'var(--color-plum)', marginBottom: '16px', fontSize: '2rem' }}>Email draft opened</h4>
+                  <p style={{ color: 'var(--color-text-secondary)', fontWeight: 600, fontSize: '1.1rem' }}>Send your message from your email app, or contact us on WhatsApp.</p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit}>
@@ -160,7 +161,7 @@ export default function ContactPage() {
                     <textarea id="c-message" required placeholder="How can we help you?" value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} style={{ padding: '16px', border: '4px solid var(--color-plum)', borderRadius: '8px', fontSize: '1rem', outline: 'none', background: 'var(--color-cream)', minHeight: 140 }} />
                   </div>
                   <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '16px', fontSize: '1.2rem' }}>
-                    <Send size={24} style={{ marginRight: '8px' }} /> Send Message
+                    <Send size={24} style={{ marginRight: '8px' }} /> Open Email Draft
                   </button>
                 </form>
               )}

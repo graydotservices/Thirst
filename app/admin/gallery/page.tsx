@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Upload, Trash2, Eye, X, Loader2, Plus, Check, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { validateImageUpload } from '@/lib/imageUpload';
+import { validateImageUpload, canOptimizeImage } from '@/lib/imageUpload';
 
 type GalleryItem = { 
   id: string; 
@@ -200,7 +200,8 @@ export default function AdminGalleryPage() {
                   src={item.image_url} 
                   alt={item.caption} 
                   fill 
-                  unoptimized 
+                  sizes="(max-width: 768px) 45vw, 180px"
+                  unoptimized={!canOptimizeImage(item.image_url)}
                   style={{ objectFit: 'cover' }} 
                 />
                 {!item.is_active && (

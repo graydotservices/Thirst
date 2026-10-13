@@ -7,6 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { adminApi, ApiRequestError } from '@/lib/adminApi';
 import { canAccessDashboard, type StaffRole } from '@/lib/security/roles';
+import { StaffContext, type StaffIdentity } from '@/lib/staffContext';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -45,47 +46,47 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const [role, setRole] = useState<StaffRole | null>(null);
-  const [staffInfo, setStaffInfo] = useState<{ name: string; email: string; role: string } | null>(null);
+  const [staffInfo, setStaffInfo] = useState<StaffIdentity | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [authorizedPath, setAuthorizedPath] = useState<string | null>(null);
+  const isPublicRoute = pathname === '/admin' || pathname === '/admin/login';
   const [accessError, setAccessError] = useState('');
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
-    if (pathname === '/admin' || pathname === '/admin/login') return;
+    if (isPublicRoute) {
+      void Promise.resolve().then(() => { setRole(null); setStaffInfo(null); setLoading(true); });
+      return;
+    }
     let cancelled = false;
     let latestCheck = 0;
     let granted = false;
+    let checking = false;
     const checkAccess = async (background = false) => {
+      if (checking) return;
+      checking = true;
       const check = ++latestCheck;
       if (!background) {
         setLoading(true);
-        setAuthorizedPath(null);
         setAccessError('');
       }
       try {
-        const staff = await adminApi<{ name: string; email: string; role: StaffRole }>('/api/auth/me');
+        const staff = await adminApi<StaffIdentity>('/api/auth/me');
         if (cancelled || check !== latestCheck) return;
-        if (!canAccessDashboard(staff.role, pathname)) {
-          setAuthorizedPath(null);
-          router.replace(staff.role === 'cashier' ? '/admin/billing' : '/admin/dashboard');
-          return;
-        }
         setRole(staff.role);
         setStaffInfo(staff);
-        setAuthorizedPath(pathname);
         granted = true;
       } catch (error) {
         if (cancelled || check !== latestCheck) return;
         if (error instanceof ApiRequestError && [401,403].includes(error.status)) {
-          setAuthorizedPath(null);
+          setRole(null);
+          setStaffInfo(null);
           await supabase.auth.signOut();
           if (!cancelled) router.replace('/admin/login');
         } else if (!background) {
           setAccessError('Unable to verify access. Check your connection and try again.');
         }
-      } finally { if (!cancelled && check === latestCheck) setLoading(false); }
+      } finally { checking = false; if (!cancelled && check === latestCheck) setLoading(false); }
     };
     void Promise.resolve().then(() => checkAccess());
     const onFocus = () => { void checkAccess(granted); };
@@ -94,13 +95,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       if (event === 'SIGNED_OUT') {
         latestCheck++;
         granted = false;
-        setAuthorizedPath(null);
+        setStaffInfo(null);
         setRole(null);
         router.replace('/admin/login');
+      } else if (event === 'SIGNED_IN') {
+        // Schedule outside the Auth callback so token reads cannot hold its lock.
+        void Promise.resolve().then(() => { if (!cancelled) void checkAccess(granted); });
       }
     });
     return () => { cancelled = true; subscription.unsubscribe(); window.removeEventListener('focus', onFocus); };
-  }, [pathname, router, retry]);
+  }, [isPublicRoute, router, retry]);
+
+  useEffect(() => {
+    if (!isPublicRoute && role && !canAccessDashboard(role, pathname)) {
+      router.replace(role === 'cashier' ? '/admin/billing' : '/admin/dashboard');
+    }
+  }, [isPublicRoute, role, pathname, router]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -111,12 +121,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   
   if (accessError) return <div style={{ padding: 32 }}><p>{accessError}</p><button className="btn btn-primary" onClick={() => setRetry(value => value + 1)}>Retry</button></div>;
 
-  if (loading || authorizedPath !== pathname || !role || !canAccessDashboard(role, pathname)) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span className="spinner"></span></div>;
+  if (loading || !role || !canAccessDashboard(role, pathname)) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span className="spinner"></span></div>;
 
   const visibleNavItems = navItems.filter(item => canAccessDashboard(role, item.href));
 
   return (
-    <div className="admin-layout">
+    <StaffContext.Provider value={staffInfo}><div className="admin-layout">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -139,7 +149,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="admin-sidebar-header" style={{ justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ position: 'relative', width: 34, height: 34, flexShrink: 0 }}>
-              <Image src="/logo-v2.png" alt="Thirst." fill style={{ objectFit: 'contain' }} />
+              <Image src="/logo-v2.png" alt="Thirst." fill sizes="34px" style={{ objectFit: 'contain' }} />
             </div>
             <div>
               <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.25rem', color: 'white', lineHeight: 1.2 }}>
@@ -322,6 +332,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           .admin-user-info { display: none !important; }
         }
       `}</style>
-    </div>
+    </div></StaffContext.Provider>
   );
 }
