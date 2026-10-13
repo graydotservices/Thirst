@@ -43,3 +43,6 @@ next-env.d.ts
 
 # backups
 admin_backup/
+
+# downloaded env files with secrets
+env.download
