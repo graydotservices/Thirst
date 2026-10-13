@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Package, AlertTriangle, Edit2, Trash2, X, Check, Search, UploadCloud } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
+import { validateImageUpload } from '@/lib/imageUpload';
 
 type Product = {
   id: string;
@@ -28,16 +29,18 @@ export default function InventoryPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  const fetchProducts = async () => {
+  async function fetchProducts() {
     setLoading(true);
     const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
     if (data) setProducts(data as Product[]);
     setLoading(false);
-  };
+  }
+
+  useEffect(() => {
+    void Promise.resolve().then(fetchProducts);
+  }, []);
+
+
 
   const getThreshold = (p: Product) => p.low_stock_threshold ?? p.threshold ?? 5;
   const lowStock = products.filter(p => p.stock <= getThreshold(p));
@@ -58,32 +61,17 @@ export default function InventoryPage() {
     try {
       let finalImageUrl = form.image || '/cake-product.png';
 
-      // Handle image upload if a file is selected
       if (imageFile) {
-        try {
-          const fileExt = imageFile.name.split('.').pop();
-          const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from('product-images')
-            .upload(fileName, imageFile, { upsert: true });
-            
-          if (uploadError) {
-            console.warn('Image bucket upload error:', uploadError.message);
-            // Non-blocking fallback if bucket is not configured
-          } else {
-            const { data: { publicUrl } } = supabase.storage
-              .from('product-images')
-              .getPublicUrl(fileName);
-            if (publicUrl) finalImageUrl = publicUrl;
-          }
-        } catch (uploadErr) {
-          console.warn('Storage upload failed, keeping existing image', uploadErr);
-        }
+        const fileExt = await validateImageUpload(imageFile);
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const { error } = await supabase.storage.from('product-images').upload(fileName, imageFile);
+        if (error) throw new Error('The image could not be uploaded. Please try again.');
+        const { data } = supabase.storage.from('product-images').getPublicUrl(fileName);
+        finalImageUrl = data.publicUrl;
       }
 
       // Build payload with both low_stock_threshold and fallback
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         name: form.name.trim(),
         category: form.category,
         price: Number(form.price) || 0,
@@ -96,12 +84,12 @@ export default function InventoryPage() {
         let updateRes = await supabase
           .from('products')
           .update(payload)
-          .eq('id', editing.id);
+          .eq('id', editing.id).select('id').single();
         
         // If column low_stock_threshold doesn't exist on remote yet, retry without it
         if (updateRes.error && updateRes.error.message.includes('low_stock_threshold')) {
           delete payload.low_stock_threshold;
-          updateRes = await supabase.from('products').update(payload).eq('id', editing.id);
+          updateRes = await supabase.from('products').update(payload).eq('id', editing.id).select('id').single();
         }
 
         if (updateRes.error) {
@@ -144,9 +132,9 @@ export default function InventoryPage() {
         }
       }
       setShowModal(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      alert(e?.message || 'Something went wrong. Please try again.');
+      alert((e instanceof Error ? e.message : '') || 'Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -158,7 +146,7 @@ export default function InventoryPage() {
     setForm({ name: '', category: 'cakes', price: 0, stock: 0, threshold: 5, image: '/cake-product.png' }); 
     setShowModal(true); 
   };
-  
+
   const openEdit = (p: Product) => { 
     setEditing(p); 
     setImageFile(null);
@@ -172,10 +160,10 @@ export default function InventoryPage() {
     }); 
     setShowModal(true); 
   };
-  
+
   const handleDelete = async (id: string) => { 
     if (confirm('Delete product permanently?')) {
-      const { error } = await supabase.from('products').delete().eq('id', id);
+      const { error } = await supabase.from('products').delete().eq('id', id).select('id').single();
       if (error) {
         alert(`Delete failed: ${error.message}`);
         return;
@@ -323,7 +311,7 @@ export default function InventoryPage() {
                 <input 
                   id="inv-img" 
                   type="file" 
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/webp"
                   className="input" 
                   style={{ paddingTop: '8px' }}
                   onChange={e => {

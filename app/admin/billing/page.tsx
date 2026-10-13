@@ -33,6 +33,7 @@ import {
   createWhatsAppUrl 
 } from '@/lib/companySettings';
 import { supabase } from '@/lib/supabase';
+import { adminApi, ApiRequestError } from '@/lib/adminApi';
 
 type CartItem = {
   id: string;
@@ -70,7 +71,6 @@ export default function BillingPage() {
   // Customer selection & CRM state
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerLoyaltyPoints, setCustomerLoyaltyPoints] = useState<number | null>(null);
   const [existingCustomers, setExistingCustomers] = useState<CustomerItem[]>([]);
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
@@ -80,15 +80,18 @@ export default function BillingPage() {
   const [billGenerated, setBillGenerated] = useState(false);
   const [billNo, setBillNo] = useState('');
   const [completedOrderData, setCompletedOrderData] = useState<OrderData | null>(null);
-  const [staffList, setStaffList] = useState<any[]>([]);
-  const [billedBy, setBilledBy] = useState('');
+  const [cashierName, setCashierName] = useState('');
+  const requestIdRef = useRef<string | null>(null);
+  const savingRef = useRef(false);
+  const pendingRequestRef = useRef<string | null>(null);
+  const [checkoutUncertain, setCheckoutUncertain] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState<'menu' | 'cart'>('menu');
-  const [thermalWidth, setThermalWidth] = useState<'80mm' | '58mm'>('80mm');
+  const thermalWidth = '80mm' as const;
 
   // Fetch products, active staff, and existing customers for autocomplete
   useEffect(() => {
-    const fetchProducts = async () => {
+    async function fetchProducts() {
       const { data } = await supabase
         .from('products')
         .select('*')
@@ -97,35 +100,20 @@ export default function BillingPage() {
       if (data) {
         setProducts(data as Product[]);
       }
-    };
+    }
     
-    const fetchStaff = async () => {
-      const { data } = await supabase
-        .from('staff')
-        .select('*')
-        .eq('status', 'active');
+    async function fetchStaff() {
+      try { const staff = await adminApi<{ name: string }>('/api/auth/me'); setCashierName(staff.name); }
+      catch { /* The layout handles access failures. */ }
+    }
+    async function fetchCustomers() {
+      const { data, error } = await supabase.rpc('billing_customers');
+      if (!error && data) setExistingCustomers(data as CustomerItem[]);
+    }
 
-      if (data && data.length > 0) {
-        setStaffList(data);
-        setBilledBy(data[0].id);
-      }
-    };
-
-    const fetchCustomers = async () => {
-      const { data } = await supabase
-        .from('customers')
-        .select('id, name, phone, loyalty_points, total_purchase')
-        .order('last_visit', { ascending: false, nullsFirst: false })
-        .limit(100);
-
-      if (data) {
-        setExistingCustomers(data as CustomerItem[]);
-      }
-    };
-    
-    fetchProducts();
-    fetchStaff();
-    fetchCustomers();
+    void Promise.resolve().then(fetchProducts);
+    void Promise.resolve().then(fetchStaff);
+    void Promise.resolve().then(fetchCustomers);
   }, []);
 
   // Close customer dropdown on outside click
@@ -154,27 +142,29 @@ export default function BillingPage() {
   });
 
   const selectExistingCustomer = (c: CustomerItem) => {
+    if (savingRef.current || checkoutUncertain || billGenerated) return;
     setCustomerName(c.name || '');
     setCustomerPhone(c.phone || '');
-    setSelectedCustomerId(c.id);
     setCustomerLoyaltyPoints(c.loyalty_points || 0);
     setCustomerDropdownOpen(false);
   };
 
   const handlePhoneChange = (val: string) => {
+    if (savingRef.current || checkoutUncertain || billGenerated) return;
     setCustomerPhone(val);
+    setCustomerLoyaltyPoints(null);
     const cleanDigits = val.replace(/\D/g, '');
     if (cleanDigits.length >= 10) {
       const found = existingCustomers.find(c => c.phone.replace(/\D/g, '').endsWith(cleanDigits.slice(-10)));
       if (found) {
         setCustomerName(found.name || '');
-        setSelectedCustomerId(found.id);
         setCustomerLoyaltyPoints(found.loyalty_points || 0);
       }
     }
   };
 
   const addToCart = (product: Product) => {
+    if (savingRef.current || checkoutUncertain || billGenerated) return;
     if (product.stock <= 0) {
       alert('This product is out of stock!');
       return;
@@ -193,6 +183,7 @@ export default function BillingPage() {
   };
 
   const updateQty = (id: string, qty: number) => {
+    if (savingRef.current || checkoutUncertain || billGenerated) return;
     if (qty <= 0) {
       setCart(prev => prev.filter(c => c.id !== id));
       return;
@@ -213,161 +204,46 @@ export default function BillingPage() {
   const rawDigits = customerPhone.replace(/\D/g, '');
   const isIndianPhoneValid = rawDigits.length === 10 || (rawDigits.length === 12 && rawDigits.startsWith('91'));
 
-  // IMMEDIATE BILL GENERATION (Payment completion & verification step removed completely!)
+  // Reuse the request ID on retries: a lost response must never create a second sale.
   const handleGenerateBill = async () => {
-    if (cart.length === 0 || saving) return;
+    if (cart.length === 0 || savingRef.current || billGenerated) return;
+    if (customerPhone && !isIndianPhoneValid) { alert('Enter a valid Indian phone number or clear it for a walk-in sale.'); return; }
+    savingRef.current = true;
     setSaving(true);
-
+    requestIdRef.current ??= crypto.randomUUID();
     try {
-      const now = new Date();
-      const istTime = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
-      const todayStr = istTime.toISOString().slice(0, 10);
-      const dateCode = todayStr.replace(/-/g, '');
-
-      const { count } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', `${todayStr}T00:00:00.000Z`)
-        .lte('created_at', `${todayStr}T23:59:59.999Z`);
-        
-      const seq = ((count || 0) + 1).toString().padStart(3, '0');
-      const no = `TH-${dateCode}-${seq}`;
-
-      // Upsert / Link customer
-      let customerId: string | null = selectedCustomerId;
-      let currentPoints = customerLoyaltyPoints || 0;
-      let currentTotalPurchase = 0;
-
-      const cleanPhoneDigits = customerPhone.replace(/\D/g, '').slice(-10);
-
-      if (cleanPhoneDigits && cleanPhoneDigits.length === 10) {
-        const { data: customer } = await supabase
-          .from('customers')
-          .upsert(
-            {
-              phone: cleanPhoneDigits,
-              name: customerName.trim() || 'Valued Customer',
-              last_visit: new Date().toISOString(),
-            },
-            { onConflict: 'phone', ignoreDuplicates: false }
-          )
-          .select()
-          .single();
-          
-        if (customer) {
-          customerId = customer.id;
-          currentPoints = customer.loyalty_points || 0;
-          currentTotalPurchase = Number(customer.total_purchase) || 0;
-        }
-      }
-
-      const selectedStaff = staffList.find(s => s.id === billedBy);
-      const billedByName = selectedStaff ? `${selectedStaff.name} (${selectedStaff.role})` : 'Admin';
-
-      const finalItems = cart.map(c => ({
-        product_id: String(c.id),
-        name: c.name,
-        price: c.price,
-        qty: c.qty,
-        total: c.price * c.qty
-      }));
-
-      // Try RPC first for atomic transaction, fallback to direct insert
-      const { data: rpcData, error: rpcError } = await supabase.rpc('place_order_atomic', {
-        p_customer_name: customerName || 'Walk-in',
-        p_customer_phone: cleanPhoneDigits || '0000000000',
-        p_customer_id: customerId,
-        p_items: finalItems,
-        p_subtotal: subtotal,
-        p_discount: discountAmt,
-        p_gst: 0,
-        p_total: total,
-        p_payment_method: paymentMethod,
-        p_payment_ref: null,
-        p_bill_no: no,
-        p_staff_id: selectedStaff?.id || null,
-        p_billed_by: billedByName,
+      pendingRequestRef.current ??= JSON.stringify({
+        request_id: requestIdRef.current,
+        items: cart.map(item => ({ product_id: item.id, qty: item.qty, price: item.price })),
+        customer_name: customerName.trim(), customer_phone: customerPhone,
+        discount_percent: discount, payment_method: paymentMethod,
       });
-
-      if (rpcError) {
-        // Fallback to standard insert
-        await supabase
-          .from('orders')
-          .insert([{
-            customer_name: customerName || 'Walk-in',
-            customer_phone: cleanPhoneDigits || '0000000000',
-            customer_id: customerId,
-            items: finalItems,
-            subtotal,
-            discount: discountAmt,
-            gst: 0,
-            total,
-            payment_method: paymentMethod,
-            payment_ref: null,
-            bill_no: no,
-            staff_id: selectedStaff?.id || null,
-            billed_by: billedByName,
-            status: 'completed',
-          }]);
-
-        // Decrement stock
-        for (const item of cart) {
-          const { data: product } = await supabase
-            .from('products')
-            .select('stock')
-            .eq('id', item.id)
-            .single();
-            
-          if (product) {
-            await supabase
-              .from('products')
-              .update({ stock: Math.max(0, product.stock - item.qty) })
-              .eq('id', item.id);
-          }
-        }
-
-        // Update customer points
-        if (customerId) {
-          const pointsEarned = Math.floor(total / 100);
-          await supabase
-            .from('customers')
-            .update({
-              loyalty_points: currentPoints + pointsEarned,
-              total_purchase: currentTotalPurchase + total,
-            })
-            .eq('id', customerId);
+      const result = await adminApi<{ order: OrderData; billNo: string }>('/api/orders', {
+        method: 'POST', body: pendingRequestRef.current,
+      });
+      setCompletedOrderData(result.order);
+      setBillNo(result.billNo);
+      setBillGenerated(true);
+      setCheckoutUncertain(false);
+      try {
+        const { data } = await supabase.from('products').select('*').eq('is_available', true);
+        if (data) setProducts(data as Product[]);
+      } catch { /* A catalogue refresh failure must not change a confirmed sale. */ }
+    } catch (error) {
+      // Keep both the cart and key. Retry the exact sale after a connection failure.
+      const rejected = error instanceof ApiRequestError && [400,401,403,409,422,429].includes(error.status);
+      setCheckoutUncertain(!rejected);
+      if (rejected) {
+        requestIdRef.current = null;
+        pendingRequestRef.current = null;
+        const { data } = await supabase.from('products').select('*').eq('is_available', true);
+        if (data) {
+          setProducts(data as Product[]);
+          setCart(prev => prev.map(item => { const product = data.find(p => p.id === item.id); return product ? { ...item, price: product.price, name: product.name } : item; }));
         }
       }
-
-      const orderData: OrderData = {
-        bill_no: no,
-        created_at: new Date().toISOString(),
-        customer_name: customerName || 'Walk-in Customer',
-        customer_phone: cleanPhoneDigits || customerPhone,
-        items: finalItems,
-        subtotal,
-        discount: discountAmt,
-        gst: 0,
-        total,
-        payment_method: paymentMethod,
-        billed_by: billedByName,
-      };
-
-      setCompletedOrderData(orderData);
-      setBillNo(no);
-      setBillGenerated(true);
-
-      // Decrement product stocks locally
-      setProducts(prev => prev.map(p => {
-        const cartItem = cart.find(c => c.id === p.id);
-        return cartItem ? { ...p, stock: Math.max(0, p.stock - cartItem.qty) } : p;
-      }));
-    } catch (e: any) {
-      console.error('Error generating bill:', e);
-      alert('Error generating bill: ' + (e.message || 'Please try again'));
-    } finally {
-      setSaving(false);
-    }
+      alert(error instanceof Error ? error.message : 'Unable to confirm the bill. Retry this sale.');
+    } finally { savingRef.current = false; setSaving(false); }
   };
 
   const handlePrintThermal = (width: '80mm' | '58mm' = thermalWidth) => {
@@ -390,11 +266,13 @@ export default function BillingPage() {
     setDiscount(0);
     setCustomerName('');
     setCustomerPhone('');
-    setSelectedCustomerId(null);
     setCustomerLoyaltyPoints(null);
     setBillGenerated(false);
     setBillNo('');
     setCompletedOrderData(null);
+    requestIdRef.current = null;
+    pendingRequestRef.current = null;
+    setCheckoutUncertain(false);
   };
 
   return (
@@ -410,21 +288,9 @@ export default function BillingPage() {
           </p>
         </div>
 
-        {/* Staff selector */}
-        {staffList.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'white', padding: '6px 14px', borderRadius: 'var(--radius-full)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-sm)' }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600 }}>Cashier:</span>
-            <select
-              value={billedBy}
-              onChange={e => setBilledBy(e.target.value)}
-              style={{ border: 'none', background: 'none', fontWeight: 700, color: 'var(--color-plum)', outline: 'none', fontSize: '0.85rem', cursor: 'pointer' }}
-            >
-              {staffList.map(s => (
-                <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
+          Cashier: {cashierName || 'Signed-in staff'}
+        </div>
       </div>
 
       {/* Mobile Tab Switcher */}
@@ -596,6 +462,7 @@ export default function BillingPage() {
                 className="input"
                 placeholder="Customer name (e.g. Priya Sharma)"
                 value={customerName}
+                disabled={saving || billGenerated || checkoutUncertain}
                 onChange={e => { setCustomerName(e.target.value); setCustomerDropdownOpen(true); }}
                 onFocus={() => setCustomerDropdownOpen(true)}
                 id="bill-customer-name"
@@ -611,6 +478,7 @@ export default function BillingPage() {
                     className="input"
                     placeholder="10-digit WhatsApp phone"
                     value={customerPhone}
+                    disabled={saving || billGenerated || checkoutUncertain}
                     onChange={e => { handlePhoneChange(e.target.value); setCustomerDropdownOpen(true); }}
                     onFocus={() => setCustomerDropdownOpen(true)}
                     id="bill-customer-phone"
@@ -619,7 +487,8 @@ export default function BillingPage() {
                   {customerPhone && (
                     <button
                       type="button"
-                      onClick={() => { setCustomerPhone(''); setCustomerName(''); setSelectedCustomerId(null); setCustomerLoyaltyPoints(null); }}
+                      disabled={saving || checkoutUncertain || billGenerated}
+                      onClick={() => { setCustomerPhone(''); setCustomerName(''); setCustomerLoyaltyPoints(null); }}
                       style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', padding: 4 }}
                     >
                       <X size={14} />
@@ -759,6 +628,7 @@ export default function BillingPage() {
                 min={0}
                 max={100}
                 value={discount}
+                disabled={saving || billGenerated || checkoutUncertain}
                 onChange={e => setDiscount(Math.max(0, Math.min(100, Number(e.target.value))))}
                 className="input"
                 style={{ padding: '6px 10px', fontSize: '0.85rem', width: 80 }}
@@ -786,6 +656,7 @@ export default function BillingPage() {
               {(['cash', 'upi', 'card'] as const).map(m => (
                 <button
                   key={m}
+                  disabled={saving || billGenerated || checkoutUncertain}
                   onClick={() => setPaymentMethod(m)}
                   style={{
                     flex: 1,
@@ -890,7 +761,7 @@ export default function BillingPage() {
                 }}
               >
                 <Printer size={18} />
-                {saving ? 'Generating...' : `Generate Bill (₹${total})`}
+                {saving ? 'Generating...' : checkoutUncertain ? 'Retry / Confirm Bill' : `Generate Bill (₹${total})`}
               </button>
             )}
           </div>

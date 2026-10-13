@@ -1,3 +1,4 @@
+import { escapeHtml } from './security/html';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { getCachedCompanySettings, CompanySettings, getFormattedAddress, formatIndianPhoneDisplay, getWhatsAppPhone } from './companySettings';
@@ -16,6 +17,17 @@ export type OrderData = {
   billed_by?: string;
   tax?: number;
 };
+
+
+function htmlOrder(order: OrderData): OrderData {
+  return { ...order, bill_no: escapeHtml(order.bill_no), customer_name: escapeHtml(order.customer_name),
+    customer_phone: escapeHtml(order.customer_phone), billed_by: escapeHtml(order.billed_by),
+    payment_method: escapeHtml(order.payment_method),
+    items: order.items.map(item => ({ ...item, name: escapeHtml(item.name) })) };
+}
+function htmlSettings(settings: CompanySettings): CompanySettings {
+  return Object.fromEntries(Object.entries(settings).map(([key,value]) => [key, typeof value === 'string' ? escapeHtml(value) : value])) as CompanySettings;
+}
 
 /**
  * Format itemized WhatsApp message for a completed bill
@@ -72,7 +84,8 @@ export function sendBillViaWhatsApp(order: OrderData, customSettings?: CompanySe
  * Supports standard 80mm roll paper (default) or 58mm compact roll paper.
  */
 export function printThermalReceipt(order: OrderData, paperWidth: '80mm' | '58mm' = '80mm', customSettings?: CompanySettings) {
-  const settings = customSettings || getCachedCompanySettings();
+  order = htmlOrder(order);
+  const settings = htmlSettings(customSettings || getCachedCompanySettings());
   const is58mm = paperWidth === '58mm';
 
   const dateStr = new Date(order.created_at).toLocaleString('en-IN', {
@@ -271,6 +284,8 @@ export function printThermalReceipt(order: OrderData, paperWidth: '80mm' | '58mm
 
   // Create hidden iframe for dedicated printing
   const iframe = document.createElement('iframe');
+  iframe.setAttribute('sandbox', 'allow-same-origin allow-modals');
+  iframe.title = 'Receipt printing';
   iframe.style.position = 'fixed';
   iframe.style.right = '0';
   iframe.style.bottom = '0';
@@ -281,13 +296,10 @@ export function printThermalReceipt(order: OrderData, paperWidth: '80mm' | '58mm
 
   const doc = iframe.contentWindow?.document;
   if (!doc) {
+    iframe.remove();
     alert('Unable to initiate receipt printing. Please try again.');
     return;
   }
-
-  doc.open();
-  doc.write(receiptHtml);
-  doc.close();
 
   iframe.onload = () => {
     try {
@@ -303,13 +315,17 @@ export function printThermalReceipt(order: OrderData, paperWidth: '80mm' | '58mm
       }, 2000);
     }
   };
+  doc.open();
+  doc.write(receiptHtml);
+  doc.close();
 }
 
 /**
  * Generate Invoice Image for Social Sharing
  */
 export const generateInvoiceImage = async (order: OrderData, customSettings?: CompanySettings): Promise<Blob | null> => {
-  const settings = customSettings || getCachedCompanySettings();
+  order = htmlOrder(order);
+  const settings = htmlSettings(customSettings || getCachedCompanySettings());
 
   return new Promise((resolve) => {
     const container = document.createElement('div');

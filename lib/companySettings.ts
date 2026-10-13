@@ -172,24 +172,17 @@ export async function saveCompanySettings(updates: Partial<CompanySettings>): Pr
       .select()
       .maybeSingle();
 
-    const finalData = data ? { ...payload, ...data } : payload;
-
+    if (error || !data) return { success: false, error: 'Company settings could not be saved. Administrator access is required.' };
+    const finalData: CompanySettings = { ...payload, ...data };
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(finalData));
         window.dispatchEvent(new CustomEvent(UPDATE_EVENT_KEY, { detail: finalData }));
-      } catch {}
+      } catch { /* Saved remotely even if browser storage is unavailable. */ }
     }
-
-    if (error) {
-      console.warn('Supabase company_settings upsert warning:', error.message);
-      // Still considered success locally
-      return { success: true, data: finalData };
-    }
-
     return { success: true, data: finalData };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to save company settings' };
+  } catch (err: unknown) {
+    return { success: false, error: (err instanceof Error ? err.message : '') || 'Failed to save company settings' };
   }
 }
 
@@ -197,7 +190,7 @@ export async function saveCompanySettings(updates: Partial<CompanySettings>): Pr
  * React Hook for dynamic company settings across the entire app
  */
 export function useCompanySettings() {
-  const [settings, setSettings] = useState<CompanySettings>(getCachedCompanySettings);
+  const [settings, setSettings] = useState<CompanySettings>(DEFAULT_COMPANY_SETTINGS);
   const [loading, setLoading] = useState<boolean>(true);
 
   const reload = useCallback(async () => {
@@ -208,7 +201,7 @@ export function useCompanySettings() {
   }, []);
 
   useEffect(() => {
-    reload();
+    void Promise.resolve().then(reload);
 
     const handleUpdate = (e: Event) => {
       const detail = (e as CustomEvent).detail;

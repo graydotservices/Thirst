@@ -14,12 +14,6 @@ type Offer = {
   isActive: boolean;
 };
 
-const defaultDemo: Offer[] = [
-  { id: '1', title: 'Birthday Special', description: 'Get 30% off on your birthday month', discount: 30, code: 'BDAY30', validUntil: '2026-12-31', isActive: true },
-  { id: '2', title: 'Weekend Deal', description: 'Buy 2 get 1 free on ice creams', discount: 33, code: 'WEEKEND', validUntil: '2026-12-31', isActive: true },
-  { id: '3', title: 'First Order', description: '20% off for new customers', discount: 20, code: 'FIRST20', validUntil: '2026-12-31', isActive: false },
-];
-
 export default function AdminOffersPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +24,7 @@ export default function AdminOffersPage() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [form, setForm] = useState({ title: '', description: '', discount: 10, code: '', validUntil: '', isActive: true });
 
-  const fetchOffers = async () => {
+  async function fetchOffers() {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -40,13 +34,13 @@ export default function AdminOffersPage() {
 
       if (error || !data || data.length === 0) {
         // Fallback to default demo offers if table empty
-        setOffers(defaultDemo);
+        setOffers([]);
       } else {
-        const mapped = data.map((o: any) => ({
+        const mapped = data.map((o) => ({
           id: o.id,
           title: o.title || '',
           description: o.description || '',
-          discount: o.discount_percentage ?? o.discount ?? 0,
+          discount: o.discount_percent ?? o.discount ?? 0,
           code: o.code || '',
           validUntil: o.valid_until ? o.valid_until.split('T')[0] : 'Ongoing',
           isActive: o.is_active ?? true,
@@ -54,28 +48,21 @@ export default function AdminOffersPage() {
         setOffers(mapped);
       }
     } catch {
-      setOffers(defaultDemo);
+      setOffers([]);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    fetchOffers();
+    void Promise.resolve().then(fetchOffers);
   }, []);
 
   const handleToggleActive = async (o: Offer) => {
     const nextState = !o.isActive;
+    const { error } = await supabase.from('offers').update({ is_active: nextState }).eq('id', o.id).select('id').single();
+    if (error) { alert('Unable to update the offer.'); return; }
     setOffers(prev => prev.map(x => x.id === o.id ? { ...x, isActive: nextState } : x));
-
-    try {
-      await supabase
-        .from('offers')
-        .update({ is_active: nextState })
-        .eq('id', o.id);
-    } catch (e) {
-      console.warn('Failed to update offer status in Supabase', e);
-    }
   };
 
   const handleSave = async () => {
@@ -91,10 +78,10 @@ export default function AdminOffersPage() {
 
     setSaving(true);
     try {
-      const payload: Record<string, any> = {
+      const payload: Record<string, unknown> = {
         title: form.title.trim(),
         description: form.description.trim(),
-        discount_percentage: Number(form.discount) || 0,
+        discount_percent: Number(form.discount) || 0,
         code: form.code.trim().toUpperCase(),
         valid_until: form.validUntil || null,
         is_active: form.isActive,
@@ -104,10 +91,10 @@ export default function AdminOffersPage() {
         const { error } = await supabase
           .from('offers')
           .update(payload)
-          .eq('id', editing.id);
+          .eq('id', editing.id).select('id').single();
 
         if (error) {
-          console.warn('Supabase update offer warning:', error.message);
+          throw new Error('Unable to save this offer.');
         }
 
         setOffers(prev => prev.map(o => o.id === editing.id ? {
@@ -127,24 +114,13 @@ export default function AdminOffersPage() {
           .single();
 
         if (error) {
-          console.warn('Supabase insert offer warning:', error.message);
-          // Local add fallback
-          const newLocal: Offer = {
-            id: Date.now().toString(),
-            title: form.title,
-            description: form.description,
-            discount: form.discount,
-            code: form.code.toUpperCase(),
-            validUntil: form.validUntil || 'Ongoing',
-            isActive: form.isActive,
-          };
-          setOffers(prev => [newLocal, ...prev]);
+          throw new Error('Unable to save this offer.');
         } else if (data) {
           const newOffer: Offer = {
             id: data.id,
             title: data.title,
             description: data.description || '',
-            discount: data.discount_percentage ?? form.discount,
+            discount: data.discount_percent ?? form.discount,
             code: data.code,
             validUntil: data.valid_until ? data.valid_until.split('T')[0] : 'Ongoing',
             isActive: data.is_active ?? true,
@@ -153,8 +129,8 @@ export default function AdminOffersPage() {
         }
       }
       setShowModal(false);
-    } catch (e: any) {
-      setErrorMessage(e?.message || 'Error saving offer.');
+    } catch (e: unknown) {
+      setErrorMessage((e instanceof Error ? e.message : '') || 'Error saving offer.');
     } finally {
       setSaving(false);
     }
@@ -182,14 +158,10 @@ export default function AdminOffersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Delete this promo offer?')) {
-      setOffers(prev => prev.filter(x => x.id !== id));
-      try {
-        await supabase.from('offers').delete().eq('id', id);
-      } catch (e) {
-        console.warn('Failed to delete offer from Supabase', e);
-      }
-    }
+    if (!confirm('Delete this promo offer?')) return;
+    const { error } = await supabase.from('offers').delete().eq('id', id).select('id').single();
+    if (error) { alert('Unable to delete the offer.'); return; }
+    setOffers(prev => prev.filter(x => x.id !== id));
   };
 
   return (

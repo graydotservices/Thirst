@@ -6,23 +6,24 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Legend,
 } from 'recharts';
 import { Download, TrendingUp, ShoppingCart, Users, IndianRupee, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, type OrderItem } from '@/lib/supabase';
+import { csvCell } from '@/lib/security/csv';
 
 const ranges = ['Daily', 'Weekly', 'Monthly', 'Yearly'] as const;
 
 export default function ReportsPage() {
   const [range, setRange] = useState<typeof ranges[number]>('Weekly');
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<{ id: string; bill_no: string; created_at: string; customer_phone: string; customer_id?: string; payment_method: string; subtotal: number; discount: number; gst: number; total: number; items: OrderItem[] }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOrders = async () => {
+    async function fetchOrders() {
       setLoading(true);
-      const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: true });
+      const { data } = await supabase.from('orders').select('*').eq('status', 'completed').order('created_at', { ascending: true });
       if (data) setOrders(data);
       setLoading(false);
-    };
-    fetchOrders();
+    }
+    void Promise.resolve().then(fetchOrders);
   }, []);
 
   const getChartData = () => {
@@ -102,7 +103,7 @@ export default function ReportsPage() {
   const getTopProducts = () => {
     const productMap = new Map<string, { orders: number, revenue: number }>();
     orders.forEach(o => {
-      o.items?.forEach((item: any) => {
+      o.items?.forEach((item: OrderItem) => {
         if (!item || item.product_id === 'meta_staff' || (item.name && item.name.startsWith('Billed by:'))) return;
         const curr = productMap.get(item.name) || { orders: 0, revenue: 0 };
         productMap.set(item.name, { orders: curr.orders + (item.qty || 1), revenue: curr.revenue + (item.total || 0) });
@@ -123,17 +124,17 @@ export default function ReportsPage() {
 
     const headers = ['Bill No', 'Date', 'Customer Phone', 'Payment Method', 'Subtotal (INR)', 'Discount (INR)', 'Tax (INR)', 'Total (INR)'];
     const rows = orders.map(o => [
-      `"${o.bill_no || o.id}"`,
-      `"${new Date(o.created_at).toLocaleString('en-IN')}"`,
-      `"${o.customer_phone || 'Walk-in'}"`,
-      `"${o.payment_method || 'Cash'}"`,
+      o.bill_no || o.id,
+      new Date(o.created_at).toLocaleString('en-IN'),
+      o.customer_phone || 'Walk-in',
+      o.payment_method || 'Cash',
       o.subtotal || 0,
       o.discount || 0,
-      o.tax || 0,
+      o.gst || 0,
       o.total || 0
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.map(csvCell).join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -242,7 +243,7 @@ export default function ReportsPage() {
               />
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: '#9c8490' }} axisLine={false} tickLine={false} />
               <Tooltip 
-                formatter={(val: any, name: any) => [name === 'Revenue (₹)' ? `₹${Number(val).toLocaleString('en-IN')}` : val, name]}
+                formatter={(val, name) => [name === 'Revenue (₹)' ? `₹${Number(val).toLocaleString('en-IN')}` : val, name]}
                 contentStyle={{ background: 'white', border: '1px solid #f0e0eb', borderRadius: 12, fontFamily: 'var(--font-heading)', fontSize: 12 }} 
               />
               <Legend />

@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 import { Lilita_One, Nunito } from "next/font/google";
 import "./globals.css";
+import { headers } from 'next/headers';
 
 const lilita = Lilita_One({
   weight: "400",
@@ -60,24 +61,22 @@ export const metadata: Metadata = {
 
 import Preloader from "@/components/Preloader";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Reading request headers opts into dynamic rendering so the CSP nonce matches
+  // every framework script and the structured-data script on each response.
+  const nonce = (await headers()).get('x-nonce') || undefined;
   return (
     <html
       lang="en"
       className={`${lilita.variable} ${nunito.variable}`}
-      style={
-        {
-          "--font-heading": "var(--font-heading)",
-          "--font-body": "var(--font-body)",
-        } as React.CSSProperties
-      }
     >
       <body suppressHydrationWarning>
         <script
+          nonce={nonce}
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({

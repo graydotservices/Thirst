@@ -90,7 +90,7 @@ export default function CustomersPage() {
     birthday: '',
   });
 
-  const fetchCustomers = async () => {
+  async function fetchCustomers() {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -98,77 +98,48 @@ export default function CustomersPage() {
         .select('*')
         .order('last_visit', { ascending: false, nullsFirst: false });
       
-      if (data && data.length > 0) {
-        setCustomers(data as Customer[]);
-      } else {
-        // Fallback default demo customer list if table is empty
-        setCustomers([
-          { id: '1', name: 'Priya Sharma', phone: '9876543210', email: 'priya@gmail.com', birthday: '1995-04-12', loyalty_points: 35, total_purchase: 3500, last_visit: new Date().toISOString() },
-          { id: '2', name: 'Arjun Mehta', phone: '9876543211', email: 'arjun@gmail.com', birthday: '1992-08-23', loyalty_points: 50, total_purchase: 5200, last_visit: new Date(Date.now() - 86400000).toISOString() },
-          { id: '3', name: 'Sneha Patel', phone: '9876543212', email: 'sneha@gmail.com', birthday: '1998-11-05', loyalty_points: 18, total_purchase: 1850, last_visit: new Date(Date.now() - 172800000).toISOString() },
-        ]);
-      }
+      if (error) throw error;
+      setCustomers((data || []) as Customer[]);
     } catch {
-      // Offline fallback
+      setCustomers([]);
+      setAddError('Unable to load customers. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
-    fetchCustomers();
+    void Promise.resolve().then(fetchCustomers);
   }, []);
 
   // Fetch recent orders when customer modal opens
   useEffect(() => {
     if (!selected) {
-      setCustomerOrders([]);
+      void Promise.resolve().then(() => setCustomerOrders([]));
       return;
     }
 
-    const fetchOrders = async () => {
+    const customer = selected;
+    async function fetchOrders() {
       setLoadingOrders(true);
       try {
-        const cleanPhone = selected.phone.replace(/\D/g, '').slice(-10);
+        const cleanPhone = customer.phone.replace(/\D/g, '').slice(-10);
         const { data } = await supabase
           .from('orders')
           .select('*')
-          .or(`customer_phone.eq.${cleanPhone},customer_phone.eq.${selected.phone}`)
+          .or(`customer_id.eq.${customer.id},customer_phone.eq.${cleanPhone}`)
           .order('created_at', { ascending: false })
           .limit(10);
 
-        if (data && data.length > 0) {
-          setCustomerOrders(data as OrderRecord[]);
-        } else {
-          // If no live orders found, synthesize from customer total purchase if > 0
-          if (selected.total_purchase > 0) {
-            setCustomerOrders([
-              {
-                id: 'demo-1',
-                bill_no: `TH-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-001`,
-                total: selected.total_purchase,
-                subtotal: selected.total_purchase,
-                discount: 0,
-                created_at: selected.last_visit || new Date().toISOString(),
-                payment_method: 'upi',
-                customer_name: selected.name,
-                customer_phone: selected.phone,
-                items: [{ name: 'Assorted Luxury Patisserie', qty: 1, price: selected.total_purchase, total: selected.total_purchase }],
-                billed_by: 'Admin'
-              }
-            ]);
-          } else {
-            setCustomerOrders([]);
-          }
-        }
+        setCustomerOrders((data || []) as OrderRecord[]);
       } catch (e) {
         setCustomerOrders([]);
       } finally {
         setLoadingOrders(false);
       }
-    };
+    }
 
-    fetchOrders();
+    void Promise.resolve().then(fetchOrders);
   }, [selected]);
 
   // Clean phone helper
@@ -200,9 +171,6 @@ export default function CustomersPage() {
         phone: cleanPhone,
         email: formData.email.trim() || null,
         birthday: formData.birthday || null,
-        loyalty_points: 0,
-        total_purchase: 0,
-        last_visit: new Date().toISOString(),
       };
 
       const { data, error } = await supabase
@@ -212,21 +180,8 @@ export default function CustomersPage() {
         .single();
 
       if (error) {
-        if (error.code === '23505') {
-          setAddError(`Customer with phone +91 ${cleanPhone} already exists.`);
-          return;
-        } else {
-          // If RLS or DB error, still save in local memory so cashier is never blocked
-          console.warn('Supabase customer insert warning:', error.message);
-          const localCust: Customer = {
-            ...newCustPayload,
-            id: 'local-' + Date.now()
-          };
-          setCustomers(prev => [localCust, ...prev]);
-          setShowAddModal(false);
-          setFormData({ name: '', phone: '', email: '', birthday: '' });
-          return;
-        }
+        setAddError(error.code === '23505' ? 'A customer with this phone already exists.' : 'Unable to save the customer. Please try again.');
+        return;
       }
 
       if (data) {
@@ -234,8 +189,8 @@ export default function CustomersPage() {
         setShowAddModal(false);
         setFormData({ name: '', phone: '', email: '', birthday: '' });
       }
-    } catch (err: any) {
-      setAddError(err?.message || 'Unexpected error occurred.');
+    } catch (err: unknown) {
+      setAddError((err instanceof Error ? err.message : '') || 'Unexpected error occurred.');
     } finally {
       setSavingCustomer(false);
     }
@@ -285,9 +240,7 @@ export default function CustomersPage() {
         .update(updates)
         .eq('id', editingCustomer.id);
 
-      if (error) {
-        console.warn('Supabase customer update warning:', error.message);
-      }
+      if (error) { setEditError('Unable to save the customer. Check for a duplicate phone number.'); return; }
 
       // Update in local state
       const updatedCust: Customer = {
@@ -301,8 +254,8 @@ export default function CustomersPage() {
       }
 
       setEditingCustomer(null);
-    } catch (err: any) {
-      setEditError(err?.message || 'Failed to update customer');
+    } catch (err: unknown) {
+      setEditError((err instanceof Error ? err.message : '') || 'Failed to update customer');
     } finally {
       setSavingEdit(false);
     }

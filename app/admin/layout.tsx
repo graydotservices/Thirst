@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { adminApi, ApiRequestError } from '@/lib/adminApi';
+import { canAccessDashboard, type StaffRole } from '@/lib/security/roles';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -42,53 +44,63 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const [role, setRole] = useState<string | null>(null);
+  const [role, setRole] = useState<StaffRole | null>(null);
   const [staffInfo, setStaffInfo] = useState<{ name: string; email: string; role: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [authorizedPath, setAuthorizedPath] = useState<string | null>(null);
+  const [accessError, setAccessError] = useState('');
+  const [retry, setRetry] = useState(0);
+
   useEffect(() => {
-    if (pathname === '/admin' || pathname === '/admin/login') {
-      setLoading(false);
-      return;
-    }
-
-    const checkRole = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/admin/login');
-        return;
+    if (pathname === '/admin' || pathname === '/admin/login') return;
+    let cancelled = false;
+    let latestCheck = 0;
+    let granted = false;
+    const checkAccess = async (background = false) => {
+      const check = ++latestCheck;
+      if (!background) {
+        setLoading(true);
+        setAuthorizedPath(null);
+        setAccessError('');
       }
-
-      const { data: staffData } = await supabase
-        .from('staff')
-        .select('name, role, status')
-        .eq('email', session.user.email)
-        .single();
-        
-      if (!staffData || staffData.status === 'inactive') {
-        // Not a registered active staff member
-        await supabase.auth.signOut();
-        router.push('/admin/login?error=unauthorized');
-        return;
-      }
-
-      const userRole = staffData.role;
-      setRole(userRole);
-      setStaffInfo({
-        name: staffData.name || 'Admin',
-        email: session.user.email || '',
-        role: userRole
-      });
-      
-      // Protect routes for cashiers
-      if (userRole === 'cashier' && pathname !== '/admin/billing') {
-        router.push('/admin/billing');
-      }
-      setLoading(false);
+      try {
+        const staff = await adminApi<{ name: string; email: string; role: StaffRole }>('/api/auth/me');
+        if (cancelled || check !== latestCheck) return;
+        if (!canAccessDashboard(staff.role, pathname)) {
+          setAuthorizedPath(null);
+          router.replace(staff.role === 'cashier' ? '/admin/billing' : '/admin/dashboard');
+          return;
+        }
+        setRole(staff.role);
+        setStaffInfo(staff);
+        setAuthorizedPath(pathname);
+        granted = true;
+      } catch (error) {
+        if (cancelled || check !== latestCheck) return;
+        if (error instanceof ApiRequestError && [401,403].includes(error.status)) {
+          setAuthorizedPath(null);
+          await supabase.auth.signOut();
+          if (!cancelled) router.replace('/admin/login');
+        } else if (!background) {
+          setAccessError('Unable to verify access. Check your connection and try again.');
+        }
+      } finally { if (!cancelled && check === latestCheck) setLoading(false); }
     };
-
-    checkRole();
-  }, [pathname, router]);
+    void Promise.resolve().then(() => checkAccess());
+    const onFocus = () => { void checkAccess(granted); };
+    window.addEventListener('focus', onFocus);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(event => {
+      if (event === 'SIGNED_OUT') {
+        latestCheck++;
+        granted = false;
+        setAuthorizedPath(null);
+        setRole(null);
+        router.replace('/admin/login');
+      }
+    });
+    return () => { cancelled = true; subscription.unsubscribe(); window.removeEventListener('focus', onFocus); };
+  }, [pathname, router, retry]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -97,11 +109,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (pathname === '/admin' || pathname === '/admin/login') return <>{children}</>;
   
-  if (loading) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span className="spinner"></span></div>;
+  if (accessError) return <div style={{ padding: 32 }}><p>{accessError}</p><button className="btn btn-primary" onClick={() => setRetry(value => value + 1)}>Retry</button></div>;
 
-  const visibleNavItems = role === 'cashier' 
-    ? navItems.filter(item => item.href === '/admin/billing')
-    : navItems;
+  if (loading || authorizedPath !== pathname || !role || !canAccessDashboard(role, pathname)) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span className="spinner"></span></div>;
+
+  const visibleNavItems = navItems.filter(item => canAccessDashboard(role, item.href));
 
   return (
     <div className="admin-layout">

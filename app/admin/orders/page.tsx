@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { adminApi } from '@/lib/adminApi';
 import { Search, Receipt, Calendar, CreditCard, ChevronRight, X, Download, Trash2, MessageCircle, Printer } from 'lucide-react';
 import { generateInvoicePDF, generateInvoiceImage, printThermalReceipt, sendBillViaWhatsApp, OrderData } from '@/lib/pdfUtils';
 
@@ -28,11 +29,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const fetchOrders = async () => {
+  async function fetchOrders() {
     setLoading(true);
     const { data } = await supabase
       .from('orders')
@@ -41,7 +38,13 @@ export default function OrdersPage() {
     
     if (data) setOrders(data as Order[]);
     setLoading(false);
-  };
+  }
+
+  useEffect(() => {
+    void Promise.resolve().then(fetchOrders);
+  }, []);
+
+
 
   const cancelOrder = async (order: Order) => {
     if (order.status === 'cancelled') {
@@ -49,16 +52,11 @@ export default function OrdersPage() {
       return;
     }
     if (window.confirm(`Are you sure you want to void/cancel Bill #${order.bill_no}? This will mark the order as Cancelled.`)) {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: 'cancelled' })
-        .eq('id', order.id);
-
-      if (error) {
-        alert(`Failed to update order status: ${error.message}`);
-      } else {
+      try {
+        await adminApi('/api/orders', { method: 'PATCH', body: JSON.stringify({ id: order.id, status: 'cancelled' }) });
         setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'cancelled' } : o));
-      }
+        if (selectedOrder?.id === order.id) setSelectedOrder(prev => prev ? { ...prev, status: 'cancelled' } : null);
+      } catch (error) { alert(error instanceof Error ? error.message : 'Unable to cancel order'); }
     }
   };
 
@@ -71,7 +69,7 @@ export default function OrdersPage() {
     const formattedPhone = rawDigits.length === 10 ? '91' + rawDigits : rawDigits;
 
     const regularItems = (order.items || []).filter(item => 
-      (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))
+      item.product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))
     );
     const itemListText = regularItems.map(item => `- ${item.qty} x ${item.name}`).join('\n');
     const msg = `Hi ${order.customer_name || 'Valued Customer'},\n\nThank you for visiting *Thirst.*!\n\n*Invoice No:* ${order.bill_no}\n*Date:* ${new Date(order.created_at).toLocaleDateString('en-IN')}\n\n*Order Details:*\n${itemListText}\n\n*Total Amount:* ₹${order.total}\n\nHope to see you again! ❤\n\n— Thirst. Team`;
@@ -153,7 +151,7 @@ export default function OrdersPage() {
           ].map(t => (
             <button
               key={t.id}
-              onClick={() => setStatusFilter(t.id as any)}
+              onClick={() => setStatusFilter(t.id as 'all' | 'completed' | 'cancelled')}
               className={`btn btn-sm ${statusFilter === t.id ? 'btn-primary' : 'btn-secondary'}`}
               style={{ whiteSpace: 'nowrap', fontSize: '0.8125rem', padding: '7px 14px' }}
             >
@@ -168,7 +166,6 @@ export default function OrdersPage() {
           <thead>
             <tr>
               <th>Bill No.</th>
-              <th>Date</th>
               <th>Customer</th>
               <th>Items</th>
               <th>Total Amount</th>
@@ -179,13 +176,13 @@ export default function OrdersPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 'var(--space-8)' }}><span className="spinner"></span></td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)' }}><span className="spinner"></span></td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>No orders found.</td></tr>
+              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>No orders found.</td></tr>
             ) : filtered.map(order => {
-              const staffMeta = (order.items || []).find(item => (item as any).product_id === 'meta_staff' || (item.name && item.name.startsWith('Billed by:')));
+              const staffMeta = (order.items || []).find(item => item.product_id === 'meta_staff' || (item.name && item.name.startsWith('Billed by:')));
               const billedByText = order.billed_by || (staffMeta ? staffMeta.name : null);
-              const cleanItems = (order.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:')));
+              const cleanItems = (order.items || []).filter(item => item.product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:')));
               const totalQty = cleanItems.reduce((acc, item) => acc + (Number(item.qty) || 1), 0);
 
               return (
@@ -245,7 +242,7 @@ export default function OrdersPage() {
                           created_at: order.created_at,
                           customer_name: order.customer_name,
                           customer_phone: order.customer_phone,
-                          items: (order.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
+                          items: (order.items || []).filter(item => item.product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
                           subtotal: order.subtotal || order.total,
                           discount: order.discount || 0,
                           gst: 0,
@@ -312,7 +309,7 @@ export default function OrdersPage() {
                 <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-plum)', marginBottom: '8px' }}>Items Purchased</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
                   {(selectedOrder.items || [])
-                    .filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:')))
+                    .filter(item => item.product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:')))
                     .map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', borderBottom: '1px dashed var(--color-lavender)', paddingBottom: '4px' }}>
                         <span>{item.qty} x {item.name}</span>
@@ -352,7 +349,7 @@ export default function OrdersPage() {
                       created_at: selectedOrder.created_at,
                       customer_name: selectedOrder.customer_name,
                       customer_phone: selectedOrder.customer_phone,
-                      items: (selectedOrder.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
+                      items: (selectedOrder.items || []).filter(item => item.product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
                       subtotal: selectedOrder.subtotal || selectedOrder.total,
                       discount: selectedOrder.discount || 0,
                       gst: 0,
@@ -371,7 +368,7 @@ export default function OrdersPage() {
                       created_at: selectedOrder.created_at,
                       customer_name: selectedOrder.customer_name,
                       customer_phone: selectedOrder.customer_phone,
-                      items: (selectedOrder.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
+                      items: (selectedOrder.items || []).filter(item => item.product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
                       subtotal: selectedOrder.subtotal || selectedOrder.total,
                       discount: selectedOrder.discount || 0,
                       gst: 0,
@@ -393,7 +390,7 @@ export default function OrdersPage() {
                       created_at: selectedOrder.created_at,
                       customer_name: selectedOrder.customer_name,
                       customer_phone: selectedOrder.customer_phone,
-                      items: (selectedOrder.items || []).filter(item => (item as any).product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
+                      items: (selectedOrder.items || []).filter(item => item.product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:'))),
                       subtotal: selectedOrder.subtotal || selectedOrder.total,
                       discount: selectedOrder.discount || 0,
                       gst: 0,

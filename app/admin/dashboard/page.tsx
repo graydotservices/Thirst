@@ -22,20 +22,11 @@ export default function DashboardPage() {
     monthlyRevenue: 0,
   });
   const [chartData, setChartData] = useState<{ date: string; revenue: number }[]>([]);
-  const [recentBills, setRecentBills] = useState<any[]>([]);
-  const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [recentBills, setRecentBills] = useState<{ bill: string; customer: string; phone: string; items: number; total: number; method: string; time: string }[]>([]);
+  const [topProducts, setTopProducts] = useState<{ name: string; orders: number; revenue: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const hr = new Date().getHours();
-    if (hr < 12) setGreeting('Good Morning');
-    else if (hr < 17) setGreeting('Good Afternoon');
-    else setGreeting('Good Evening');
-
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  async function fetchDashboardData() {
     try {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -53,6 +44,7 @@ export default function DashboardPage() {
         .from('orders')
         .select('*')
         .gte('created_at', thirtyDaysAgo.toISOString())
+        .eq('status', 'completed')
         .order('created_at', { ascending: false });
 
       if (allOrders) {
@@ -77,8 +69,8 @@ export default function DashboardPage() {
           phone: (!o.customer_phone || o.customer_phone === '0000000000') ? '—' : o.customer_phone,
           items: o.items 
             ? o.items
-                .filter((item: any) => item.product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:')))
-                .reduce((acc: number, item: any) => acc + (Number(item.qty) || 1), 0)
+                .filter((item: OrderItem) => item.product_id !== 'meta_staff' && (!item.name || !item.name.startsWith('Billed by:')))
+                .reduce((acc: number, item: OrderItem) => acc + (Number(item.qty) || 1), 0)
             : 0,
           total: o.total,
           method: (o.payment_method || 'CASH').toUpperCase(),
@@ -109,7 +101,7 @@ export default function DashboardPage() {
         const productMap: Record<string, { name: string, orders: number, revenue: number }> = {};
         allOrders.forEach(o => {
           if (o.items && Array.isArray(o.items)) {
-            o.items.forEach((item: any) => {
+            o.items.forEach((item: OrderItem) => {
               if (item.product_id === 'meta_staff' || (item.name && item.name.startsWith('Billed by:'))) {
                 return;
               }
@@ -131,7 +123,20 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+    const hr = new Date().getHours();
+    if (hr < 12) setGreeting('Good Morning');
+    else if (hr < 17) setGreeting('Good Afternoon');
+    else setGreeting('Good Evening');
+
+    fetchDashboardData();
+    });
+  }, []);
+
+
 
   const statCards = [
     { label: "Today's Revenue", value: `₹${stats.todayRevenue.toLocaleString('en-IN')}`, change: 'Live', up: true, icon: IndianRupee, color: 'var(--color-berry)' },
@@ -214,7 +219,7 @@ export default function DashboardPage() {
                 />
                 <Tooltip
                   contentStyle={{ background: 'white', border: '1px solid #f0e0eb', borderRadius: 12, fontFamily: 'var(--font-heading)', fontSize: 12 }}
-                  formatter={(v: any) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Revenue']}
+                  formatter={(v) => [`₹${Number(v).toLocaleString('en-IN')}`, 'Revenue']}
                 />
                 <Area type="monotone" dataKey="revenue" stroke="#D94F8A" strokeWidth={2.5} fill="url(#revenueGrad)" dot={{ fill: '#D94F8A', r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} />
               </AreaChart>

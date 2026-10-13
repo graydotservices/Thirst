@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { UserPlus, Search, Edit2, Trash2, X, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { adminApi } from '@/lib/adminApi';
 
 type Staff = {
   id: string;
@@ -25,15 +26,15 @@ export default function StaffPage() {
   const [form, setForm] = useState({ name: '', phone: '', email: '', role: 'cashier' as Staff['role'], status: 'active' as Staff['status'], password: '' });
   const [saving, setSaving] = useState(false);
 
-  const fetchStaff = async () => {
+  async function fetchStaff() {
     setLoading(true);
     const { data } = await supabase.from('staff').select('*').order('created_at', { ascending: false });
     if (data) setStaff(data as Staff[]);
     setLoading(false);
-  };
+  }
 
   useEffect(() => {
-    fetchStaff();
+    void Promise.resolve().then(fetchStaff);
   }, []);
 
   const filtered = staff.filter(s =>
@@ -46,64 +47,28 @@ export default function StaffPage() {
   const openEdit = (s: Staff) => { setEditing(s); setForm({ name: s.name, phone: s.phone || '', email: s.email, role: s.role, status: s.status, password: '' }); setError(''); setShowModal(true); };
 
   const handleSave = async () => {
+    if (saving) return;
     setSaving(true);
     setError('');
-    
-    if (editing) {
-      // Update
-      const { error: updateError } = await supabase
-        .from('staff')
-        .update({ name: form.name, phone: form.phone, role: form.role, status: form.status })
-        .eq('id', editing.id);
-      
-      if (updateError) {
-        setError(updateError.message);
-      } else {
-        setStaff(prev => prev.map(s => s.id === editing.id ? { ...s, ...form } : s));
-        setShowModal(false);
-      }
-    } else {
-      // Add new
-      if (!form.password) {
-        setError('Password is required for new staff');
-        setSaving(false);
-        return;
-      }
-      
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch('/api/staff', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {})
-          },
-          body: JSON.stringify(form)
-        });
-        const data = await res.json();
-        
-        if (!res.ok) {
-          setError(data.error || 'Failed to create staff account');
-        } else if (data.staff) {
-          setStaff(prev => [data.staff as Staff, ...prev]);
-          setShowModal(false);
-        }
-      } catch (err: any) {
-        setError(err.message || 'Network error');
-      }
-    }
-    setSaving(false);
+    try {
+      const body = editing
+        ? { id: editing.id, name: form.name, phone: form.phone, role: form.role, status: form.status }
+        : form;
+      const result = await adminApi<{ staff: Staff }>('/api/staff', { method: editing ? 'PUT' : 'POST', body: JSON.stringify(body) });
+      setStaff(prev => editing ? prev.map(member => member.id === editing.id ? result.staff : member) : [result.staff, ...prev]);
+      setForm({ name: '', phone: '', email: '', role: 'cashier', status: 'active', password: '' });
+      setShowModal(false);
+    } catch (error) { setError(error instanceof Error ? error.message : 'Unable to save staff'); }
+    finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Remove this staff member? This cannot be undone.')) {
-      const { error: delError } = await supabase.from('staff').delete().eq('id', id);
-      if (delError) {
-        alert(`Failed to remove staff: ${delError.message}`);
-      } else {
-        setStaff(prev => prev.filter(s => s.id !== id));
-      }
-    }
+    if (!window.confirm('Remove this staff member? This cannot be undone.')) return;
+    try {
+      const result = await adminApi<{ warning?: string }>(`/api/staff?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      setStaff(prev => prev.filter(member => member.id !== id));
+      if (result.warning) alert(result.warning);
+    } catch (error) { alert(error instanceof Error ? error.message : 'Unable to remove staff'); }
   };
 
   return (
@@ -193,7 +158,7 @@ export default function StaffPage() {
               {!editing && (
                 <div className="input-group">
                   <label className="input-label" htmlFor="sm-password">Initial Password</label>
-                  <input id="sm-password" type="password" className="input" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="Create password" />
+                  <input id="sm-password" type="password" className="input" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="At least 12 characters" minLength={12} maxLength={128} />
                 </div>
               )}
               <div className="input-group">

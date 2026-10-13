@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: 'Exclusive offers and deals from Thirst. Premium dessert brand.',
 };
 
-const offers: any[] = [];
+const offers: { id: string; color: string; image: string; title: string; discount: number; tag: string; description: string; code: string; validUntil: string }[] = [];
 
 
 

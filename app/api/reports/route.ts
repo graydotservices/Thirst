@@ -1,69 +1,39 @@
-import { supabase } from '@/lib/supabase';
-import { NextRequest } from 'next/server';
+import { apiError, json, requireStaff } from '@/lib/security/server';
+import { MANAGERS } from '@/lib/security/roles';
+import { choice, HttpError } from '@/lib/security/validation';
 
-export async function GET(request: NextRequest) {
+type Sale = { total: number; created_at: string; items: Array<{name:string;qty:number;total:number;product_id?:string}> };
+export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const range = searchParams.get('range') || 'daily';
-    const now = new Date();
-
-    let startDate: Date;
-    if (range === 'daily') {
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    } else if (range === 'weekly') {
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    } else if (range === 'monthly') {
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-    } else {
-      startDate = new Date(now.getFullYear(), 0, 1);
+    const { client } = await requireStaff(request, MANAGERS);
+    const range = choice(new URL(request.url).searchParams.get('range') || 'daily', ['daily','weekly','monthly','yearly'] as const, 'range');
+    const local = new Date(Date.now() + 19800000).toISOString().slice(0,10);
+    const day = range === 'monthly' ? local.slice(0,7) + '-01' : range === 'yearly' ? local.slice(0,4) + '-01-01' : local;
+    const start = new Date(`${day}T00:00:00+05:30`);
+    if (range === 'weekly') start.setTime(start.getTime() - 6 * 86400000);
+    const orders: Sale[] = [];
+    for (let offset=0; ; offset+=1000) {
+      if (offset >= 100000) throw new HttpError(422, 'Select a smaller report period');
+      const { data, error } = await client.from('orders').select('id,total,created_at,items').eq('status','completed')
+        .gte('created_at',start.toISOString()).order('created_at').order('id').range(offset,offset+999);
+      if (error) throw error;
+      orders.push(...(data || []));
+      if (!data || data.length < 1000) break;
     }
-
-    const { data: orders, error } = await supabase
-      .from('orders')
-      .select('*')
-      .gte('created_at', startDate.toISOString())
-      .eq('status', 'completed');
-
-    if (error) throw error;
-
-    const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-    const totalOrders = orders.length;
-    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
-    // Top products
-    const productMap: Record<string, { name: string; count: number; revenue: number }> = {};
+    const totalRevenue = orders.reduce((sum,o)=>sum+Number(o.total),0);
+    const products = new Map<string,{name:string;count:number;revenue:number}>();
+    const daily = new Map<string,number>();
     for (const order of orders) {
-      for (const item of (order.items || [])) {
-        if (!productMap[item.name]) {
-          productMap[item.name] = { name: item.name, count: 0, revenue: 0 };
-        }
-        productMap[item.name].count += item.qty;
-        productMap[item.name].revenue += item.total;
+      for (const item of order.items || []) {
+        if (item.product_id === 'meta_staff') continue;
+        const entry = products.get(item.name) || {name:item.name,count:0,revenue:0};
+        entry.count += Number(item.qty); entry.revenue += Number(item.total); products.set(item.name,entry);
       }
+      const date = new Date(Date.parse(order.created_at)+19800000).toISOString().slice(0,10);
+      daily.set(date,(daily.get(date)||0)+Number(order.total));
     }
-    const topProducts = Object.values(productMap)
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10);
-
-    // Daily revenue for chart
-    const revenueByDay: Record<string, number> = {};
-    for (const order of orders) {
-      const day = order.created_at.slice(0, 10);
-      revenueByDay[day] = (revenueByDay[day] || 0) + order.total;
-    }
-    const chartData = Object.entries(revenueByDay)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, revenue]) => ({ date, revenue }));
-
-    return Response.json({
-      totalRevenue,
-      totalOrders,
-      avgOrderValue,
-      topProducts,
-      chartData,
-      range,
-    });
-  } catch (err) {
-    return Response.json({ error: 'Failed to fetch reports' }, { status: 500 });
-  }
+    return json({totalRevenue,totalOrders:orders.length,avgOrderValue:orders.length?totalRevenue/orders.length:0,
+      topProducts:[...products.values()].sort((a,b)=>b.revenue-a.revenue).slice(0,10),
+      chartData:[...daily].sort(([a],[b])=>a.localeCompare(b)).map(([date,revenue])=>({date,revenue})),range});
+  } catch (error) { return apiError(error); }
 }

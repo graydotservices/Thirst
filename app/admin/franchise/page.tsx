@@ -31,13 +31,6 @@ type App = {
   created_at: string; 
 };
 
-const demo: App[] = [
-  { id: '1', name: 'Suresh Kumar', phone: '9876543210', email: 'suresh@gmail.com', city: 'Ahmedabad', budget: '18-28 Lakhs', experience: '3-5 years', message: 'Looking to open a franchise in the SG Highway area.', status: 'pending', created_at: '2025-07-22T14:30:00Z' },
-  { id: '2', name: 'Meena Reddy', phone: '9876543211', email: 'meena@gmail.com', city: 'Hyderabad', budget: 'Custom: ₹45,00,000', experience: '5+ years in F&B', message: 'Want to expand my restaurant chain into desserts.', status: 'reviewing', created_at: '2025-07-20T10:00:00Z' },
-  { id: '3', name: 'Amit Joshi', phone: '9876543212', email: 'amit@gmail.com', city: 'Jaipur', budget: '8-12 Lakhs', experience: 'None', message: 'First time entrepreneur, passionate about desserts.', status: 'approved', created_at: '2025-07-18T09:00:00Z' },
-  { id: '4', name: 'Kavya Nair', phone: '9876543213', email: 'kavya@gmail.com', city: 'Kochi', budget: 'Custom: ₹25,00,000', experience: '1-3 years', message: 'Running a small bakery, want to upgrade to a Thirst. franchise.', status: 'rejected', created_at: '2025-07-15T16:00:00Z' },
-];
-
 const statusColors: Record<string, string> = { 
   pending: 'badge-warning', 
   reviewing: 'badge-primary', 
@@ -58,11 +51,7 @@ export default function FranchiseAdminPage() {
   const [presetBudgetVal, setPresetBudgetVal] = useState('18-28 Lakhs');
   const [savingBudget, setSavingBudget] = useState(false);
 
-  useEffect(() => {
-    fetchApps();
-  }, []);
-
-  const fetchApps = async () => {
+  async function fetchApps() {
     setLoading(true);
     try {
       const { data } = await supabase
@@ -72,21 +61,24 @@ export default function FranchiseAdminPage() {
       if (data && data.length > 0) {
         setApps(data as App[]);
       } else {
-        setApps(demo);
+        setApps([]);
       }
     } catch {
-      setApps(demo);
+      setApps([]);
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    void Promise.resolve().then(fetchApps);
+  }, []);
+
+
 
   const updateStatus = async (id: string, status: App['status']) => {
-    try {
-      await supabase.from('franchise_applications').update({ status }).eq('id', id);
-    } catch (e) {
-      console.warn('Status update warning:', e);
-    }
+    const { error } = await supabase.from('franchise_applications').update({ status }).eq('id', id).select('id').single();
+    if (error) { alert('Unable to update this application.'); return; }
     setApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status } : null);
   };
@@ -111,14 +103,8 @@ export default function FranchiseAdminPage() {
       ? `Custom: ₹${customBudgetVal.trim() || '0'}` 
       : presetBudgetVal;
 
-    try {
-      await supabase
-        .from('franchise_applications')
-        .update({ budget: newBudgetValue })
-        .eq('id', editingBudgetApp.id);
-    } catch (e) {
-      console.warn('Supabase budget update warning:', e);
-    }
+    const { error } = await supabase.from('franchise_applications').update({ budget: newBudgetValue }).eq('id', editingBudgetApp.id).select('id').single();
+    if (error) { setSavingBudget(false); alert('Unable to save this budget.'); return; }
 
     setApps(prev => prev.map(a => a.id === editingBudgetApp.id ? { ...a, budget: newBudgetValue } : a));
     if (selected?.id === editingBudgetApp.id) {
