@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Menu, X, ShoppingBag, Phone } from 'lucide-react';
+import { useCompanySettings } from '@/lib/companySettings';
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -17,6 +18,7 @@ const navLinks = [
 ];
 
 export default function Navbar() {
+  const { settings, phoneDisplay } = useCompanySettings();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -105,7 +107,7 @@ export default function Navbar() {
             style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}
           >
             <a
-              href="tel:+919999999999"
+              href={`tel:${(settings.phone || '+91 87548 81546').replace(/\s+/g, '')}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -117,7 +119,7 @@ export default function Navbar() {
               }}
             >
               <Phone size={16} />
-              Call Us
+              {phoneDisplay || 'Call Us'}
             </a>
             <Link 
               href="/menu" 

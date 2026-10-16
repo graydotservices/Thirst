@@ -1,18 +1,84 @@
-import type { Metadata } from 'next';
+'use client';
+
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clock, Percent, ArrowRight, Sparkles, Gift, Star } from 'lucide-react';
+import { Clock, Percent, ArrowRight, Sparkles, Tag, Gift } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
-export const metadata: Metadata = {
-  title: 'Offers & Deals — Thirst.',
-  description: 'Exclusive offers and deals from Thirst. Premium dessert brand.',
+type OfferItem = {
+  id: string;
+  color: string;
+  image: string;
+  title: string;
+  discount: number;
+  tag: string;
+  description: string;
+  code: string;
+  validUntil: string;
 };
 
-const offers: { id: string; color: string; image: string; title: string; discount: number; tag: string; description: string; code: string; validUntil: string }[] = [];
-
-
+const DEFAULT_OFFERS: OfferItem[] = [
+  {
+    id: 'default-1',
+    title: 'Happy Hours Special',
+    description: 'Flat 15% off on all signature thick shakes and vintage hot chocolate orders placed between 2:00 PM and 5:00 PM.',
+    discount: 15,
+    code: 'HAPPY15',
+    tag: 'Happy Hours',
+    validUntil: 'Everyday 2-5 PM',
+    color: 'var(--color-berry)',
+    image: '/hot-chocolate.png',
+  },
+  {
+    id: 'default-2',
+    title: 'Weekend Dessert Duo',
+    description: 'Order any luxury waffle and get 20% discount on any craft coffee or hot chocolate of your choice.',
+    discount: 20,
+    code: 'DUO20',
+    tag: 'Weekend Special',
+    validUntil: 'Sat & Sun',
+    color: 'var(--color-plum)',
+    image: '/biscoff-waffle.png',
+  },
+];
 
 export default function OffersPage() {
+  const [offersList, setOffersList] = useState<OfferItem[]>(DEFAULT_OFFERS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadOffers() {
+      try {
+        const { data, error } = await supabase
+          .from('offers')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          const mapped: OfferItem[] = data.map((o, idx) => ({
+            id: o.id,
+            title: o.title || 'Special Boutique Offer',
+            description: o.description || 'Exclusive dessert privileges and promotional pricing handcrafted for you.',
+            discount: o.discount_percent ?? o.discount ?? 0,
+            code: o.code || 'THIRST',
+            tag: o.tag || (o.discount_percent ? `${o.discount_percent}% OFF` : 'Exclusive Deal'),
+            validUntil: o.valid_until ? o.valid_until.split('T')[0] : 'Ongoing',
+            color: idx % 2 === 0 ? 'var(--color-berry)' : 'var(--color-plum)',
+            image: o.image_url || (idx % 2 === 0 ? '/thick-shake.png' : '/biscoff-waffle.png'),
+          }));
+          setOffersList(mapped);
+        }
+      } catch {
+        // Fallback to default offers
+      } finally {
+        setLoading(false);
+      }
+    }
+    void loadOffers();
+  }, []);
+
   return (
     <>
       {/* Hero */}
@@ -34,7 +100,7 @@ export default function OffersPage() {
       <section className="section" style={{ background: 'var(--color-cream)' }}>
         <div className="container">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '40px' }}>
-            {offers.map((offer) => (
+            {offersList.map((offer) => (
               <div
                 key={offer.id}
                 style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--color-white)', border: '4px solid var(--color-plum)', borderRadius: '16px', boxShadow: 'var(--shadow-xl)' }}
@@ -56,6 +122,7 @@ export default function OffersPage() {
                     src={offer.image}
                     alt={offer.title}
                     fill
+                    unoptimized={offer.image.startsWith('http')}
                     style={{ objectFit: 'contain', opacity: 0.3 }}
                     loading="lazy"
                   />
@@ -122,8 +189,6 @@ export default function OffersPage() {
           </div>
         </div>
       </section>
-
-
     </>
   );
 }

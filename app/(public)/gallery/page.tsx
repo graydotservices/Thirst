@@ -1,11 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { X, ZoomIn } from 'lucide-react';
-import type { Metadata } from 'next';
+import { supabase } from '@/lib/supabase';
 
-const galleryItems = [
+type GalleryPhoto = {
+  id: string | number;
+  src: string;
+  alt: string;
+  caption: string;
+  span?: string;
+};
+
+const DEFAULT_GALLERY_ITEMS: GalleryPhoto[] = [
   { id: 1, src: '/biscoff-waffle.png', alt: 'Lotus Biscoff Waffle', caption: 'Lotus Biscoff Waffle', span: 'large' },
   { id: 2, src: '/blue-crusher.png', alt: 'Strawberry Crusher', caption: 'Strawberry Crusher', span: 'small' },
   { id: 3, src: '/hot-chocolate.png', alt: 'Signature Sip', caption: 'Signature Sip', span: 'small' },
@@ -18,7 +26,34 @@ const galleryItems = [
 ];
 
 export default function GalleryPage() {
+  const [galleryItems, setGalleryItems] = useState<GalleryPhoto[]>(DEFAULT_GALLERY_ITEMS);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function loadGallery() {
+      try {
+        const { data, error } = await supabase
+          .from('gallery')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          const mapped: GalleryPhoto[] = data.map((item) => ({
+            id: item.id,
+            src: item.image_url || '/biscoff-waffle.png',
+            alt: item.caption || 'Thirst Special Dessert',
+            caption: item.caption || 'Thirst Special',
+            span: 'large',
+          }));
+          setGalleryItems(mapped);
+        }
+      } catch {
+        // Fallback to default gallery items
+      }
+    }
+    void loadGallery();
+  }, []);
 
   const prev = () => setLightboxIdx((i) => (i === null || i === 0 ? galleryItems.length - 1 : i - 1));
   const next = () => setLightboxIdx((i) => (i === null ? 0 : (i === galleryItems.length - 1 ? 0 : i + 1)));
@@ -71,6 +106,7 @@ export default function GalleryPage() {
                     height={idx % 3 === 0 ? 700 : 400}
                     style={{ width: '100%', height: 'auto', display: 'block', transition: 'transform var(--transition-slow)' }}
                     loading="lazy"
+                    unoptimized={typeof item.src === 'string' && item.src.startsWith('http')}
                     className="gallery-img"
                   />
                 </div>
@@ -114,6 +150,7 @@ export default function GalleryPage() {
                 alt={galleryItems[lightboxIdx].alt}
                 width={800}
                 height={600}
+                unoptimized={typeof galleryItems[lightboxIdx].src === 'string' && galleryItems[lightboxIdx].src.startsWith('http')}
                 style={{ width: '100%', height: 'auto', objectFit: 'contain', maxHeight: '70vh', display: 'block' }}
               />
             </div>

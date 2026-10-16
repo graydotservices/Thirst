@@ -46,3 +46,4 @@ admin_backup/
 
 # downloaded env files with secrets
 env.download
+env

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useCompanySettings } from '@/lib/companySettings';
 import { useSignatureSettings } from '@/lib/signatureSettings';
+import { supabase } from '@/lib/supabase';
 
 /* ============================================================
    DATA
@@ -131,6 +132,33 @@ export default function HomePage() {
 
   const [activeReview, setActiveReview] = useState(0);
   const [selectedImg, setSelectedImg] = useState<string | null>(null);
+  const [liveFavorites, setLiveFavorites] = useState(bestSellers);
+
+  // Load live customer favorites from Supabase products
+  useEffect(() => {
+    async function loadFavorites() {
+      try {
+        const { data } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_available', true)
+          .limit(4);
+
+        if (data && data.length > 0) {
+          const mapped = data.map((p, idx) => ({
+            name: p.name,
+            price: typeof p.price === 'number' ? `₹${p.price}` : String(p.price || '₹99'),
+            rating: 4.8 + ((idx % 3) * 0.1),
+            img: p.image || '/hot-chocolate.png',
+          }));
+          setLiveFavorites(mapped);
+        }
+      } catch {
+        // Fallback to static favorites
+      }
+    }
+    void loadFavorites();
+  }, []);
 
   // Auto-slide testimonials
   useEffect(() => {
@@ -315,7 +343,7 @@ export default function HomePage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '32px' }}>
-            {bestSellers.map((item, i) => (
+            {liveFavorites.map((item, i) => (
               <motion.div 
                 key={i}
                 initial={{ opacity: 0, y: 30 }}
@@ -345,7 +373,13 @@ export default function HomePage() {
                 {/* Image Section */}
                 <div style={{ position: 'relative', paddingBottom: '100%', overflow: 'hidden' }}>
                   <motion.div whileHover={{ scale: 1.08 }} transition={{ duration: 0.8, ease: "easeOut" }} style={{ position: 'absolute', inset: 0 }}>
-                    <Image src={item.img} alt={item.name} fill style={{ objectFit: 'cover' }} />
+                    <Image 
+                      src={item.img} 
+                      alt={item.name} 
+                      fill 
+                      unoptimized={Boolean(item.img && item.img.startsWith('http'))}
+                      style={{ objectFit: 'cover' }} 
+                    />
                   </motion.div>
                 </div>
 

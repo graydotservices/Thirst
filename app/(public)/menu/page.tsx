@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Sparkles, Coffee, type LucideIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
+import { formatCategoryLabel } from '@/lib/categories';
+
 type MenuItem = {
   id: string;
   name: string;
@@ -26,25 +28,34 @@ export default function MenuPage() {
 
   useEffect(() => {
     const fetchMenu = async () => {
-      const { data } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_available', true)
-        .gt('stock', 0);
-        
-      if (data) {
-        setMenuItems(data as MenuItem[]);
-        
-        // Dynamically extract categories from the live data
-        const uniqueCategories = Array.from(new Set(data.map(item => item.category)));
-        const dynamicCategories = [
-          { id: 'all', label: 'All Items', icon: Sparkles },
-          ...uniqueCategories.map(cat => ({ id: cat, label: cat, icon: Coffee }))
-        ];
-        
-        setCategories(dynamicCategories);
+      try {
+        const { data } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_available', true)
+          .order('name');
+          
+        if (data && data.length > 0) {
+          setMenuItems(data as MenuItem[]);
+          
+          // Dynamically extract categories from the live data
+          const uniqueCategories = Array.from(new Set(data.map(item => item.category).filter(Boolean)));
+          const dynamicCategories = [
+            { id: 'all', label: 'All Items', icon: Sparkles },
+            ...uniqueCategories.map(cat => ({ 
+              id: cat, 
+              label: formatCategoryLabel(cat), 
+              icon: Coffee 
+            }))
+          ];
+          
+          setCategories(dynamicCategories);
+        }
+      } catch {
+        // Handled
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchMenu();
   }, []);
@@ -246,6 +257,7 @@ export default function MenuPage() {
                         sizes="(max-width: 768px) 100vw, 33vw" 
                         style={{ objectFit: 'cover' }} 
                         loading="lazy" 
+                        unoptimized={Boolean(item.image && item.image.startsWith('http'))}
                       />
                     </div>
                     
