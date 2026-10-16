@@ -112,40 +112,44 @@ export async function saveStoreLocation(
       created_at: new Date().toISOString(),
     };
 
-    // Attempt save to Supabase
-    try {
-      if (isEdit && loc.id) {
-        const { data, error } = await supabase
-          .from('store_locations')
-          .update(payload)
-          .eq('id', loc.id)
-          .select()
-          .maybeSingle();
+    // Save to Supabase
+    if (isEdit && loc.id) {
+      const { data, error } = await supabase
+        .from('store_locations')
+        .update(payload)
+        .eq('id', loc.id)
+        .select()
+        .maybeSingle();
 
-        if (!error && data) {
-          savedItem = {
-            ...savedItem,
-            id: data.id,
-            created_at: data.created_at,
-          };
-        }
-      } else {
-        const { data, error } = await supabase
-          .from('store_locations')
-          .insert([payload])
-          .select()
-          .maybeSingle();
-
-        if (!error && data) {
-          savedItem = {
-            ...savedItem,
-            id: data.id,
-            created_at: data.created_at,
-          };
-        }
+      if (error) {
+        console.error('Failed to update store location:', error);
+        return { success: false, error: `Database error (${error.code || 'error'}): ${error.message}` };
       }
-    } catch {
-      // Local fallback keeps working
+      if (data) {
+        savedItem = {
+          ...savedItem,
+          id: data.id,
+          created_at: data.created_at,
+        };
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('store_locations')
+        .insert([payload])
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to insert store location:', error);
+        return { success: false, error: `Database error (${error.code || 'error'}): ${error.message}` };
+      }
+      if (data) {
+        savedItem = {
+          ...savedItem,
+          id: data.id,
+          created_at: data.created_at,
+        };
+      }
     }
 
     // Update local cache
@@ -173,9 +177,11 @@ export async function saveStoreLocation(
 
 export async function deleteStoreLocation(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    try {
-      await supabase.from('store_locations').delete().eq('id', id);
-    } catch {}
+    const { error } = await supabase.from('store_locations').delete().eq('id', id);
+    if (error) {
+      console.error('Failed to delete store location:', error);
+      return { success: false, error: `Database error: ${error.message}` };
+    }
 
     const current = getCachedStoreLocations();
     const updatedList = current.filter(x => x.id !== id);

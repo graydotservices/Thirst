@@ -1,7 +1,11 @@
 -- ============================================================
--- SIGNATURE SETTINGS TABLE & INITIAL VALUES
+-- THIRST. — SIGNATURE SETTINGS TABLE & PERMISSIONS
+-- Run this in your Supabase SQL editor:
+-- https://supabase.com/dashboard/project/ecmwqikinlmmrsgjdbbd/sql
 -- ============================================================
-CREATE TABLE IF NOT EXISTS signature_settings (
+
+-- 1. Create signature_settings table
+CREATE TABLE IF NOT EXISTS public.signature_settings (
   id TEXT PRIMARY KEY DEFAULT 'primary',
   is_active BOOLEAN DEFAULT true,
   badge TEXT DEFAULT 'Thirst Special',
@@ -16,8 +20,8 @@ CREATE TABLE IF NOT EXISTS signature_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Insert default row if not exists
-INSERT INTO signature_settings (
+-- 2. Insert default row if not exists
+INSERT INTO public.signature_settings (
   id, is_active, badge, title, description, rating_text, tag_text, price, button_text, button_link, image_url
 ) VALUES (
   'primary',
@@ -33,13 +37,22 @@ INSERT INTO signature_settings (
   '/vintage-hot-chocolate.png'
 ) ON CONFLICT (id) DO NOTHING;
 
--- RLS policies
-ALTER TABLE signature_settings ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Public read signature settings" ON signature_settings;
-CREATE POLICY "Public read signature settings" ON signature_settings FOR SELECT USING (true);
+-- 3. Row Level Security policies
+ALTER TABLE public.signature_settings ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Authenticated update signature settings" ON signature_settings;
-CREATE POLICY "Authenticated update signature settings" ON signature_settings FOR ALL TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Public read signature settings" ON public.signature_settings;
+DROP POLICY IF EXISTS "public_signature_settings" ON public.signature_settings;
+CREATE POLICY "Public read signature settings" ON public.signature_settings 
+  FOR SELECT USING (true);
 
-GRANT SELECT ON signature_settings TO anon, authenticated;
-GRANT ALL ON signature_settings TO authenticated, service_role;
+DROP POLICY IF EXISTS "Authenticated update signature settings" ON public.signature_settings;
+DROP POLICY IF EXISTS "management_access_signature" ON public.signature_settings;
+CREATE POLICY "Authenticated update signature settings" ON public.signature_settings 
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- 4. Grant schema permissions
+GRANT SELECT ON public.signature_settings TO anon, authenticated;
+GRANT ALL ON public.signature_settings TO authenticated, service_role;
+
+-- 5. Notify PostgREST to reload schema cache immediately
+NOTIFY pgrst, 'reload schema';

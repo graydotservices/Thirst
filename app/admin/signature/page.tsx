@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -16,15 +16,77 @@ import {
   Eye,
   EyeOff,
   Image as ImageIcon,
-  CheckCircle2
+  CheckCircle2,
+  Copy,
+  Database,
+  RefreshCw,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Terminal
 } from 'lucide-react';
 import { 
   useSignatureSettings, 
   SignatureSettings, 
-  DEFAULT_SIGNATURE_SETTINGS 
+  DEFAULT_SIGNATURE_SETTINGS,
+  checkSignatureTableHealth
 } from '@/lib/signatureSettings';
 import { supabase } from '@/lib/supabase';
 import { validateImageUpload } from '@/lib/imageUpload';
+
+const SETUP_SQL = `-- Run this in your Supabase SQL Editor:
+-- 1. Create table signature_settings
+CREATE TABLE IF NOT EXISTS public.signature_settings (
+  id TEXT PRIMARY KEY DEFAULT 'primary',
+  is_active BOOLEAN DEFAULT true,
+  badge TEXT DEFAULT 'Thirst Special',
+  title TEXT DEFAULT 'The Signature Sip',
+  description TEXT DEFAULT 'Hot chocolate with Milo, marshmallows, biscuit crunch, and a chocolate roll. A truly decadent experience handcrafted for chocolate lovers.',
+  rating_text TEXT DEFAULT '5.0 (250+ reviews)',
+  tag_text TEXT DEFAULT 'Best Seller',
+  price TEXT DEFAULT '₹99',
+  button_text TEXT DEFAULT 'View Menu',
+  button_link TEXT DEFAULT '/menu',
+  image_url TEXT DEFAULT '/vintage-hot-chocolate.png',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Insert default row if not exists
+INSERT INTO public.signature_settings (
+  id, is_active, badge, title, description, rating_text, tag_text, price, button_text, button_link, image_url
+) VALUES (
+  'primary',
+  true,
+  'Thirst Special',
+  'The Signature Sip',
+  'Hot chocolate with Milo, marshmallows, biscuit crunch, and a chocolate roll. A truly decadent experience handcrafted for chocolate lovers.',
+  '5.0 (250+ reviews)',
+  'Best Seller',
+  '₹99',
+  'View Menu',
+  '/menu',
+  '/vintage-hot-chocolate.png'
+) ON CONFLICT (id) DO NOTHING;
+
+-- 3. Row Level Security policies
+ALTER TABLE public.signature_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public read signature settings" ON public.signature_settings;
+DROP POLICY IF EXISTS "public_signature_settings" ON public.signature_settings;
+CREATE POLICY "Public read signature settings" ON public.signature_settings 
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Authenticated update signature settings" ON public.signature_settings;
+DROP POLICY IF EXISTS "management_access_signature" ON public.signature_settings;
+CREATE POLICY "Authenticated update signature settings" ON public.signature_settings 
+  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- 4. Grant table permissions
+GRANT SELECT ON public.signature_settings TO anon, authenticated;
+GRANT ALL ON public.signature_settings TO authenticated, service_role;
+
+-- 5. Notify PostgREST to reload schema cache
+NOTIFY pgrst, 'reload schema';`;
 
 const PRESET_IMAGES = [
   { label: 'Signature Sip (Sketch)', url: '/vintage-hot-chocolate.png' },
@@ -44,6 +106,46 @@ export default function AdminSignaturePage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Supabase Database Connection & Table State
+  const [dbStatus, setDbStatus] = useState<'checking' | 'ready' | 'missing' | 'error'>('checking');
+  const [dbErrorDetail, setDbErrorDetail] = useState('');
+  const [copiedSql, setCopiedSql] = useState(false);
+  const [showSqlCode, setShowSqlCode] = useState(false);
+  const [checkingDb, setCheckingDb] = useState(false);
+
+  const checkDb = useCallback(async () => {
+    setCheckingDb(true);
+    try {
+      const res = await checkSignatureTableHealth();
+      if (res.exists) {
+        setDbStatus('ready');
+        setDbErrorDetail('');
+      } else {
+        setDbStatus('missing');
+        setDbErrorDetail(res.error || 'Database table "signature_settings" does not exist yet.');
+      }
+    } catch (e: unknown) {
+      setDbStatus('error');
+      setDbErrorDetail(e instanceof Error ? e.message : 'Database check failed');
+    } finally {
+      setCheckingDb(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void checkDb();
+  }, [checkDb]);
+
+  const copySqlToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(SETUP_SQL);
+      setCopiedSql(true);
+      setTimeout(() => setCopiedSql(false), 3500);
+    } catch {
+      // fallback
+    }
+  };
 
   useEffect(() => {
     if (!loading && settings) {
@@ -106,9 +208,13 @@ export default function AdminSignaturePage() {
       const res = await updateSettings(form);
       if (res.success) {
         setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 4000);
+        setDbStatus('ready');
+        setTimeout(() => setSaveSuccess(false), 5000);
       } else {
         setErrorMessage(res.error || 'Failed to save signature changes.');
+        if (res.isTableMissing) {
+          setDbStatus('missing');
+        }
       }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : 'Failed to save changes.');
@@ -124,12 +230,12 @@ export default function AdminSignaturePage() {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'flex-start', 
-        marginBottom: '28px',
+        marginBottom: '24px',
         flexWrap: 'wrap',
         gap: '16px'
       }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
             <div style={{ 
               width: 36, 
               height: 36, 
@@ -159,6 +265,43 @@ export default function AdminSignaturePage() {
               {form.is_active ? <CheckCircle2 size={12} /> : <EyeOff size={12} />}
               {form.is_active ? 'Live on Main URL' : 'Hidden from Main URL'}
             </span>
+
+            {/* Database Health Badge */}
+            {dbStatus === 'ready' && (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                background: 'rgba(34, 197, 94, 0.12)',
+                color: '#15803d',
+                border: '1px solid rgba(34, 197, 94, 0.25)'
+              }}>
+                <Database size={12} />
+                <span>Supabase Synced</span>
+              </span>
+            )}
+
+            {dbStatus === 'missing' && (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                background: 'rgba(245, 158, 11, 0.15)',
+                color: '#b45309',
+                border: '1px solid rgba(245, 158, 11, 0.3)'
+              }}>
+                <AlertTriangle size={12} />
+                <span>DB Setup Required</span>
+              </span>
+            )}
           </div>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', margin: 0 }}>
             Modify all texts, price, badges, action button, and image for the featured spotlight on the main homepage.
@@ -246,13 +389,167 @@ export default function AdminSignaturePage() {
         </div>
       </div>
 
+      {/* Database Setup Banner (When table is missing in Supabase) */}
+      {dbStatus === 'missing' && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+          border: '2px solid #f59e0b',
+          borderRadius: '16px',
+          padding: '20px 24px',
+          marginBottom: '24px',
+          boxShadow: '0 4px 12px rgba(245, 158, 11, 0.12)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, minWidth: '280px' }}>
+              <div style={{
+                background: '#f59e0b',
+                color: 'white',
+                borderRadius: '10px',
+                width: 38,
+                height: 38,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Database size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: '0 0 6px 0', fontSize: '1.05rem', fontWeight: 800, color: '#92400e' }}>
+                  Supabase Setup Required for Live Website Sync
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: '#78350f', lineHeight: 1.5 }}>
+                  The table <code style={{ background: '#fde68a', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>signature_settings</code> has not been created in your Supabase project yet. Because of this, changes saved here are not visible to visitors on <strong style={{ textDecoration: 'underline' }}>https://www.thirstfresh.in/</strong>.
+                </p>
+                <div style={{ marginTop: '10px', fontSize: '0.85rem', color: '#92400e', fontWeight: 600 }}>
+                  👉 <strong>Fix in 15 seconds:</strong> Click <strong>&quot;Copy SQL Script&quot;</strong> below, switch to your open Supabase tab (<strong>Untitled query | SQL Editor</strong>), paste and click <strong>Run</strong>.
+                </div>
+              </div>
+            </div>
+
+            {/* Banner Actions */}
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={copySqlToClipboard}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '9px 16px',
+                  borderRadius: '8px',
+                  background: copiedSql ? '#15803d' : '#d97706',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+                }}
+              >
+                {copiedSql ? <Check size={16} /> : <Copy size={16} />}
+                <span>{copiedSql ? 'Copied to Clipboard!' : 'Copy SQL Script'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={checkDb}
+                disabled={checkingDb}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '9px 14px',
+                  borderRadius: '8px',
+                  background: 'white',
+                  color: '#92400e',
+                  border: '1px solid #d97706',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: checkingDb ? 'not-allowed' : 'pointer'
+                }}
+              >
+                <RefreshCw size={14} className={checkingDb ? 'spinner' : ''} />
+                <span>{checkingDb ? 'Checking...' : 'Check Database Connection'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowSqlCode(prev => !prev)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.6)',
+                  color: '#78350f',
+                  border: '1px solid #fde68a',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                <Terminal size={14} />
+                <span>{showSqlCode ? 'Hide SQL' : 'View SQL'}</span>
+                {showSqlCode ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Collapsible SQL Script Preview */}
+          {showSqlCode && (
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #fde68a' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#92400e' }}>
+                  SQL Script (Run in Supabase SQL Editor):
+                </span>
+                <button
+                  type="button"
+                  onClick={copySqlToClipboard}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#b45309',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <Copy size={13} />
+                  <span>{copiedSql ? 'Copied!' : 'Copy Code'}</span>
+                </button>
+              </div>
+              <pre style={{
+                background: '#1e1e2f',
+                color: '#e2e8f0',
+                padding: '14px 18px',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                lineHeight: 1.5,
+                overflowX: 'auto',
+                margin: 0,
+                maxHeight: '220px',
+                fontFamily: 'Consolas, Monaco, monospace'
+              }}>
+                {SETUP_SQL}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Notifications */}
       {errorMessage && (
         <div style={{
           display: 'flex',
-          alignItems: 'center',
+          flexDirection: 'column',
           gap: '10px',
-          padding: '14px 18px',
+          padding: '16px 20px',
           background: '#fef2f2',
           border: '1px solid #fecaca',
           borderRadius: 'var(--radius-md)',
@@ -260,8 +557,37 @@ export default function AdminSignaturePage() {
           fontSize: '0.875rem',
           marginBottom: '20px'
         }}>
-          <AlertCircle size={18} />
-          <span>{errorMessage}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span style={{ fontWeight: 600 }}>{errorMessage}</span>
+          </div>
+          {(errorMessage.includes('signature_settings') || errorMessage.includes('does not exist') || dbStatus === 'missing') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={copySqlToClipboard}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: '#991b1b',
+                  color: 'white',
+                  border: 'none',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                <Copy size={13} />
+                <span>{copiedSql ? 'Copied SQL Script!' : 'Copy Supabase SQL Script'}</span>
+              </button>
+              <span style={{ fontSize: '0.8rem', color: '#7f1d1d' }}>
+                Run this in your open Supabase tab, then click &quot;Save Changes&quot; again.
+              </span>
+            </div>
+          )}
         </div>
       )}
 

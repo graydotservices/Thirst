@@ -85,11 +85,42 @@ export async function fetchSignatureSettings(): Promise<SignatureSettings> {
 }
 
 /**
+ * Check if the signature_settings table exists and is accessible in Supabase
+ */
+export async function checkSignatureTableHealth(): Promise<{ exists: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('signature_settings')
+      .select('id')
+      .limit(1);
+
+    if (error) {
+      const isMissing = 
+        error.code === 'PGRST205' || 
+        error.code === '42P01' || 
+        error.message?.toLowerCase().includes('does not exist') || 
+        error.message?.toLowerCase().includes('schema cache');
+
+      if (isMissing) {
+        return { 
+          exists: false, 
+          error: 'Database table "signature_settings" does not exist in your Supabase project yet.' 
+        };
+      }
+      return { exists: false, error: error.message };
+    }
+    return { exists: true };
+  } catch (err: unknown) {
+    return { exists: false, error: err instanceof Error ? err.message : 'Database check failed' };
+  }
+}
+
+/**
  * Save updated signature settings to Supabase and browser cache
  */
 export async function saveSignatureSettings(
   updates: Partial<SignatureSettings>
-): Promise<{ success: boolean; data?: SignatureSettings; error?: string }> {
+): Promise<{ success: boolean; data?: SignatureSettings; error?: string; isTableMissing?: boolean }> {
   try {
     const current = getCachedSignatureSettings();
     const payload: SignatureSettings = {
@@ -100,29 +131,50 @@ export async function saveSignatureSettings(
     };
 
     // Attempt remote save to Supabase
-    try {
-      const { data, error } = await supabase
-        .from('signature_settings')
-        .upsert(payload, { onConflict: 'id' })
-        .select()
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from('signature_settings')
+      .upsert(payload, { onConflict: 'id' })
+      .select()
+      .maybeSingle();
 
-      if (!error && data) {
-        payload.updated_at = data.updated_at;
+    if (error) {
+      console.error('Failed to save signature settings to Supabase:', error);
+      const isMissing = 
+        error.code === 'PGRST205' || 
+        error.code === '42P01' || 
+        error.message?.toLowerCase().includes('does not exist') || 
+        error.message?.toLowerCase().includes('schema cache');
+
+      const friendlyMsg = isMissing
+        ? 'Database table "signature_settings" does not exist in your Supabase project yet. Please run the SQL migration script in your Supabase SQL Editor.'
+        : `Database error (${error.code || 'error'}): ${error.message}`;
+
+      // Cache locally on this device so input is not lost, but return success: false so the user is not misled
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        } catch {}
       }
-    } catch {
-      // If table is not yet migrated, local storage and memory cache still work flawlessly
+
+      return {
+        success: false,
+        error: friendlyMsg,
+        isTableMissing: isMissing,
+        data: payload
+      };
     }
+
+    const finalData = data ? { ...payload, ...data } : payload;
 
     // Persist locally & dispatch update event for instant reactive rendering
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-        window.dispatchEvent(new CustomEvent(UPDATE_EVENT_KEY, { detail: payload }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(finalData));
+        window.dispatchEvent(new CustomEvent(UPDATE_EVENT_KEY, { detail: finalData }));
       } catch {}
     }
 
-    return { success: true, data: payload };
+    return { success: true, data: finalData };
   } catch (err: unknown) {
     return {
       success: false,
