@@ -1,10 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Plus, Package, AlertTriangle, Edit2, Trash2, X, Check, Search, UploadCloud } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { 
+  Plus, 
+  Package, 
+  AlertTriangle, 
+  Edit2, 
+  Trash2, 
+  X, 
+  Check, 
+  Search, 
+  Tag, 
+  Settings2,
+  CheckCircle2,
+  Sparkles
+} from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { validateImageUpload } from '@/lib/imageUpload';
+import { useCategories, formatCategoryLabel, slugifyCategory } from '@/lib/categories';
 
 type Product = {
   id: string;
@@ -22,12 +36,32 @@ export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [form, setForm] = useState({ name: '', category: 'cakes', price: 0, stock: 0, threshold: 5, image: '/cake-product.png' });
+  const [form, setForm] = useState({ 
+    name: '', 
+    category: 'cakes', 
+    price: 0, 
+    stock: 0, 
+    threshold: 5, 
+    image: '/cake-product.png' 
+  });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // Custom Category State inside Product Modal
+  const [isAddingCustomCat, setIsAddingCustomCat] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [showManageCatModal, setShowManageCatModal] = useState(false);
+  const [newCatManageInput, setNewCatManageInput] = useState('');
+
+  // Extract all categories from products + persistent cache
+  const productCategorySlugs = useMemo(() => {
+    return Array.from(new Set(products.map(p => p.category).filter(Boolean)));
+  }, [products]);
+
+  const { categories, addCategory, removeCategory } = useCategories(productCategorySlugs);
 
   async function fetchProducts() {
     setLoading(true);
@@ -40,8 +74,6 @@ export default function InventoryPage() {
     void Promise.resolve().then(fetchProducts);
   }, []);
 
-
-
   const getThreshold = (p: Product) => p.low_stock_threshold ?? p.threshold ?? 5;
   const lowStock = products.filter(p => p.stock <= getThreshold(p));
 
@@ -51,10 +83,25 @@ export default function InventoryPage() {
     return matchesSearch && matchesCategory;
   });
 
+  const handleAddNewCategory = () => {
+    if (!newCategoryName.trim()) return;
+    const added = addCategory(newCategoryName);
+    setForm(p => ({ ...p, category: added.id }));
+    setNewCategoryName('');
+    setIsAddingCustomCat(false);
+  };
+
   const handleSave = async () => {
     if (!form.name.trim()) {
       alert('Please enter a product name');
       return;
+    }
+
+    // Ensure category is not empty
+    let finalCategory = form.category;
+    if (isAddingCustomCat && newCategoryName.trim()) {
+      const added = addCategory(newCategoryName);
+      finalCategory = added.id;
     }
 
     setSaving(true);
@@ -70,10 +117,10 @@ export default function InventoryPage() {
         finalImageUrl = data.publicUrl;
       }
 
-      // Build payload with both low_stock_threshold and fallback
+      // Build payload
       const payload: Record<string, unknown> = {
         name: form.name.trim(),
-        category: form.category,
+        category: finalCategory,
         price: Number(form.price) || 0,
         stock: Number(form.stock) || 0,
         image: finalImageUrl,
@@ -103,7 +150,7 @@ export default function InventoryPage() {
           ...payload, 
           threshold: form.threshold,
           low_stock_threshold: form.threshold 
-        } : p));
+        } as Product : p));
       } else {
         payload.is_available = true;
         let insertRes = await supabase
@@ -132,6 +179,8 @@ export default function InventoryPage() {
         }
       }
       setShowModal(false);
+      setIsAddingCustomCat(false);
+      setNewCategoryName('');
     } catch (e: unknown) {
       console.error(e);
       alert((e instanceof Error ? e.message : '') || 'Something went wrong. Please try again.');
@@ -143,13 +192,24 @@ export default function InventoryPage() {
   const openAdd = () => { 
     setEditing(null); 
     setImageFile(null);
-    setForm({ name: '', category: 'cakes', price: 0, stock: 0, threshold: 5, image: '/cake-product.png' }); 
+    setIsAddingCustomCat(false);
+    setNewCategoryName('');
+    setForm({ 
+      name: '', 
+      category: categories[0]?.id || 'cakes', 
+      price: 0, 
+      stock: 0, 
+      threshold: 5, 
+      image: '/cake-product.png' 
+    }); 
     setShowModal(true); 
   };
 
   const openEdit = (p: Product) => { 
     setEditing(p); 
     setImageFile(null);
+    setIsAddingCustomCat(false);
+    setNewCategoryName('');
     setForm({ 
       name: p.name, 
       category: p.category, 
@@ -172,16 +232,47 @@ export default function InventoryPage() {
     }
   };
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}><span className="spinner"></span></div>;
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+        <span className="spinner"></span>
+      </div>
+    );
+  }
 
   return (
-    <div>
+    <div style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '60px' }}>
+      {/* Header bar */}
       <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)' }}>Inventory</h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>{products.length} products · {lowStock.length} low stock alerts</p>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)', margin: 0 }}>
+            Inventory Management
+          </h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginTop: '4px' }}>
+            {products.length} products · {categories.length} categories · {lowStock.length} low stock alerts
+          </p>
         </div>
-        <button id="btn-add-product" onClick={openAdd} className="btn btn-primary" style={{ padding: '10px 18px' }}><Plus size={18} /> Add Product</button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setShowManageCatModal(true)}
+            className="btn btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 16px', fontSize: '0.85rem', fontWeight: 600 }}
+          >
+            <Tag size={15} color="var(--color-berry)" />
+            <span>Manage Categories</span>
+          </button>
+
+          <button 
+            id="btn-add-product" 
+            onClick={openAdd} 
+            className="btn btn-primary" 
+            style={{ padding: '10px 18px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            <Plus size={18} /> Add Product
+          </button>
+        </div>
       </div>
 
       {/* Low Stock Alerts */}
@@ -210,32 +301,40 @@ export default function InventoryPage() {
           />
         </div>
 
+        {/* Dynamic Category Filter Tabs */}
         <div className="admin-tab-bar" style={{ display: 'flex', gap: '6px', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '2px', maxWidth: '100%' }}>
-          {[
-            { id: 'all', label: 'All Items' },
-            { id: 'cakes', label: 'Cakes' },
-            { id: 'ice-cream', label: 'Ice Creams' },
-            { id: 'special-desserts', label: 'Specials' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setCategoryFilter(tab.id)}
-              className={`btn btn-sm ${categoryFilter === tab.id ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap', padding: '7px 14px' }}
-            >
-              {tab.label}
-            </button>
-          ))}
+          <button
+            onClick={() => setCategoryFilter('all')}
+            className={`btn btn-sm ${categoryFilter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap', padding: '7px 14px' }}
+          >
+            All Items ({products.length})
+          </button>
+
+          {categories.map(cat => {
+            const count = products.filter(p => p.category === cat.id).length;
+            const isSelected = categoryFilter === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setCategoryFilter(cat.id)}
+                className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap', padding: '7px 14px' }}
+              >
+                {cat.label} {count > 0 ? `(${count})` : ''}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Products Grid */}
       {filteredProducts.length === 0 ? (
         <div style={{ padding: 'var(--space-12)', textAlign: 'center', background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}>
-          No products found matching &quot;{search}&quot;.
+          No products found matching &quot;{search}&quot; {categoryFilter !== 'all' ? `in category "${categoryFilter}"` : ''}.
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 'var(--space-4)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 'var(--space-4)' }}>
           {filteredProducts.map(p => {
             const thresh = getThreshold(p);
             const isLow = p.stock <= thresh;
@@ -263,7 +362,7 @@ export default function InventoryPage() {
                     <div>
                       <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '0.9375rem' }}>{p.name}</h3>
                       <span className="badge badge-primary" style={{ marginTop: '4px', textTransform: 'capitalize' }}>
-                        {p.category.replace('-', ' ')}
+                        {formatCategoryLabel(p.category)}
                       </span>
                     </div>
                     <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-berry)', fontSize: '1.0625rem' }}>₹{p.price}</span>
@@ -292,18 +391,23 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Edit / Add Product Modal with Dynamic Category Support */}
       {showModal && (
         <div className="overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
-              <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1.25rem' }}>{editing ? 'Edit Product' : 'Add Product'}</h3>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}><X size={22} /></button>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1.25rem' }}>
+                {editing ? 'Edit Product' : 'Add Product'}
+              </h3>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                <X size={22} />
+              </button>
             </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               <div className="input-group">
                 <label className="input-label" htmlFor="inv-name">Product Name *</label>
-                <input id="inv-name" className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Belgian Chocolate Mousse" />
+                <input id="inv-name" className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Golden Tiramisu Cake" />
               </div>
               
               <div className="input-group">
@@ -327,19 +431,107 @@ export default function InventoryPage() {
                 )}
               </div>
               
-              <div className="grid grid-2" style={{ gap: 'var(--space-3)' }}>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="inv-cat">Category</label>
-                  <select id="inv-cat" className="input" value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}>
-                    <option value="cakes">Cake</option>
-                    <option value="ice-cream">Ice Cream</option>
-                    <option value="special-desserts">Special Dessert</option>
-                  </select>
+              {/* Category Field with Inline Custom Category Creation */}
+              <div className="input-group" style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className="input-label" htmlFor="inv-cat" style={{ margin: 0, fontWeight: 700 }}>
+                    Category *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingCustomCat(!isAddingCustomCat);
+                      setNewCategoryName('');
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--color-berry)',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      padding: 0,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {isAddingCustomCat ? '← Select Existing' : '+ Add New Category'}
+                  </button>
                 </div>
-                <div className="input-group"><label className="input-label" htmlFor="inv-price">Price (₹)</label><input id="inv-price" type="number" inputMode="numeric" min="0" className="input" value={form.price} onChange={e => setForm(p => ({ ...p, price: Number(e.target.value) }))} /></div>
-                <div className="input-group"><label className="input-label" htmlFor="inv-stock">Current Stock</label><input id="inv-stock" type="number" inputMode="numeric" min="0" className="input" value={form.stock} onChange={e => setForm(p => ({ ...p, stock: Number(e.target.value) }))} /></div>
-                <div className="input-group"><label className="input-label" htmlFor="inv-thresh">Low Stock Alert At</label><input id="inv-thresh" type="number" inputMode="numeric" min="1" className="input" value={form.threshold} onChange={e => setForm(p => ({ ...p, threshold: Number(e.target.value) }))} /></div>
+
+                {isAddingCustomCat ? (
+                  <div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        autoFocus
+                        className="input"
+                        placeholder="Type new category (e.g. Waffles, Shakes, Mocktails)..."
+                        value={newCategoryName}
+                        onChange={e => setNewCategoryName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddNewCategory();
+                          }
+                        }}
+                        style={{ flex: 1, background: 'white' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddNewCategory}
+                        className="btn btn-primary"
+                        style={{ padding: '8px 16px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                      >
+                        <Check size={14} style={{ marginRight: 4 }} /> Add
+                      </button>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                      Press Add or Enter to save and apply this category immediately.
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    <select 
+                      id="inv-cat" 
+                      className="input" 
+                      value={form.category} 
+                      onChange={e => {
+                        if (e.target.value === '__NEW__') {
+                          setIsAddingCustomCat(true);
+                        } else {
+                          setForm(p => ({ ...p, category: e.target.value }));
+                        }
+                      }}
+                      style={{ background: 'white' }}
+                    >
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.label}
+                        </option>
+                      ))}
+                      <option value="__NEW__">➕ + Add New Custom Category...</option>
+                    </select>
+                  </div>
+                )}
               </div>
+
+              <div className="grid grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-3)' }}>
+                <div className="input-group">
+                  <label className="input-label" htmlFor="inv-price">Price (₹)</label>
+                  <input id="inv-price" type="number" inputMode="numeric" min="0" className="input" value={form.price} onChange={e => setForm(p => ({ ...p, price: Number(e.target.value) }))} />
+                </div>
+                <div className="input-group">
+                  <label className="input-label" htmlFor="inv-stock">Current Stock</label>
+                  <input id="inv-stock" type="number" inputMode="numeric" min="0" className="input" value={form.stock} onChange={e => setForm(p => ({ ...p, stock: Number(e.target.value) }))} />
+                </div>
+                <div className="input-group">
+                  <label className="input-label" htmlFor="inv-thresh">Low Stock Alert</label>
+                  <input id="inv-thresh" type="number" inputMode="numeric" min="1" className="input" value={form.threshold} onChange={e => setForm(p => ({ ...p, threshold: Number(e.target.value) }))} />
+                </div>
+              </div>
+
               <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
                 <button onClick={() => setShowModal(false)} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
                 <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
@@ -350,7 +542,114 @@ export default function InventoryPage() {
           </div>
         </div>
       )}
+
+      {/* Standalone Manage Categories Modal */}
+      {showManageCatModal && (
+        <div className="overlay" onClick={() => setShowManageCatModal(false)}>
+          <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Tag size={20} color="var(--color-berry)" />
+                <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, color: 'var(--color-plum)', fontSize: '1.25rem', margin: 0 }}>
+                  Manage Product Categories
+                </h3>
+              </div>
+              <button onClick={() => setShowManageCatModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Quick Add Form */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+              <input
+                type="text"
+                className="input"
+                placeholder="New category name (e.g. Milkshakes, Pastries)..."
+                value={newCatManageInput}
+                onChange={e => setNewCatManageInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (newCatManageInput.trim()) {
+                      addCategory(newCatManageInput);
+                      setNewCatManageInput('');
+                    }
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (newCatManageInput.trim()) {
+                    addCategory(newCatManageInput);
+                    setNewCatManageInput('');
+                  }
+                }}
+                className="btn btn-primary"
+                style={{ padding: '8px 18px', whiteSpace: 'nowrap' }}
+              >
+                <Plus size={16} /> Add
+              </button>
+            </div>
+
+            {/* Existing Categories List */}
+            <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {categories.map(c => {
+                const count = products.filter(p => p.category === c.id).length;
+                return (
+                  <div
+                    key={c.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '10px 14px',
+                      background: '#f8fafc',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0'
+                    }}
+                  >
+                    <div>
+                      <strong style={{ color: 'var(--color-plum)', fontSize: '0.9rem' }}>{c.label}</strong>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '8px' }}>
+                        ({count} product{count === 1 ? '' : 's'})
+                      </span>
+                    </div>
+
+                    {count === 0 && (
+                      <button
+                        type="button"
+                        onClick={() => removeCategory(c.id)}
+                        title="Delete unused category"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#dc2626',
+                          cursor: 'pointer',
+                          padding: '4px'
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setShowManageCatModal(false)}
+                className="btn btn-primary"
+                style={{ padding: '8px 20px' }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

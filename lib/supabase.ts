@@ -154,6 +154,46 @@ export type Database = {
         Insert: Omit<Database["public"]["Tables"]["store_locations"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["store_locations"]["Insert"]>;
       };
+      company_settings: {
+        Row: {
+          id: string;
+          name: string;
+          tagline: string;
+          address_line1: string;
+          address_line2: string | null;
+          city: string;
+          state: string;
+          pincode: string;
+          phone: string;
+          alt_phone: string | null;
+          email: string;
+          gstin: string | null;
+          fssai: string | null;
+          opening_hours: string;
+          google_maps_url: string | null;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["company_settings"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["company_settings"]["Row"]>;
+      };
+      signature_settings: {
+        Row: {
+          id: string;
+          is_active: boolean;
+          badge: string;
+          title: string;
+          description: string;
+          rating_text: string;
+          tag_text: string;
+          price: string;
+          button_text: string;
+          button_link: string;
+          image_url: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["signature_settings"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["signature_settings"]["Row"]>;
+      };
     };
   };
 };

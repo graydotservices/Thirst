@@ -13,7 +13,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS products (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('cakes', 'ice-cream', 'special-desserts')),
+  category TEXT NOT NULL CHECK (length(btrim(category)) BETWEEN 1 AND 100),
   price NUMERIC(10,2) NOT NULL,
   image TEXT,
   description TEXT,
@@ -147,29 +147,10 @@ CREATE TABLE IF NOT EXISTS store_locations (
 );
 
 -- ============================================================
--- SEED DATA — PRODUCTS
--- ============================================================
-INSERT INTO products (name, category, price, description, stock, is_available) VALUES
-  ('Rose Velvet Cake', 'cakes', 850, 'Delicate rose-infused red velvet with berry cream frosting and edible gold.', 12, true),
-  ('Midnight Cheesecake', 'cakes', 1200, 'New York style cheesecake with wild berry compote and lotus biscuit base.', 8, true),
-  ('Golden Tiramisu Cake', 'cakes', 950, 'Classic Italian tiramisu elevated with gold dusted cream and espresso sponge.', 6, true),
-  ('Berry Blast Scoop', 'ice-cream', 320, 'Three scoops of hand-churned berry ice cream with rose petals and gold dust.', 48, true),
-  ('Plum Royale Cone', 'ice-cream', 280, 'Deep plum sorbet in premium Belgian waffle cone with white chocolate drizzle.', 36, true),
-  ('Saffron Kulfi Cup', 'ice-cream', 220, 'Traditional saffron kulfi with pistachio crumble and rose water syrup.', 52, true),
-  ('Gold Parfait Glass', 'special-desserts', 480, 'Layered berry mousse, gold crumble, fresh berries and edible gold leaf.', 18, true),
-  ('Plum Mousse Cup', 'special-desserts', 380, 'Velvety plum mousse with hazelnut praline and a mirror glaze finish.', 14, true),
-  ('Waffles Royale', 'special-desserts', 540, 'Belgian waffles with berry compote, whipped cream, macaron and gold drizzle.', 20, true)
-ON CONFLICT DO NOTHING;
-
--- ============================================================
--- SEED DATA — STORE LOCATIONS
+-- INITIAL STORE LOCATION (REAL THIRUVALLUR FLAGSHIP)
 -- ============================================================
 INSERT INTO store_locations (name, address, city, phone, hours, is_active) VALUES
-  ('Thirst. Bandra — Flagship', '12 Sweet Lane, Bandra West', 'Mumbai', '+91 98765 43210', '2:00 PM – 12:00 AM', true),
-  ('Thirst. Andheri', '45 Versova Road, Andheri West', 'Mumbai', '+91 98765 43211', '2:00 PM – 12:00 AM', true),
-  ('Thirst. Connaught Place', 'Block A, Connaught Place', 'New Delhi', '+91 98765 43212', '2:00 PM – 12:00 AM', true),
-  ('Thirst. Koramangala', '7th Block, Koramangala', 'Bangalore', '+91 98765 43213', '9:00 AM – 11:00 PM', true),
-  ('Thirst. Jubilee Hills', 'Road No. 10, Jubilee Hills', 'Hyderabad', '+91 98765 43214', '2:00 PM – 12:00 AM', true)
+  ('Thirst. Thiruvallur — Flagship', 'NO.01, Siva Vishnu kovil street, kakkalur', 'Thiruvallur', '+91 87548 81546', '2:00 PM – 12:00 AM', true)
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
@@ -212,6 +193,40 @@ INSERT INTO company_settings (
   'Mon–Sun: 2:00 PM – 12:00 AM'
 ) ON CONFLICT (id) DO NOTHING;
 
+-- ============================================================
+-- SIGNATURE SETTINGS TABLE & INITIAL VALUES
+-- ============================================================
+CREATE TABLE IF NOT EXISTS signature_settings (
+  id TEXT PRIMARY KEY DEFAULT 'primary',
+  is_active BOOLEAN DEFAULT true,
+  badge TEXT DEFAULT 'Thirst Special',
+  title TEXT DEFAULT 'The Signature Sip',
+  description TEXT DEFAULT 'Hot chocolate with Milo, marshmallows, biscuit crunch, and a chocolate roll. A truly decadent experience handcrafted for chocolate lovers.',
+  rating_text TEXT DEFAULT '5.0 (250+ reviews)',
+  tag_text TEXT DEFAULT 'Best Seller',
+  price TEXT DEFAULT '₹99',
+  button_text TEXT DEFAULT 'View Menu',
+  button_link TEXT DEFAULT '/menu',
+  image_url TEXT DEFAULT '/vintage-hot-chocolate.png',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO signature_settings (
+  id, is_active, badge, title, description, rating_text, tag_text, price, button_text, button_link, image_url
+) VALUES (
+  'primary',
+  true,
+  'Thirst Special',
+  'The Signature Sip',
+  'Hot chocolate with Milo, marshmallows, biscuit crunch, and a chocolate roll. A truly decadent experience handcrafted for chocolate lovers.',
+  '5.0 (250+ reviews)',
+  'Best Seller',
+  '₹99',
+  'View Menu',
+  '/menu',
+  '/vintage-hot-chocolate.png'
+) ON CONFLICT (id) DO NOTHING;
+
 
 
 -- Apply after the earlier migrations, before deploying the updated application.
@@ -240,7 +255,7 @@ GRANT EXECUTE ON FUNCTION public.current_staff_role() TO authenticated;
 DO $$ DECLARE p RECORD; BEGIN
   FOR p IN SELECT schemaname, tablename, policyname FROM pg_policies
     WHERE schemaname = 'public' AND tablename IN
-      ('products','customers','orders','staff','franchise_applications','gallery','offers','notifications','store_locations','company_settings')
+      ('products','customers','orders','staff','franchise_applications','gallery','offers','notifications','store_locations','company_settings','signature_settings')
   LOOP EXECUTE format('DROP POLICY %I ON %I.%I', p.policyname, p.schemaname, p.tablename); END LOOP;
 END $$;
 
@@ -254,21 +269,22 @@ ALTER TABLE public.offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.store_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.company_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.signature_settings ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON public.products, public.customers, public.orders, public.staff,
   public.franchise_applications, public.gallery, public.offers, public.notifications,
-  public.store_locations, public.company_settings FROM anon, authenticated;
+  public.store_locations, public.company_settings, public.signature_settings FROM anon, authenticated;
 GRANT SELECT ON public.products, public.gallery, public.offers, public.notifications,
-  public.store_locations, public.company_settings TO anon, authenticated;
+  public.store_locations, public.company_settings, public.signature_settings TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.products, public.gallery, public.offers,
-  public.notifications, public.store_locations TO authenticated;
+  public.notifications, public.store_locations, public.signature_settings TO authenticated;
 GRANT SELECT ON public.staff, public.customers, public.orders, public.franchise_applications TO authenticated;
 GRANT INSERT (name, phone, email, birthday), UPDATE (name, phone, email, birthday) ON public.customers TO authenticated;
 GRANT UPDATE (status, budget) ON public.franchise_applications TO authenticated;
-GRANT INSERT, UPDATE ON public.company_settings TO authenticated;
+GRANT INSERT, UPDATE ON public.company_settings, public.signature_settings TO authenticated;
 GRANT ALL ON public.products, public.customers, public.orders, public.staff,
   public.franchise_applications, public.gallery, public.offers, public.notifications,
-  public.store_locations, public.company_settings TO service_role;
+  public.store_locations, public.company_settings, public.signature_settings TO service_role;
 
 CREATE POLICY public_products ON public.products FOR SELECT TO anon, authenticated USING (is_available = true);
 CREATE POLICY public_gallery ON public.gallery FOR SELECT TO anon, authenticated USING (is_active = true);
@@ -276,9 +292,10 @@ CREATE POLICY public_offers ON public.offers FOR SELECT TO anon, authenticated U
 CREATE POLICY public_notifications ON public.notifications FOR SELECT TO anon, authenticated USING (is_active = true);
 CREATE POLICY public_locations ON public.store_locations FOR SELECT TO anon, authenticated USING (is_active = true);
 CREATE POLICY public_company_settings ON public.company_settings FOR SELECT TO anon, authenticated USING (id = 'primary');
+CREATE POLICY public_signature_settings ON public.signature_settings FOR SELECT TO anon, authenticated USING (id = 'primary');
 
 DO $$ DECLARE t TEXT; BEGIN
-  FOREACH t IN ARRAY ARRAY['products','gallery','offers','notifications','store_locations'] LOOP
+  FOREACH t IN ARRAY ARRAY['products','gallery','offers','notifications','store_locations','signature_settings'] LOOP
     EXECUTE format('CREATE POLICY management_access ON public.%I FOR ALL TO authenticated USING ((SELECT public.current_staff_role()) IN (''admin'',''manager'')) WITH CHECK ((SELECT public.current_staff_role()) IN (''admin'',''manager''))', t);
   END LOOP;
 END $$;

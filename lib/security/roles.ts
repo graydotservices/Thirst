@@ -7,6 +7,6 @@ export function canAccessDashboard(role: StaffRole, pathname: string): boolean {
   if (role === 'cashier') return pathname === '/admin/billing';
   if (role !== 'manager') return false;
   return ['/admin/dashboard', '/admin/billing', '/admin/orders', '/admin/customers',
-    '/admin/inventory', '/admin/reports', '/admin/offers', '/admin/gallery',
-    '/admin/franchise', '/admin/notifications'].includes(pathname);
+    '/admin/inventory', '/admin/reports', '/admin/signature', '/admin/offers', '/admin/gallery',
+    '/admin/franchise', '/admin/notifications', '/admin/locations'].includes(pathname);
 }

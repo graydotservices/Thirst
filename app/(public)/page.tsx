@@ -23,6 +23,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { useCompanySettings } from '@/lib/companySettings';
+import { useSignatureSettings } from '@/lib/signatureSettings';
 
 /* ============================================================
    DATA
@@ -123,6 +124,7 @@ function Counter({ value, suffix, label }: { value: number; suffix: string; labe
 
 export default function HomePage() {
   const { settings, formattedAddress } = useCompanySettings();
+  const { settings: signature } = useSignatureSettings();
   const { scrollYProgress } = useScroll();
   const heroY = useTransform(scrollYProgress, [0, 1], ['0%', '50%']);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
@@ -238,38 +240,66 @@ export default function HomePage() {
       </section>
 
       {/* 3. TODAY'S SIGNATURE DESSERT */}
-      <section className="pad-mobile" style={{ padding: '120px 0', background: 'var(--gradient-hero)' }}>
-        <div className="container">
-          <div className="flex-col-mobile text-center-mobile gap-mobile-sm" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px' }}>
-            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ flex: 1, minWidth: '280px', position: 'relative', width: '100%' }}>
-              <div style={{ maxWidth: '300px', margin: '0 auto', width: '100%' }}>
-                <div style={{ position: 'relative', paddingBottom: '100%', borderRadius: '32px', overflow: 'hidden', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-xl)' }}>
-                  <Image src="/vintage-hot-chocolate.png" alt="The Signature Sip" fill style={{ objectFit: 'cover' }} />
+      {signature.is_active && (
+        <section className="pad-mobile" style={{ padding: '120px 0', background: 'var(--gradient-hero)' }}>
+          <div className="container">
+            <div className="flex-col-mobile text-center-mobile gap-mobile-sm" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px' }}>
+              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ flex: 1, minWidth: '280px', position: 'relative', width: '100%' }}>
+                <div style={{ maxWidth: '300px', margin: '0 auto', width: '100%' }}>
+                  <div style={{ position: 'relative', paddingBottom: '100%', borderRadius: '32px', overflow: 'hidden', border: '4px solid var(--color-plum)', boxShadow: 'var(--shadow-xl)', background: 'white' }}>
+                    <Image
+                      src={signature.image_url || '/vintage-hot-chocolate.png'}
+                      alt={signature.title || 'The Signature Sip'}
+                      fill
+                      unoptimized={signature.image_url?.startsWith('http')}
+                      style={{ objectFit: 'cover' }}
+                    />
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} style={{ flex: 1, minWidth: '280px', textAlign: 'center' }}>
-              <div style={{ color: 'var(--color-berry)', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>Thirst Special</div>
-              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 4rem)', color: 'var(--color-plum)', lineHeight: 1.1, marginBottom: '24px' }}>
-                The Signature Sip
-              </h2>
-              <p style={{ fontSize: '1.2rem', color: 'var(--color-text-secondary)', lineHeight: 1.8, marginBottom: '32px', fontWeight: 700 }}>
-                Hot chocolate with Milo, marshmallows, biscuit crunch, and a chocolate roll. A truly decadent experience handcrafted for chocolate lovers.
-              </p>
-              
-              <div style={{ display: 'flex', gap: '24px', marginBottom: '40px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><Star fill="var(--color-gold)" color="var(--color-gold)" size={20} /><span style={{ fontWeight: 800 }}>5.0 (250+ reviews)</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--color-plum)', fontWeight: 800 }}><Award color="var(--color-berry)" size={20} /><span>Best Seller</span></div>
-              </div>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} style={{ flex: 1, minWidth: '280px', textAlign: 'center' }}>
+                {signature.badge && (
+                  <div style={{ color: 'var(--color-berry)', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>
+                    {signature.badge}
+                  </div>
+                )}
+                <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2.5rem, 5vw, 4rem)', color: 'var(--color-plum)', lineHeight: 1.1, marginBottom: '24px' }}>
+                  {signature.title || 'The Signature Sip'}
+                </h2>
+                <p style={{ fontSize: '1.2rem', color: 'var(--color-text-secondary)', lineHeight: 1.8, marginBottom: '32px', fontWeight: 700 }}>
+                  {signature.description}
+                </p>
+                
+                <div style={{ display: 'flex', gap: '24px', marginBottom: '40px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {signature.rating_text && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <Star fill="var(--color-gold)" color="var(--color-gold)" size={20} />
+                      <span style={{ fontWeight: 800 }}>{signature.rating_text}</span>
+                    </div>
+                  )}
+                  {signature.tag_text && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--color-plum)', fontWeight: 800 }}>
+                      <Award color="var(--color-berry)" size={20} />
+                      <span>{signature.tag_text}</span>
+                    </div>
+                  )}
+                </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '32px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-plum)' }}>₹99</div>
-                <Link href="/menu" className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>View Menu</Link>
-              </div>
-            </motion.div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '32px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {signature.price && (
+                    <div style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', fontWeight: 800, color: 'var(--color-plum)' }}>
+                      {signature.price}
+                    </div>
+                  )}
+                  <Link href={signature.button_link || '/menu'} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
+                    {signature.button_text || 'View Menu'}
+                  </Link>
+                </div>
+              </motion.div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 4. BEST SELLERS */}
       <section className="pad-mobile" style={{ padding: '120px 0', background: 'var(--color-cream)' }}>

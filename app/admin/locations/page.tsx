@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   Plus, 
   MapPin, 
@@ -15,12 +16,12 @@ import {
   Mail, 
   Clock, 
   ShieldCheck, 
-  FileText, 
   Save, 
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  Navigation,
+  CheckCircle2
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { 
   useCompanySettings, 
   saveCompanySettings, 
@@ -28,19 +29,32 @@ import {
   getFormattedAddress, 
   formatIndianPhoneDisplay 
 } from '@/lib/companySettings';
-
-type Location = { 
-  id: string; 
-  name: string; 
-  address: string; 
-  city: string; 
-  phone: string; 
-  hours: string; 
-  isActive: boolean; 
-};
+import { 
+  useStoreLocations, 
+  StoreLocation 
+} from '@/lib/storeLocations';
 
 export default function AdminLocationsPage() {
-  const [activeTab, setActiveTab] = useState<'company' | 'outlets'>('company');
+  const [activeTab, setActiveTab] = useState<'outlets' | 'company'>('outlets');
+
+  // Branch Outlets State via reactive hook
+  const { locations: locs, loading: loadingLocs, saveLocation, removeLocation } = useStoreLocations();
+  const [savingLoc, setSavingLoc] = useState(false);
+  const [showLocModal, setShowLocModal] = useState(false);
+  const [editingLoc, setEditingLoc] = useState<StoreLocation | null>(null);
+  const [locSuccessMsg, setLocSuccessMsg] = useState('');
+  const [locErrorMessage, setLocErrorMessage] = useState('');
+  const [locForm, setLocForm] = useState({ 
+    id: '',
+    name: '', 
+    address: '', 
+    city: 'Chennai', 
+    phone: '+91 87548 81546', 
+    hours: '2:00 PM – 12:00 AM', 
+    map_url: '',
+    is_flagship: false,
+    is_active: true 
+  });
 
   // Company Settings State
   const { settings, loading: settingsLoading, reload: reloadSettings } = useCompanySettings();
@@ -52,58 +66,9 @@ export default function AdminLocationsPage() {
   // Synchronize company form with settings hook
   useEffect(() => {
     if (settings) {
-      void Promise.resolve().then(() => setCompanyForm(settings));
+      setCompanyForm(settings);
     }
   }, [settings]);
-
-  // Outlets State
-  const [locs, setLocs] = useState<Location[]>([]);
-  const [loadingLocs, setLoadingLocs] = useState(true);
-  const [savingLoc, setSavingLoc] = useState(false);
-  const [showLocModal, setShowLocModal] = useState(false);
-  const [editingLoc, setEditingLoc] = useState<Location | null>(null);
-  const [locErrorMessage, setLocErrorMessage] = useState('');
-  const [locForm, setLocForm] = useState({ 
-    name: '', 
-    address: '', 
-    city: 'Thiruvallur', 
-    phone: '', 
-    hours: '2:00 PM – 12:00 AM', 
-    isActive: true 
-  });
-
-  async function fetchLocations() {
-    setLoadingLocs(true);
-    try {
-      const { data, error } = await supabase
-        .from('store_locations')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error || !data || data.length === 0) {
-        setLocs([]);
-      } else {
-        const mapped = data.map((l) => ({
-          id: l.id,
-          name: l.name || '',
-          address: l.address || '',
-          city: l.city || '',
-          phone: l.phone || '',
-          hours: l.hours || '',
-          isActive: l.is_active ?? true,
-        }));
-        setLocs(mapped);
-      }
-    } catch {
-      setLocs([]);
-    } finally {
-      setLoadingLocs(false);
-    }
-  }
-
-  useEffect(() => {
-    void Promise.resolve().then(fetchLocations);
-  }, []);
 
   const handleSaveCompanySettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,7 +79,7 @@ export default function AdminLocationsPage() {
     try {
       const res = await saveCompanySettings(companyForm);
       if (res.success) {
-        setCompanySuccessMsg('Company address & profile updated successfully! Changes are now live across website footer, contact page, store locations, and billing receipts.');
+        setCompanySuccessMsg('Company address & profile updated successfully! Changes are live across website footer, contact page, store locations, and billing receipts.');
         await reloadSettings();
         setTimeout(() => setCompanySuccessMsg(''), 6000);
       } else {
@@ -138,52 +103,33 @@ export default function AdminLocationsPage() {
       setLocErrorMessage('Please enter store address.');
       return;
     }
+    if (!locForm.city.trim()) {
+      setLocErrorMessage('Please enter city name.');
+      return;
+    }
 
     setSavingLoc(true);
     try {
       const payload = {
+        id: editingLoc ? editingLoc.id : undefined,
         name: locForm.name.trim(),
         address: locForm.address.trim(),
         city: locForm.city.trim(),
         phone: locForm.phone.trim(),
         hours: locForm.hours.trim(),
-        is_active: locForm.isActive,
+        map_url: locForm.map_url.trim(),
+        is_flagship: locForm.is_flagship,
+        is_active: locForm.is_active,
       };
 
-      if (editingLoc) {
-        const { error } = await supabase
-          .from('store_locations')
-          .update(payload)
-          .eq('id', editingLoc.id).select('id').single();
-
-        if (error) {
-          throw new Error('Unable to save this location.');
-        }
-
-        setLocs(prev => prev.map(l => l.id === editingLoc.id ? { ...l, ...locForm } : l));
+      const res = await saveLocation(payload);
+      if (res.success) {
+        setLocSuccessMsg(editingLoc ? 'Location updated successfully!' : 'New branch location added successfully!');
+        setShowLocModal(false);
+        setTimeout(() => setLocSuccessMsg(''), 5000);
       } else {
-        const { data, error } = await supabase
-          .from('store_locations')
-          .insert([payload])
-          .select()
-          .single();
-
-        if (error) {
-          throw new Error('Unable to save this location.');
-        } else if (data) {
-          setLocs(prev => [{
-            id: data.id,
-            name: data.name,
-            address: data.address,
-            city: data.city,
-            phone: data.phone || '',
-            hours: data.hours || '',
-            isActive: data.is_active ?? true,
-          }, ...prev]);
-        }
+        setLocErrorMessage(res.error || 'Failed to save location.');
       }
-
-      setShowLocModal(false);
     } catch (err: unknown) {
       setLocErrorMessage((err instanceof Error ? err.message : '') || 'Failed to save location.');
     } finally {
@@ -195,298 +141,631 @@ export default function AdminLocationsPage() {
     setEditingLoc(null);
     setLocErrorMessage('');
     setLocForm({ 
+      id: '',
       name: '', 
       address: '', 
-      city: 'Thiruvallur', 
+      city: 'Chennai', 
       phone: companyForm.phone || '+91 87548 81546', 
       hours: '2:00 PM – 12:00 AM', 
-      isActive: true 
+      map_url: '',
+      is_flagship: false,
+      is_active: true 
     });
     setShowLocModal(true);
   };
 
-  const openEditLoc = (l: Location) => {
+  const openEditLoc = (l: StoreLocation) => {
     setEditingLoc(l);
     setLocErrorMessage('');
     setLocForm({ 
+      id: l.id,
       name: l.name, 
       address: l.address, 
       city: l.city, 
       phone: l.phone, 
       hours: l.hours, 
-      isActive: l.isActive 
+      map_url: l.map_url || '',
+      is_flagship: l.is_flagship ?? false,
+      is_active: l.is_active 
     });
     setShowLocModal(true);
   };
 
-  const handleDeleteLoc = async (id: string) => {
-    if (!confirm('Delete this store location?')) return;
-    const { error } = await supabase.from('store_locations').delete().eq('id', id).select('id').single();
-    if (error) { alert('Unable to delete this location.'); return; }
-    setLocs(prev => prev.filter(x => x.id !== id));
+  const handleDeleteLoc = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete branch "${name}"? It will be removed from the public website.`)) return;
+    const res = await removeLocation(id);
+    if (res.success) {
+      setLocSuccessMsg(`Branch "${name}" was removed.`);
+      setTimeout(() => setLocSuccessMsg(''), 4000);
+    } else {
+      alert(res.error || 'Unable to delete this location.');
+    }
   };
 
   return (
-    <div>
+    <div style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '60px' }}>
       {/* Header */}
-      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: 'clamp(1.25rem, 4vw, 1.5rem)', color: 'var(--color-plum)' }}>
-            Address & Store Management
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-            Update official company address, billing identity, and retail store locations
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(217, 79, 138, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-berry)' }}>
+              <MapPin size={20} />
+            </div>
+            <h1 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.65rem', color: 'var(--color-plum)', margin: 0 }}>
+              Store Locations & Branches
+            </h1>
+          </div>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', margin: 0 }}>
+            Manage all retail store branches, new city outlets, and official company flagship address.
           </p>
         </div>
 
-        {activeTab === 'outlets' && (
-          <button id="btn-add-location" onClick={openAddLoc} className="btn btn-primary" style={{ padding: '10px 18px' }}>
-            <Plus size={18} /> Add Branch Outlet
-          </button>
-        )}
+        {/* Top actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <Link
+            href="/store-locations"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--color-lavender)',
+              color: 'var(--color-plum)',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              textDecoration: 'none'
+            }}
+          >
+            <ExternalLink size={16} />
+            <span>View Public Store Locations</span>
+          </Link>
+
+          {activeTab === 'outlets' && (
+            <button
+              onClick={openAddLoc}
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', fontSize: '0.875rem', fontWeight: 700 }}
+            >
+              <Plus size={18} /> Add New Branch
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="admin-tab-bar" style={{ display: 'flex', gap: '8px', borderBottom: '2px solid var(--color-border)', marginBottom: 'var(--space-5)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      {/* Global Success / Alert messages */}
+      {locSuccessMsg && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 18px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 'var(--radius-md)', color: '#166534', fontSize: '0.875rem', marginBottom: '20px' }}>
+          <CheckCircle2 size={18} />
+          <span>{locSuccessMsg}</span>
+        </div>
+      )}
+
+      {/* Navigation Tabs */}
+      <div style={{ display: 'flex', gap: '10px', borderBottom: '2px solid #e2e8f0', marginBottom: '28px' }}>
         <button
-          onClick={() => setActiveTab('company')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            fontFamily: 'var(--font-heading)',
-            fontWeight: 700,
-            fontSize: '0.875rem',
-            background: 'none',
-            border: 'none',
-            borderBottom: activeTab === 'company' ? '3px solid var(--color-berry)' : '3px solid transparent',
-            color: activeTab === 'company' ? 'var(--color-berry)' : 'var(--color-text-muted)',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          <Building2 size={16} />
-          Company Address & HQ
-        </button>
-        <button
+          type="button"
           onClick={() => setActiveTab('outlets')}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '10px 16px',
+            padding: '12px 20px',
             fontFamily: 'var(--font-heading)',
             fontWeight: 700,
-            fontSize: '0.875rem',
+            fontSize: '0.95rem',
             background: 'none',
             border: 'none',
             borderBottom: activeTab === 'outlets' ? '3px solid var(--color-berry)' : '3px solid transparent',
-            color: activeTab === 'outlets' ? 'var(--color-berry)' : 'var(--color-text-muted)',
+            color: activeTab === 'outlets' ? 'var(--color-berry)' : 'var(--color-text-secondary)',
             cursor: 'pointer',
             transition: 'all 0.2s',
-            whiteSpace: 'nowrap'
           }}
         >
-          <MapPin size={16} />
-          Branches & Outlets ({locs.length})
+          <MapPin size={17} />
+          <span>Branch Locations</span>
+          <span style={{
+            fontSize: '0.75rem',
+            padding: '2px 8px',
+            borderRadius: '999px',
+            background: activeTab === 'outlets' ? 'rgba(217, 79, 138, 0.15)' : '#e2e8f0',
+            color: activeTab === 'outlets' ? 'var(--color-berry)' : '#64748b',
+            fontWeight: 800
+          }}>
+            {locs.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('company')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 20px',
+            fontFamily: 'var(--font-heading)',
+            fontWeight: 700,
+            fontSize: '0.95rem',
+            background: 'none',
+            border: 'none',
+            borderBottom: activeTab === 'company' ? '3px solid var(--color-berry)' : '3px solid transparent',
+            color: activeTab === 'company' ? 'var(--color-berry)' : 'var(--color-text-secondary)',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          <Building2 size={17} />
+          <span>Company Address & HQ</span>
         </button>
       </div>
 
-      {/* TAB 1: COMPANY ADDRESS & HQ PROFILE */}
-      {activeTab === 'company' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 480px), 1fr))', gap: 'var(--space-6)', alignItems: 'start' }}>
-          {/* Edit Form */}
-          <div style={{ background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', padding: 'var(--space-6)', boxShadow: 'var(--shadow-sm)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-4)' }}>
-              <Building2 size={20} style={{ color: 'var(--color-berry)' }} />
-              <h2 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '1.25rem', color: 'var(--color-plum)' }}>
-                Company Address Details
-              </h2>
+      {/* TAB 1: BRANCH LOCATIONS & OUTLETS */}
+      {activeTab === 'outlets' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+              All branches listed below appear automatically on the public <Link href="/store-locations" target="_blank" style={{ color: 'var(--color-berry)', fontWeight: 600 }}>/store-locations</Link> directory.
             </div>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', marginBottom: 'var(--space-5)' }}>
-              This address and contact details automatically reflect on the public website (Footer, Contact, About, Store Locations) and appear on all generated invoices and thermal receipts.
-            </p>
+            <button
+              onClick={openAddLoc}
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '0.85rem' }}
+            >
+              <Plus size={16} /> Add Location
+            </button>
+          </div>
+
+          <div className="table-container" style={{ background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: 'var(--color-plum)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <th style={{ padding: '14px 18px' }}>Store Name</th>
+                  <th style={{ padding: '14px 18px' }}>City</th>
+                  <th style={{ padding: '14px 18px' }}>Address</th>
+                  <th style={{ padding: '14px 18px' }}>Phone</th>
+                  <th style={{ padding: '14px 18px' }}>Hours</th>
+                  <th style={{ padding: '14px 18px' }}>Status</th>
+                  <th style={{ padding: '14px 18px', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loadingLocs ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <Loader2 size={18} className="animate-spin" /> Loading locations...
+                      </div>
+                    </td>
+                  </tr>
+                ) : locs.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
+                      <MapPin size={36} color="var(--color-berry)" style={{ marginBottom: 10, opacity: 0.7 }} />
+                      <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--color-plum)' }}>No Branch Outlets Added Yet</div>
+                      <div style={{ fontSize: '0.85rem', marginTop: 4, marginBottom: 16 }}>Click &quot;Add New Branch&quot; to add your first branch location.</div>
+                      <button onClick={openAddLoc} className="btn btn-primary btn-sm">
+                        <Plus size={15} /> Add First Branch
+                      </button>
+                    </td>
+                  </tr>
+                ) : (
+                  locs.map(l => (
+                    <tr key={l.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.15s' }}>
+                      <td style={{ padding: '16px 18px', fontWeight: 700, color: 'var(--color-plum)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <MapPin size={16} style={{ color: 'var(--color-berry)', flexShrink: 0 }} />
+                          <span>{l.name}</span>
+                          {l.is_flagship && (
+                            <span style={{ fontSize: '0.65rem', padding: '2px 8px', borderRadius: '50px', background: 'var(--color-berry)', color: 'white', fontWeight: 800, textTransform: 'uppercase' }}>
+                              Flagship
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '16px 18px', fontWeight: 600, color: 'var(--color-plum)' }}>
+                        {l.city}
+                      </td>
+                      <td style={{ padding: '16px 18px', fontSize: '0.875rem', color: 'var(--color-text-secondary)', maxWidth: 280 }}>
+                        {l.address}
+                      </td>
+                      <td style={{ padding: '16px 18px', fontSize: '0.875rem' }}>
+                        {l.phone ? (
+                          <a href={`tel:${l.phone.replace(/\s+/g, '')}`} style={{ color: 'var(--color-plum)', fontWeight: 600, textDecoration: 'none' }}>
+                            {formatIndianPhoneDisplay(l.phone)}
+                          </a>
+                        ) : '—'}
+                      </td>
+                      <td style={{ padding: '16px 18px', fontSize: '0.825rem', color: '#64748b' }}>
+                        {l.hours || '—'}
+                      </td>
+                      <td style={{ padding: '16px 18px' }}>
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '999px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          background: l.is_active ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                          color: l.is_active ? '#15803d' : '#b91c1c'
+                        }}>
+                          {l.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '16px 18px', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => openEditLoc(l)}
+                            title="Edit branch"
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '6px 10px', fontSize: '0.75rem' }}
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteLoc(l.id, l.name)}
+                            title="Delete branch"
+                            style={{
+                              padding: '6px 10px',
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              color: '#dc2626',
+                              border: 'none',
+                              borderRadius: 'var(--radius-md)',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Add / Edit Branch Modal */}
+          {showLocModal && (
+            <div className="overlay" onClick={() => setShowLocModal(false)} style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 300,
+              padding: '20px'
+            }}>
+              <div
+                className="modal"
+                style={{
+                  background: 'white',
+                  borderRadius: '20px',
+                  padding: '28px',
+                  width: '100%',
+                  maxWidth: 520,
+                  boxShadow: 'var(--shadow-xl)'
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, color: 'var(--color-plum)', fontSize: '1.35rem', margin: 0 }}>
+                    {editingLoc ? 'Edit Branch Location' : 'Add New Branch Location'}
+                  </h3>
+                  <button type="button" onClick={() => setShowLocModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                    <X size={22} />
+                  </button>
+                </div>
+
+                {locErrorMessage && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', color: '#dc2626', fontSize: '0.85rem', marginBottom: '16px' }}>
+                    <AlertCircle size={16} />
+                    <span>{locErrorMessage}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSaveLocation} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                      Store / Branch Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={locForm.name}
+                      onChange={e => setLocForm(p => ({ ...p, name: e.target.value }))}
+                      placeholder="e.g. Thirst. Anna Nagar Boutique"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                        City *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={locForm.city}
+                        onChange={e => setLocForm(p => ({ ...p, city: e.target.value }))}
+                        placeholder="e.g. Chennai"
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                        Contact Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={locForm.phone}
+                        onChange={e => setLocForm(p => ({ ...p, phone: e.target.value }))}
+                        placeholder="+91 87548 81546"
+                        style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                      Full Address *
+                    </label>
+                    <textarea
+                      rows={2}
+                      required
+                      value={locForm.address}
+                      onChange={e => setLocForm(p => ({ ...p, address: e.target.value }))}
+                      placeholder="Street, Landmark, Area, Pincode"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem', resize: 'vertical' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                      Operating Hours
+                    </label>
+                    <input
+                      type="text"
+                      value={locForm.hours}
+                      onChange={e => setLocForm(p => ({ ...p, hours: e.target.value }))}
+                      placeholder="e.g. 2:00 PM – 12:00 AM"
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                      Google Maps Link (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={locForm.map_url}
+                      onChange={e => setLocForm(p => ({ ...p, map_url: e.target.value }))}
+                      placeholder="https://maps.google.com/?q=..."
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                    />
+                    <span style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                      If left blank, Google Maps direction search is automatically generated from the address.
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '4px' }}>
+                        Store Type
+                      </label>
+                      <select
+                        value={locForm.is_flagship ? 'flagship' : 'outlet'}
+                        onChange={e => setLocForm(p => ({ ...p, is_flagship: e.target.value === 'flagship' }))}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      >
+                        <option value="outlet">Branch Outlet</option>
+                        <option value="flagship">Flagship Store</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '4px' }}>
+                        Operational Status
+                      </label>
+                      <select
+                        value={locForm.is_active ? 'active' : 'inactive'}
+                        onChange={e => setLocForm(p => ({ ...p, is_active: e.target.value === 'active' }))}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      >
+                        <option value="active">Active (Open)</option>
+                        <option value="inactive">Inactive (Closed / Renovation)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                    <button type="button" onClick={() => setShowLocModal(false)} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={savingLoc} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
+                      {savingLoc ? 'Saving...' : <><Check size={16} /> {editingLoc ? 'Update Branch' : 'Add Branch'}</>}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: COMPANY ADDRESS & HQ */}
+      {activeTab === 'company' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 500px), 1fr))', gap: '28px', alignItems: 'start' }}>
+          {/* Edit Form */}
+          <div style={{ background: 'white', borderRadius: '20px', padding: '28px', border: '1px solid #e2e8f0', boxShadow: 'var(--shadow-sm)' }}>
+            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-plum)', marginBottom: '20px' }}>
+              Company HQ & Billing Profile
+            </h2>
 
             {companySuccessMsg && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 'var(--radius-md)', color: '#047857', fontSize: '0.875rem', marginBottom: 'var(--space-4)' }}>
-                <Check size={18} style={{ flexShrink: 0 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 'var(--radius-md)', color: '#166534', fontSize: '0.85rem', marginBottom: '20px' }}>
+                <CheckCircle2 size={18} />
                 <span>{companySuccessMsg}</span>
               </div>
             )}
 
             {companyErrorMsg && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', color: '#dc2626', fontSize: '0.875rem', marginBottom: 'var(--space-4)' }}>
-                <AlertCircle size={18} style={{ flexShrink: 0 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', color: '#991b1b', fontSize: '0.85rem', marginBottom: '20px' }}>
+                <AlertCircle size={18} />
                 <span>{companyErrorMsg}</span>
               </div>
             )}
 
-            <form onSubmit={handleSaveCompanySettings} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-              <div className="grid grid-2" style={{ gap: 'var(--space-3)' }}>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="comp-name">Brand / Entity Name *</label>
+            <form onSubmit={handleSaveCompanySettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                    Brand Name *
+                  </label>
                   <input
-                    id="comp-name"
+                    type="text"
                     required
-                    className="input"
-                    value={companyForm.name || ''}
+                    value={companyForm.name}
                     onChange={e => setCompanyForm(p => ({ ...p, name: e.target.value }))}
-                    placeholder="Thirst."
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                   />
                 </div>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="comp-tagline">Brand Tagline</label>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                    Tagline
+                  </label>
                   <input
-                    id="comp-tagline"
-                    className="input"
-                    value={companyForm.tagline || ''}
+                    type="text"
+                    value={companyForm.tagline}
                     onChange={e => setCompanyForm(p => ({ ...p, tagline: e.target.value }))}
-                    placeholder="India's Premium Luxury Dessert Boutique"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                   />
                 </div>
               </div>
 
-              <div className="input-group">
-                <label className="input-label" htmlFor="comp-addr1">Address Line 1 (Street / Building) *</label>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                  Address Line 1 *
+                </label>
                 <input
-                  id="comp-addr1"
+                  type="text"
                   required
-                  className="input"
-                  value={companyForm.address_line1 || ''}
+                  value={companyForm.address_line1}
                   onChange={e => setCompanyForm(p => ({ ...p, address_line1: e.target.value }))}
-                  placeholder="NO.01, Siva Vishnu kovil street"
+                  placeholder="e.g. NO.01, Siva Vishnu kovil street"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                 />
               </div>
 
-              <div className="grid grid-3" style={{ gap: 'var(--space-3)' }}>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="comp-addr2">Area / Locality</label>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                  Address Line 2 (Area / Locality)
+                </label>
+                <input
+                  type="text"
+                  value={companyForm.address_line2 || ''}
+                  onChange={e => setCompanyForm(p => ({ ...p, address_line2: e.target.value }))}
+                  placeholder="e.g. kakkalur"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                    City *
+                  </label>
                   <input
-                    id="comp-addr2"
-                    className="input"
-                    value={companyForm.address_line2 || ''}
-                    onChange={e => setCompanyForm(p => ({ ...p, address_line2: e.target.value }))}
-                    placeholder="kakkalur"
-                  />
-                </div>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="comp-city">City *</label>
-                  <input
-                    id="comp-city"
+                    type="text"
                     required
-                    className="input"
-                    value={companyForm.city || ''}
+                    value={companyForm.city}
                     onChange={e => setCompanyForm(p => ({ ...p, city: e.target.value }))}
-                    placeholder="Thiruvallur"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                   />
                 </div>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="comp-state">State *</label>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                    State *
+                  </label>
                   <input
-                    id="comp-state"
+                    type="text"
                     required
-                    className="input"
-                    value={companyForm.state || ''}
+                    value={companyForm.state}
                     onChange={e => setCompanyForm(p => ({ ...p, state: e.target.value }))}
-                    placeholder="Tamil Nadu"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                    Pincode *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    pattern="[0-9]{6}"
+                    value={companyForm.pincode}
+                    onChange={e => setCompanyForm(p => ({ ...p, pincode: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-2" style={{ gap: 'var(--space-3)' }}>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="comp-pincode">PIN Code *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                    Primary Phone Number *
+                  </label>
                   <input
-                    id="comp-pincode"
-                    required
-                    maxLength={6}
-                    className="input"
-                    value={companyForm.pincode || ''}
-                    onChange={e => setCompanyForm(p => ({ ...p, pincode: e.target.value.replace(/\D/g, '') }))}
-                    placeholder="602001"
-                  />
-                </div>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="comp-hours">Operating Hours</label>
-                  <input
-                    id="comp-hours"
-                    className="input"
-                    value={companyForm.opening_hours || ''}
-                    onChange={e => setCompanyForm(p => ({ ...p, opening_hours: e.target.value }))}
-                    placeholder="Mon–Sun: 2:00 PM – 12:00 AM"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-2" style={{ gap: 'var(--space-3)' }}>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="comp-phone">Primary Phone / WhatsApp *</label>
-                  <input
-                    id="comp-phone"
-                    required
                     type="tel"
-                    className="input"
-                    value={companyForm.phone || ''}
+                    required
+                    value={companyForm.phone}
                     onChange={e => setCompanyForm(p => ({ ...p, phone: e.target.value }))}
                     placeholder="+91 87548 81546"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                   />
                 </div>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="comp-email">Official Email *</label>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                    Contact Email *
+                  </label>
                   <input
-                    id="comp-email"
-                    required
                     type="email"
-                    className="input"
-                    value={companyForm.email || ''}
+                    required
+                    value={companyForm.email}
                     onChange={e => setCompanyForm(p => ({ ...p, email: e.target.value }))}
-                    placeholder="thirst.freshchennai@gmail.com"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                   />
                 </div>
               </div>
 
-              <div className="grid grid-2" style={{ gap: 'var(--space-3)' }}>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="comp-gstin">GSTIN Number</label>
-                  <input
-                    id="comp-gstin"
-                    className="input"
-                    value={companyForm.gstin || ''}
-                    onChange={e => setCompanyForm(p => ({ ...p, gstin: e.target.value.toUpperCase() }))}
-                    placeholder="33AABCT0000A1Z5"
-                  />
-                </div>
-                <div className="input-group">
-                  <label className="input-label" htmlFor="comp-fssai">FSSAI License Number</label>
-                  <input
-                    id="comp-fssai"
-                    className="input"
-                    value={companyForm.fssai || ''}
-                    onChange={e => setCompanyForm(p => ({ ...p, fssai: e.target.value }))}
-                    placeholder="22425478001152"
-                  />
-                </div>
-              </div>
-
-              <div className="input-group">
-                <label className="input-label" htmlFor="comp-maps">Google Maps URL</label>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)', marginBottom: '6px' }}>
+                  Opening / Operating Hours
+                </label>
                 <input
-                  id="comp-maps"
-                  className="input"
-                  value={companyForm.google_maps_url || ''}
-                  onChange={e => setCompanyForm(p => ({ ...p, google_maps_url: e.target.value }))}
-                  placeholder="https://maps.google.com/..."
+                  type="text"
+                  value={companyForm.opening_hours}
+                  onChange={e => setCompanyForm(p => ({ ...p, opening_hours: e.target.value }))}
+                  placeholder="Mon–Sun: 2:00 PM – 12:00 AM"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
                 />
               </div>
 
-              <div style={{ marginTop: 'var(--space-3)' }}>
+              <div style={{ marginTop: '10px' }}>
                 <button
                   type="submit"
                   disabled={savingCompany}
                   className="btn btn-primary"
-                  style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '1rem' }}
+                  style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '1rem', fontWeight: 700 }}
                 >
                   {savingCompany ? (
                     <><Loader2 size={18} className="animate-spin" /> Updating Company Address...</>
@@ -498,20 +777,20 @@ export default function AdminLocationsPage() {
             </form>
           </div>
 
-          {/* Live Preview Card */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-            <div style={{ background: 'var(--color-plum)', color: 'white', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)', border: '2px solid var(--color-plum)', boxShadow: 'var(--shadow-md)' }}>
+          {/* Right Preview Card */}
+          <div style={{ position: 'sticky', top: '100px' }}>
+            <div style={{ background: 'var(--color-plum)', color: 'white', borderRadius: '24px', padding: '32px 28px', border: '2px solid var(--color-plum)', boxShadow: 'var(--shadow-md)', marginBottom: '20px' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--color-gold)', color: 'var(--color-plum)', padding: '4px 12px', borderRadius: '50px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '16px' }}>
-                <Sparkles size={13} /> Live System Preview
+                <Sparkles size={13} /> Live System Flagship
               </div>
-              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', fontWeight: 800, marginBottom: '6px', color: 'white' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', fontWeight: 800, marginBottom: '6px', color: 'white' }}>
                 {companyForm.name || 'Thirst.'}
               </h3>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: '20px' }}>
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '24px' }}>
                 {companyForm.tagline || "India's Premium Luxury Dessert Boutique"}
               </p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.9rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                   <MapPin size={18} style={{ color: 'var(--color-soft-pink)', flexShrink: 0, marginTop: 2 }} />
                   <div>
@@ -536,158 +815,23 @@ export default function AdminLocationsPage() {
                   <Clock size={18} style={{ color: 'var(--color-soft-pink)', flexShrink: 0 }} />
                   <span>{companyForm.opening_hours || 'Hours not set'}</span>
                 </div>
-
-                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', paddingTop: '10px', borderTop: '1px dashed rgba(255,255,255,0.15)', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)' }}>
-                  <span>FSSAI: {companyForm.fssai || '—'}</span>
-                  <span>GSTIN: {companyForm.gstin || '—'}</span>
-                </div>
               </div>
             </div>
 
-            <div style={{ background: '#f8fafc', borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)', border: '1px solid #e2e8f0' }}>
+            <div style={{ background: '#f8fafc', borderRadius: '16px', padding: '20px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontWeight: 700, color: 'var(--color-plum)', fontSize: '0.9rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <ShieldCheck size={16} color="var(--color-success)" />
-                Connected Components
+                Connected Surfaces
               </div>
               <ul style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, paddingLeft: '16px', margin: 0 }}>
-                <li><strong>Public Website Footer:</strong> Updates address, phone, email, and GSTIN automatically.</li>
-                <li><strong>Contact Page:</strong> Updates interactive cards and direct WhatsApp contact.</li>
-                <li><strong>Store Locations:</strong> Updates flagship branch name and map coordinates.</li>
-                <li><strong>Billing & POS (Thermal Receipts):</strong> Prints this updated header on 80mm/58mm thermal bills.</li>
-                <li><strong>A4 PDF Invoices:</strong> Uses this header and tax registration on downloadable PDF bills.</li>
+                <li><strong>Public Store Locations:</strong> Updates flagship card and directions.</li>
+                <li><strong>Website Footer:</strong> Updates address, phone, and hours in real time.</li>
+                <li><strong>Contact Page:</strong> Syncs contact details and WhatsApp chat.</li>
+                <li><strong>Thermal Receipts & A4 PDFs:</strong> Prints this header on official bills.</li>
               </ul>
             </div>
           </div>
         </div>
-      )}
-
-      {/* TAB 2: STORE BRANCHES & OUTLETS */}
-      {activeTab === 'outlets' && (
-        <>
-          <div className="table-container" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-            <table style={{ minWidth: 650 }}>
-              <thead>
-                <tr>
-                  <th>Store Name</th>
-                  <th>City</th>
-                  <th>Address</th>
-                  <th>Phone</th>
-                  <th>Hours</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loadingLocs ? (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                        <Loader2 size={18} className="animate-spin" /> Loading locations...
-                      </div>
-                    </td>
-                  </tr>
-                ) : locs.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-text-muted)' }}>
-                      No store locations found. Add your first outlet!
-                    </td>
-                  </tr>
-                ) : (
-                  locs.map(l => (
-                    <tr key={l.id}>
-                      <td style={{ fontWeight: 600, color: 'var(--color-plum)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <MapPin size={15} style={{ color: 'var(--color-berry)', flexShrink: 0 }} />
-                          {l.name}
-                        </div>
-                      </td>
-                      <td>{l.city}</td>
-                      <td style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>{l.address}</td>
-                      <td style={{ fontSize: '0.875rem' }}>
-                        {l.phone ? <a href={`tel:${l.phone.replace(/\s+/g, '')}`} style={{ color: 'var(--color-text-secondary)', textDecoration: 'none' }}>{l.phone}</a> : '—'}
-                      </td>
-                      <td style={{ fontSize: '0.8125rem' }}>{l.hours || '—'}</td>
-                      <td>
-                        <span className={`badge ${l.isActive ? 'badge-success' : 'badge-error'}`}>
-                          {l.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                          <button onClick={() => openEditLoc(l)} title="Edit location" className="btn btn-secondary btn-sm">
-                            <Edit2 size={13} />
-                          </button>
-                          <button onClick={() => handleDeleteLoc(l.id)} title="Delete location" style={{ padding: '8px 10px', background: 'rgba(239,68,68,0.1)', color: 'var(--color-error)', border: 'none', borderRadius: 'var(--radius-full)', cursor: 'pointer' }}>
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Outlet Modal */}
-          {showLocModal && (
-            <div className="overlay" onClick={() => setShowLocModal(false)}>
-              <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-5)' }}>
-                  <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--color-plum)', fontSize: '1.25rem' }}>
-                    {editingLoc ? 'Edit Branch Location' : 'Add Branch Location'}
-                  </h3>
-                  <button onClick={() => setShowLocModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}><X size={22} /></button>
-                </div>
-
-                {locErrorMessage && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', color: '#dc2626', fontSize: '0.85rem', marginBottom: 'var(--space-4)' }}>
-                    <AlertCircle size={16} />
-                    <span>{locErrorMessage}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleSaveLocation} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                  <div className="input-group">
-                    <label className="input-label" htmlFor="loc-name">Store Name *</label>
-                    <input id="loc-name" required className="input" value={locForm.name} onChange={e => setLocForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Thirst. Anna Nagar" />
-                  </div>
-                  <div className="grid grid-2" style={{ gap: 'var(--space-3)' }}>
-                    <div className="input-group">
-                      <label className="input-label" htmlFor="loc-city">City *</label>
-                      <input id="loc-city" required className="input" value={locForm.city} onChange={e => setLocForm(p => ({ ...p, city: e.target.value }))} placeholder="Chennai" />
-                    </div>
-                    <div className="input-group">
-                      <label className="input-label" htmlFor="loc-phone">Phone</label>
-                      <input id="loc-phone" type="tel" inputMode="tel" className="input" value={locForm.phone} onChange={e => setLocForm(p => ({ ...p, phone: e.target.value }))} placeholder="+91 87548 81546" />
-                    </div>
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label" htmlFor="loc-addr">Full Address *</label>
-                    <input id="loc-addr" required className="input" value={locForm.address} onChange={e => setLocForm(p => ({ ...p, address: e.target.value }))} placeholder="Street, Area, Landmark" />
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label" htmlFor="loc-hours">Business Hours</label>
-                    <input id="loc-hours" className="input" value={locForm.hours} onChange={e => setLocForm(p => ({ ...p, hours: e.target.value }))} placeholder="e.g. 2:00 PM – 12:00 AM" />
-                  </div>
-                  <div className="input-group">
-                    <label className="input-label" htmlFor="loc-status">Operational Status</label>
-                    <select id="loc-status" className="input" value={locForm.isActive ? 'active' : 'inactive'} onChange={e => setLocForm(p => ({ ...p, isActive: e.target.value === 'active' }))}>
-                      <option value="active">Active (Open)</option>
-                      <option value="inactive">Inactive (Closed / Renovation)</option>
-                    </select>
-                  </div>
-                  <div style={{ display: 'flex', gap: 'var(--space-3)', marginTop: 'var(--space-2)' }}>
-                    <button type="button" onClick={() => setShowLocModal(false)} className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>Cancel</button>
-                    <button type="submit" disabled={savingLoc} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
-                      {savingLoc ? 'Saving...' : <><Check size={16} /> {editingLoc ? 'Update Location' : 'Add Location'}</>}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-        </>
       )}
     </div>
   );

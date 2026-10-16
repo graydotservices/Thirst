@@ -23,6 +23,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 
 const navItems = [
@@ -33,6 +34,7 @@ const navItems = [
   { href: '/admin/staff', label: 'Staff', icon: UserCog },
   { href: '/admin/inventory', label: 'Inventory', icon: Package },
   { href: '/admin/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/admin/signature', label: 'The Signature', icon: Sparkles },
   { href: '/admin/offers', label: 'Offers', icon: Ticket },
   { href: '/admin/gallery', label: 'Gallery', icon: Images },
   { href: '/admin/franchise', label: 'Franchise Apps', icon: ChevronRight },

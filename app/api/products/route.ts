@@ -6,7 +6,8 @@ const fields = ['id','name','category','price','stock','low_stock_threshold','im
 function product(body: Record<string, unknown>) {
   if (body.is_available !== undefined && typeof body.is_available !== 'boolean') throw new HttpError(400, 'Invalid availability');
   return {
-    name: text(body.name, 'name'), category: choice(body.category, ['cakes','ice-cream','special-desserts'] as const, 'category'),
+    name: text(body.name, 'name'), 
+    category: text(body.category, 'category', 100),
     price: number(body.price, 'price', 0, 1000000), stock: number(body.stock, 'stock', 0, 1000000, true),
     low_stock_threshold: number(body.low_stock_threshold ?? 5, 'stock threshold', 0, 1000000, true),
     image: imageUrl(body.image), description: text(body.description, 'description', 2000, true) || null,
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
     const { client } = await requireStaff(request);
     const category = new URL(request.url).searchParams.get('category');
     let query = client.from('products').select('*').order('name');
-    if (category) query = query.eq('category', choice(category, ['cakes','ice-cream','special-desserts'] as const, 'category'));
+    if (category) query = query.eq('category', text(category, 'category', 100));
     const { data, error } = await query;
     if (error) throw error;
     return json(data);
