@@ -18,12 +18,31 @@ export function adminClient() {
 }
 
 export function sameOrigin(request: Request) {
-  const origin = request.headers.get('origin');
-  if (process.env.NODE_ENV === 'production' && !process.env.APP_ORIGIN) {
-    throw new HttpError(503, 'Application origin is not configured');
+  if (request.headers.get('sec-fetch-site') === 'cross-site') {
+    throw new HttpError(403, 'Cross-site requests are not allowed');
   }
-  const expected = process.env.APP_ORIGIN ? new URL(process.env.APP_ORIGIN).origin : new URL(request.url).origin;
-  if ((origin && origin !== expected) || request.headers.get('sec-fetch-site') === 'cross-site') throw new HttpError(403, 'Cross-site requests are not allowed');
+  const origin = request.headers.get('origin');
+  if (!origin) return;
+
+  const allowed: string[] = [new URL(request.url).origin];
+  if (process.env.APP_ORIGIN) {
+    for (const part of process.env.APP_ORIGIN.split(',')) {
+      const trimmed = part.trim();
+      if (trimmed) {
+        try { allowed.push(new URL(trimmed).origin); } catch { /* ignore malformed URL */ }
+      }
+    }
+  }
+  if (process.env.VERCEL_URL) {
+    try { allowed.push(new URL(`https://${process.env.VERCEL_URL}`).origin); } catch { /* ignore */ }
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    try { allowed.push(new URL(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`).origin); } catch { /* ignore */ }
+  }
+
+  if (!allowed.includes(origin)) {
+    throw new HttpError(403, 'Cross-site requests are not allowed');
+  }
 }
 
 export async function requireStaff(request: Request, roles: readonly StaffRole[] = STAFF_ROLES) {

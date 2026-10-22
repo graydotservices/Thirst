@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { adminApi } from '@/lib/adminApi';
+import { adminApi, ApiRequestError } from '@/lib/adminApi';
 import { type StaffRole } from '@/lib/security/roles';
 
 export default function AdminLoginPage() {
@@ -28,8 +28,11 @@ export default function AdminLoginPage() {
         try {
           const staff = await adminApi<{ role: StaffRole }>('/api/auth/me');
           router.replace(staff.role === 'cashier' ? '/admin/billing' : '/admin/dashboard');
-        } catch {
-          setError('Your account is not authorized or access could not be verified. Please contact an administrator.');
+        } catch (apiErr: unknown) {
+          const message = apiErr instanceof ApiRequestError
+            ? apiErr.message
+            : 'Your account is not authorized or access could not be verified. Please contact an administrator.';
+          setError(message);
           await supabase.auth.signOut();
         }
       }
