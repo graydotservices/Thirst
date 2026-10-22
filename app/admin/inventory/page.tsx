@@ -13,16 +13,13 @@ import {
   Tag, 
   Settings2,
   CheckCircle2,
-  Sparkles,
   Copy,
-  ExternalLink,
-  Database
+  ExternalLink
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { validateImageUpload } from '@/lib/imageUpload';
 import { useCategories, formatCategoryLabel, slugifyCategory } from '@/lib/categories';
-import { THIRST_MENU_ITEMS } from '@/lib/defaultMenu';
 
 const FIX_CATEGORY_SQL = `-- Run this in your Supabase SQL Editor to allow any category:
 ALTER TABLE public.products DROP CONSTRAINT IF EXISTS products_category_check;
@@ -65,7 +62,6 @@ export default function InventoryPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showManageCatModal, setShowManageCatModal] = useState(false);
   const [newCatManageInput, setNewCatManageInput] = useState('');
-  const [seeding, setSeeding] = useState(false);
 
   // Constraint error recovery state
   const [constraintModal, setConstraintModal] = useState<{
@@ -112,48 +108,6 @@ export default function InventoryPage() {
     setIsAddingCustomCat(false);
   };
 
-  const handleSeedMenu = async () => {
-    if (!confirm('Import all 35 authentic Thirst menu items (Hot Chocolate, Shakes, Waffles, Cakes, Crushers)?')) {
-      return;
-    }
-    setSeeding(true);
-    try {
-      const existingNames = new Set(products.map(p => (p.name || '').toLowerCase().trim()));
-      const itemsToInsert = THIRST_MENU_ITEMS.filter(item => !existingNames.has(item.name.toLowerCase().trim()));
-
-      if (itemsToInsert.length === 0) {
-        alert('All 35 menu items are already present in inventory!');
-        setSeeding(false);
-        return;
-      }
-
-      let insertRes = await supabase.from('products').insert(itemsToInsert).select();
-      if (insertRes.error && insertRes.error.message.includes('low_stock_threshold')) {
-        const stripped = itemsToInsert.map(({ low_stock_threshold, ...rest }) => rest);
-        insertRes = await supabase.from('products').insert(stripped).select();
-      }
-
-      if (insertRes.error) {
-        if (insertRes.error.message.includes('products_category_check')) {
-          setConstraintModal({
-            open: true,
-            category: 'Thirst Menu Categories (special, shakes, waffles, crushers, etc.)'
-          });
-          setSeeding(false);
-          return;
-        }
-        throw insertRes.error;
-      }
-
-      alert(`Successfully imported ${itemsToInsert.length} Thirst menu items!`);
-      await fetchProducts();
-    } catch (err: unknown) {
-      console.error(err);
-      alert((err instanceof Error ? err.message : '') || 'Failed to seed menu items. Check database permissions.');
-    } finally {
-      setSeeding(false);
-    }
-  };
 
   const handleFallbackSave = async (fallbackCat: string) => {
     if (!constraintModal.pendingPayload) return;
@@ -363,16 +317,6 @@ export default function InventoryPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={handleSeedMenu}
-            disabled={seeding}
-            className="btn btn-secondary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 16px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-berry)', borderColor: 'rgba(217,79,138,0.2)' }}
-          >
-            <Sparkles size={15} />
-            <span>{seeding ? 'Importing Menu...' : 'Import Thirst Menu'}</span>
-          </button>
 
           <button
             type="button"
@@ -453,29 +397,21 @@ export default function InventoryPage() {
         products.length === 0 ? (
           <div style={{ padding: 'var(--space-12) var(--space-6)', textAlign: 'center', background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
             <div style={{ display: 'inline-flex', padding: '18px', background: 'var(--color-cream)', borderRadius: '50%', marginBottom: '16px', color: 'var(--color-berry)' }}>
-              <Sparkles size={32} />
+              <Package size={32} />
             </div>
             <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.35rem', color: 'var(--color-plum)', marginBottom: '8px', fontWeight: 700 }}>
               No Products in Inventory Yet
             </h3>
             <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', maxWidth: '480px', margin: '0 auto 24px', lineHeight: 1.6 }}>
-              Sync your live menu immediately by importing all 35 authentic Thirst handcrafted dessert items (Hot Chocolate, Shakes, Waffles, Cakes, Crushers).
+              Get started by adding your first product to the inventory.
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button 
-                onClick={handleSeedMenu} 
-                disabled={seeding} 
+                onClick={openAdd} 
                 className="btn btn-primary" 
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}
               >
-                <Sparkles size={18} /> {seeding ? 'Importing Menu Items...' : '✨ Import 35 Thirst Menu Items'}
-              </button>
-              <button 
-                onClick={openAdd} 
-                className="btn btn-secondary" 
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px' }}
-              >
-                <Plus size={18} /> Add Single Product
+                <Plus size={18} /> Add Product
               </button>
             </div>
           </div>
