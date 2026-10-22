@@ -43,7 +43,7 @@ function MenuContent() {
   useEffect(() => {
     const paramCat = searchParams.get('category');
     if (paramCat) {
-      setActiveCategory(paramCat);
+      void Promise.resolve().then(() => setActiveCategory(paramCat));
     }
   }, [searchParams]);
 

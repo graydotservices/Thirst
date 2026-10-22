@@ -67,3 +67,18 @@ export function imageUrl(value: unknown): string | null {
   } catch { /* Invalid URL. */ }
   throw new HttpError(400, 'Use an image uploaded to this store');
 }
+
+export function safeHref(url: unknown, fallback = '/'): string {
+  if (typeof url !== 'string' || !url.trim()) return fallback;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//') && !trimmed.startsWith('/\\')) {
+    if (/^\/[a-zA-Z0-9_\-#?&=/.]*$/.test(trimmed)) return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if ((parsed.protocol === 'https:' || parsed.protocol === 'http:') && !parsed.username && !parsed.password) {
+      return trimmed;
+    }
+  } catch { /* Invalid URL */ }
+  return fallback;
+}

@@ -33,7 +33,12 @@ export const INITIAL_BRANCH_LOCATIONS: StoreLocation[] = [
 ];
 
 export function getDirectionsUrl(name: string, address: string, customUrl?: string): string {
-  if (customUrl && customUrl.trim().startsWith('http')) return customUrl.trim();
+  if (customUrl && /^https?:\/\//i.test(customUrl.trim())) {
+    try {
+      const parsed = new URL(customUrl.trim());
+      if (!parsed.username && !parsed.password) return customUrl.trim();
+    } catch {}
+  }
   const query = encodeURIComponent(`${name}, ${address}`);
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
@@ -203,7 +208,7 @@ export async function deleteStoreLocation(id: string): Promise<{ success: boolea
 }
 
 export function useStoreLocations() {
-  const [locations, setLocations] = useState<StoreLocation[]>(INITIAL_BRANCH_LOCATIONS);
+  const [locations, setLocations] = useState<StoreLocation[]>(() => getCachedStoreLocations());
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
@@ -214,8 +219,6 @@ export function useStoreLocations() {
   }, []);
 
   useEffect(() => {
-    const cached = getCachedStoreLocations();
-    setLocations(cached);
     void Promise.resolve().then(reload);
 
     const handleUpdate = (e: Event) => {

@@ -66,7 +66,7 @@ export default function AdminLocationsPage() {
   // Synchronize company form with settings hook
   useEffect(() => {
     if (settings) {
-      setCompanyForm(settings);
+      void Promise.resolve().then(() => setCompanyForm(settings));
     }
   }, [settings]);
 

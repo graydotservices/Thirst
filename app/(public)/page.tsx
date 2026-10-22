@@ -26,6 +26,7 @@ import { useCompanySettings } from '@/lib/companySettings';
 import { useSignatureSettings } from '@/lib/signatureSettings';
 import { supabase } from '@/lib/supabase';
 import { formatCategoryLabel } from '@/lib/categories';
+import { safeHref } from '@/lib/security/validation';
 
 /* ============================================================
    TYPES & VISUAL MAPPINGS
@@ -407,7 +408,7 @@ export default function HomePage() {
                       {signature.price}
                     </div>
                   )}
-                  <Link href={signature.button_link || '/menu'} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
+                  <Link href={safeHref(signature.button_link, '/menu')} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
                     {signature.button_text || 'View Menu'}
                   </Link>
                 </div>

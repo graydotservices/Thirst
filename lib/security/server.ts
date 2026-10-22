@@ -19,6 +19,9 @@ export function adminClient() {
 
 export function sameOrigin(request: Request) {
   const origin = request.headers.get('origin');
+  if (process.env.NODE_ENV === 'production' && !process.env.APP_ORIGIN) {
+    throw new HttpError(503, 'Application origin is not configured');
+  }
   const expected = process.env.APP_ORIGIN ? new URL(process.env.APP_ORIGIN).origin : new URL(request.url).origin;
   if ((origin && origin !== expected) || request.headers.get('sec-fetch-site') === 'cross-site') throw new HttpError(403, 'Cross-site requests are not allowed');
 }

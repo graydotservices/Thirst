@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from './supabase';
+import { safeHref } from './security/validation';
 
 export type SignatureSettings = {
   id?: string;
@@ -123,6 +124,9 @@ export async function saveSignatureSettings(
 ): Promise<{ success: boolean; data?: SignatureSettings; error?: string; isTableMissing?: boolean }> {
   try {
     const current = getCachedSignatureSettings();
+    if (updates.button_link !== undefined) {
+      updates.button_link = safeHref(updates.button_link, '/menu');
+    }
     const payload: SignatureSettings = {
       ...current,
       ...updates,
@@ -187,7 +191,7 @@ export async function saveSignatureSettings(
  * React hook for dynamic signature item data across the entire application
  */
 export function useSignatureSettings() {
-  const [settings, setSettings] = useState<SignatureSettings>(DEFAULT_SIGNATURE_SETTINGS);
+  const [settings, setSettings] = useState<SignatureSettings>(() => getCachedSignatureSettings());
   const [loading, setLoading] = useState<boolean>(true);
 
   const reload = useCallback(async () => {
@@ -198,9 +202,6 @@ export function useSignatureSettings() {
   }, []);
 
   useEffect(() => {
-    // Initial load from cache then remote
-    const cached = getCachedSignatureSettings();
-    setSettings(cached);
     void Promise.resolve().then(reload);
 
     const handleUpdate = (e: Event) => {

@@ -115,7 +115,7 @@ export function useCategories(productCategories: string[] = []) {
   }, [productCategories]);
 
   useEffect(() => {
-    reload();
+    void Promise.resolve().then(reload);
 
     const handleUpdate = (e: Event) => {
       const detail = (e as CustomEvent).detail;

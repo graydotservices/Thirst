@@ -134,7 +134,7 @@ export default function AdminSignaturePage() {
   }, []);
 
   useEffect(() => {
-    void checkDb();
+    void Promise.resolve().then(() => checkDb());
   }, [checkDb]);
 
   const copySqlToClipboard = async () => {
@@ -149,7 +149,7 @@ export default function AdminSignaturePage() {
 
   useEffect(() => {
     if (!loading && settings) {
-      setForm(settings);
+      void Promise.resolve().then(() => setForm(settings));
     }
   }, [loading, settings]);
 
@@ -645,7 +645,7 @@ export default function AdminSignaturePage() {
                   Show on Homepage
                 </label>
                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
-                  Display or hide the entire "Today's Signature Dessert" block from the main website.
+                  Display or hide the entire &quot;Today&apos;s Signature Dessert&quot; block from the main website.
                 </div>
               </div>
               <input
