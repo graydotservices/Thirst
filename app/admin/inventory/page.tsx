@@ -13,12 +13,22 @@ import {
   Tag, 
   Settings2,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Copy,
+  ExternalLink,
+  Database
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { validateImageUpload } from '@/lib/imageUpload';
 import { useCategories, formatCategoryLabel, slugifyCategory } from '@/lib/categories';
+import { THIRST_MENU_ITEMS } from '@/lib/defaultMenu';
+
+const FIX_CATEGORY_SQL = `-- Run this in your Supabase SQL Editor to allow any category:
+ALTER TABLE public.products DROP CONSTRAINT IF EXISTS products_category_check;
+ALTER TABLE public.products ADD CONSTRAINT products_category_check 
+  CHECK (length(btrim(category)) BETWEEN 1 AND 100);
+NOTIFY pgrst, 'reload schema';`;
 
 type Product = {
   id: string;
@@ -55,6 +65,17 @@ export default function InventoryPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showManageCatModal, setShowManageCatModal] = useState(false);
   const [newCatManageInput, setNewCatManageInput] = useState('');
+  const [seeding, setSeeding] = useState(false);
+
+  // Constraint error recovery state
+  const [constraintModal, setConstraintModal] = useState<{
+    open: boolean;
+    category: string;
+    pendingPayload?: Record<string, unknown>;
+    isEditing?: boolean;
+    editingId?: string;
+  }>({ open: false, category: '' });
+  const [copiedSql, setCopiedSql] = useState(false);
 
   // Extract all categories from products + persistent cache
   const productCategorySlugs = useMemo(() => {
@@ -89,6 +110,73 @@ export default function InventoryPage() {
     setForm(p => ({ ...p, category: added.id }));
     setNewCategoryName('');
     setIsAddingCustomCat(false);
+  };
+
+  const handleSeedMenu = async () => {
+    if (!confirm('Import all 35 authentic Thirst menu items (Hot Chocolate, Shakes, Waffles, Cakes, Crushers)?')) {
+      return;
+    }
+    setSeeding(true);
+    try {
+      const existingNames = new Set(products.map(p => (p.name || '').toLowerCase().trim()));
+      const itemsToInsert = THIRST_MENU_ITEMS.filter(item => !existingNames.has(item.name.toLowerCase().trim()));
+
+      if (itemsToInsert.length === 0) {
+        alert('All 35 menu items are already present in inventory!');
+        setSeeding(false);
+        return;
+      }
+
+      let insertRes = await supabase.from('products').insert(itemsToInsert).select();
+      if (insertRes.error && insertRes.error.message.includes('low_stock_threshold')) {
+        const stripped = itemsToInsert.map(({ low_stock_threshold, ...rest }) => rest);
+        insertRes = await supabase.from('products').insert(stripped).select();
+      }
+
+      if (insertRes.error) {
+        if (insertRes.error.message.includes('products_category_check')) {
+          setConstraintModal({
+            open: true,
+            category: 'Thirst Menu Categories (special, shakes, waffles, crushers, etc.)'
+          });
+          setSeeding(false);
+          return;
+        }
+        throw insertRes.error;
+      }
+
+      alert(`Successfully imported ${itemsToInsert.length} Thirst menu items!`);
+      await fetchProducts();
+    } catch (err: unknown) {
+      console.error(err);
+      alert((err instanceof Error ? err.message : '') || 'Failed to seed menu items. Check database permissions.');
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  const handleFallbackSave = async (fallbackCat: string) => {
+    if (!constraintModal.pendingPayload) return;
+    setSaving(true);
+    try {
+      const payload = { ...constraintModal.pendingPayload, category: fallbackCat };
+      if (constraintModal.isEditing && constraintModal.editingId) {
+        const { error } = await supabase.from('products').update(payload).eq('id', constraintModal.editingId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('products').insert([payload]).select().single();
+        if (error) throw error;
+        if (data) setProducts(prev => [data as Product, ...prev]);
+      }
+      setConstraintModal({ open: false, category: '' });
+      setShowModal(false);
+      alert(`Product saved with temporary category "${fallbackCat}"! Run the SQL fix in your Supabase SQL editor whenever you're ready to use custom categories like "${constraintModal.category}".`);
+      await fetchProducts();
+    } catch (err: unknown) {
+      alert((err instanceof Error ? err.message : '') || 'Fallback save failed.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -140,6 +228,17 @@ export default function InventoryPage() {
         }
 
         if (updateRes.error) {
+          if (updateRes.error.message.includes('products_category_check')) {
+            setConstraintModal({
+              open: true,
+              category: String(payload.category || finalCategory),
+              pendingPayload: payload,
+              isEditing: true,
+              editingId: editing.id,
+            });
+            setSaving(false);
+            return;
+          }
           alert(`Update failed: ${updateRes.error.message}`);
           setSaving(false);
           return;
@@ -165,6 +264,16 @@ export default function InventoryPage() {
         }
 
         if (insertRes.error) {
+          if (insertRes.error.message.includes('products_category_check')) {
+            setConstraintModal({
+              open: true,
+              category: String(payload.category || finalCategory),
+              pendingPayload: payload,
+              isEditing: false,
+            });
+            setSaving(false);
+            return;
+          }
           alert(`Insert failed: ${insertRes.error.message}`);
           setSaving(false);
           return;
@@ -256,6 +365,17 @@ export default function InventoryPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <button
             type="button"
+            onClick={handleSeedMenu}
+            disabled={seeding}
+            className="btn btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 16px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-berry)', borderColor: 'rgba(217,79,138,0.2)' }}
+          >
+            <Sparkles size={15} />
+            <span>{seeding ? 'Importing Menu...' : 'Import Thirst Menu'}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setShowManageCatModal(true)}
             className="btn btn-secondary"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 16px', fontSize: '0.85rem', fontWeight: 600 }}
@@ -330,9 +450,40 @@ export default function InventoryPage() {
 
       {/* Products Grid */}
       {filteredProducts.length === 0 ? (
-        <div style={{ padding: 'var(--space-12)', textAlign: 'center', background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}>
-          No products found matching &quot;{search}&quot; {categoryFilter !== 'all' ? `in category "${categoryFilter}"` : ''}.
-        </div>
+        products.length === 0 ? (
+          <div style={{ padding: 'var(--space-12) var(--space-6)', textAlign: 'center', background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+            <div style={{ display: 'inline-flex', padding: '18px', background: 'var(--color-cream)', borderRadius: '50%', marginBottom: '16px', color: 'var(--color-berry)' }}>
+              <Sparkles size={32} />
+            </div>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.35rem', color: 'var(--color-plum)', marginBottom: '8px', fontWeight: 700 }}>
+              No Products in Inventory Yet
+            </h3>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.95rem', maxWidth: '480px', margin: '0 auto 24px', lineHeight: 1.6 }}>
+              Sync your live menu immediately by importing all 35 authentic Thirst handcrafted dessert items (Hot Chocolate, Shakes, Waffles, Cakes, Crushers).
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button 
+                onClick={handleSeedMenu} 
+                disabled={seeding} 
+                className="btn btn-primary" 
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}
+              >
+                <Sparkles size={18} /> {seeding ? 'Importing Menu Items...' : '✨ Import 35 Thirst Menu Items'}
+              </button>
+              <button 
+                onClick={openAdd} 
+                className="btn btn-secondary" 
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 20px' }}
+              >
+                <Plus size={18} /> Add Single Product
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: 'var(--space-12)', textAlign: 'center', background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}>
+            No products found matching &quot;{search}&quot; {categoryFilter !== 'all' ? `in category "${categoryFilter}"` : ''}.
+          </div>
+        )
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 'var(--space-4)' }}>
           {filteredProducts.map(p => {
@@ -647,6 +798,103 @@ export default function InventoryPage() {
                 Done
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Database Constraint Fix Modal */}
+      {constraintModal.open && (
+        <div className="overlay" style={{ zIndex: 1200 }} onClick={() => setConstraintModal({ open: false, category: '' })}>
+          <div className="modal" style={{ maxWidth: 540 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b45309' }}>
+                  <AlertTriangle size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, color: 'var(--color-plum)', fontSize: '1.25rem', margin: 0 }}>
+                    Database Category Constraint
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>PostgreSQL check violation</span>
+                </div>
+              </div>
+              <button onClick={() => setConstraintModal({ open: false, category: '' })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                <X size={22} />
+              </button>
+            </div>
+
+            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '10px', padding: '14px', marginBottom: '16px', fontSize: '0.9rem', color: '#92400e', lineHeight: 1.5 }}>
+              Your Supabase database table <strong>&quot;products&quot;</strong> currently has an older check constraint restricting categories to only:
+              <br />
+              <code style={{ background: 'white', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, display: 'inline-block', marginTop: '6px' }}>cakes</code>, <code style={{ background: 'white', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>ice-cream</code>, <code style={{ background: 'white', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>special-desserts</code>.
+              <br />
+              PostgreSQL rejected category: <strong>&quot;{constraintModal.category}&quot;</strong>.
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)' }}>
+                  1. Run this 2-line SQL in Supabase SQL Editor (10 seconds):
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(FIX_CATEGORY_SQL);
+                    setCopiedSql(true);
+                    setTimeout(() => setCopiedSql(false), 3000);
+                  }}
+                  style={{ background: 'none', border: 'none', color: 'var(--color-berry)', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <Copy size={13} />
+                  <span>{copiedSql ? '✓ Copied!' : 'Copy SQL'}</span>
+                </button>
+              </div>
+
+              <pre style={{ background: '#1e1e2e', color: '#cdd6f4', padding: '14px', borderRadius: '8px', fontSize: '0.8rem', lineHeight: 1.45, overflowX: 'auto', fontFamily: 'monospace', margin: 0 }}>
+                {FIX_CATEGORY_SQL}
+              </pre>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              <a
+                href="https://supabase.com/dashboard/project/ecmwqikinlmmrsgjdbbd/sql"
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-primary"
+                style={{ flex: 1, justifyContent: 'center', display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '11px 18px', fontSize: '0.9rem' }}
+              >
+                <ExternalLink size={16} /> Open Supabase SQL Editor
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(FIX_CATEGORY_SQL);
+                  setCopiedSql(true);
+                  setTimeout(() => setCopiedSql(false), 3000);
+                }}
+                className="btn btn-secondary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '11px 18px', fontSize: '0.9rem' }}
+              >
+                <Copy size={16} /> {copiedSql ? 'Copied!' : 'Copy Script'}
+              </button>
+            </div>
+
+            {constraintModal.pendingPayload && (
+              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '16px' }}>
+                <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block', marginBottom: '8px' }}>
+                  Need to save immediately before opening Supabase?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleFallbackSave('special-desserts')}
+                  className="btn btn-secondary"
+                  style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem', color: 'var(--color-plum)', background: '#f8fafc' }}
+                >
+                  Save as &quot;special-desserts&quot; temporarily so work is not lost
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

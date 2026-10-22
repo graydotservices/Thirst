@@ -146,6 +146,6 @@ test('dashboard access is explicitly allowed by role and denies unknown manager 
   assert.equal(canAccessDashboard('cashier','/admin/billing'),true);
   assert.equal(canAccessDashboard('cashier','/admin/staff'),false);
   assert.equal(canAccessDashboard('manager','/admin/inventory'),true);
-  for(const route of ['/admin/staff','/admin/locations','/admin/staff/new','/admin/future-sensitive-route']) assert.equal(canAccessDashboard('manager',route),false);
+  for(const route of ['/admin/staff','/admin/company','/admin/staff/new','/admin/future-sensitive-route']) assert.equal(canAccessDashboard('manager',route),false);
   assert.equal(canAccessDashboard('outsider','/admin/dashboard'),false);
 });

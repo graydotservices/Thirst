@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Sparkles, Coffee, type LucideIcon } from 'lucide-react';
+import { Search, Sparkles, Coffee, Cake, IceCream, Heart, Gift, type LucideIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 import { formatCategoryLabel } from '@/lib/categories';
@@ -19,12 +20,32 @@ type MenuItem = {
   is_available: boolean;
 };
 
-export default function MenuPage() {
+function getCategoryIcon(cat: string): LucideIcon {
+  const norm = cat.toLowerCase();
+  if (norm.includes('cake') || norm.includes('treat')) return Cake;
+  if (norm.includes('waffle') || norm.includes('pancake')) return Heart;
+  if (norm.includes('ice')) return IceCream;
+  if (norm.includes('combo') || norm.includes('offer')) return Gift;
+  return Coffee;
+}
+
+function MenuContent() {
+  const searchParams = useSearchParams();
+  const initialCategory = searchParams.get('category') || 'all';
+
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<{ id: string; label: string; icon: LucideIcon }[]>([]);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Sync category param if URL changes
+  useEffect(() => {
+    const paramCat = searchParams.get('category');
+    if (paramCat) {
+      setActiveCategory(paramCat);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchMenu = async () => {
@@ -45,14 +66,17 @@ export default function MenuPage() {
             ...uniqueCategories.map(cat => ({ 
               id: cat, 
               label: formatCategoryLabel(cat), 
-              icon: Coffee 
+              icon: getCategoryIcon(cat)
             }))
           ];
           
           setCategories(dynamicCategories);
+        } else {
+          setMenuItems([]);
+          setCategories([]);
         }
-      } catch {
-        // Handled
+      } catch (err) {
+        console.error('Failed to load menu products:', err);
       } finally {
         setLoading(false);
       }
@@ -207,18 +231,39 @@ export default function MenuPage() {
       <section style={{ padding: '80px 0' }}>
         <div className="container">
           {loading ? (
-             <div style={{ textAlign: 'center', padding: '100px 0' }}>
-               <span className="spinner"></span>
-             </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '40px' }}>
+              {[1, 2, 3, 4, 5, 6].map(idx => (
+                <div key={idx} style={{ background: 'var(--color-white)', borderRadius: '16px', overflow: 'hidden', padding: '24px', height: '380px', display: 'flex', flexDirection: 'column', gap: '16px', border: '2px solid rgba(0,0,0,0.05)' }}>
+                  <div style={{ width: '100%', height: '180px', borderRadius: '12px', background: 'rgba(74, 13, 51, 0.05)' }} />
+                  <div style={{ width: '60%', height: '22px', borderRadius: '6px', background: 'rgba(74, 13, 51, 0.08)' }} />
+                  <div style={{ width: '85%', height: '16px', borderRadius: '6px', background: 'rgba(74, 13, 51, 0.05)' }} />
+                </div>
+              ))}
+            </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '100px 0' }}>
               <div style={{ display: 'inline-flex', padding: '24px', background: 'white', borderRadius: '50%', marginBottom: '20px', border: '4px dashed var(--color-soft-pink)' }}>
                 <Search size={40} color="var(--color-text-muted)" />
               </div>
-              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', color: 'var(--color-plum)', marginBottom: '8px' }}>No items found</h3>
-              <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem' }}>
-                We couldn&apos;t find anything matching your search. Try a different term.
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.5rem', color: 'var(--color-plum)', marginBottom: '8px' }}>
+                {search.trim() ? 'No items found' : menuItems.length === 0 ? 'Dessert Menu In Preparation' : 'No items in this collection'}
+              </h3>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem', maxWidth: '500px', margin: '0 auto 24px' }}>
+                {search.trim() 
+                  ? "We couldn't find anything matching your search. Try a different keyword." 
+                  : menuItems.length === 0 
+                  ? "Our fresh luxury menu is being prepared. Check back shortly to explore our full selection!"
+                  : "We don't have items in this category right now. Browse our other sweet categories!"}
               </p>
+              {activeCategory !== 'all' && (
+                <button
+                  onClick={() => setActiveCategory('all')}
+                  className="btn btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <Sparkles size={16} /> View All Items
+                </button>
+              )}
             </div>
           ) : (
             <motion.div layout className="pad-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '40px' }}>
@@ -302,5 +347,17 @@ export default function MenuPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function MenuPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-primary)' }}>
+        <span className="spinner"></span>
+      </div>
+    }>
+      <MenuContent />
+    </Suspense>
   );
 }

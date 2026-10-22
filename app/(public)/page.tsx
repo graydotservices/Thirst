@@ -25,23 +25,56 @@ import {
 import { useCompanySettings } from '@/lib/companySettings';
 import { useSignatureSettings } from '@/lib/signatureSettings';
 import { supabase } from '@/lib/supabase';
+import { formatCategoryLabel } from '@/lib/categories';
 
 /* ============================================================
-   DATA
+   TYPES & VISUAL MAPPINGS
 ============================================================ */
-const categories = [
-  { name: 'Thick Shakes', image: '/thick-shake.png', href: '/menu', color: 'var(--color-lavender)' },
-  { name: 'Treats & Cakes', image: '/dream-cake.png', href: '/menu', color: 'var(--color-soft-pink)' },
-  { name: 'Waffles & Pancakes', image: '/biscoff-waffle.png', href: '/menu', color: 'var(--color-gold)' },
-  { name: 'Combos & Offers', image: '/hot-chocolate.png', href: '/menu', color: 'var(--color-berry)' },
-];
+type FavoriteItem = {
+  id: string;
+  name: string;
+  category: string;
+  price: string;
+  rating: number;
+  img: string;
+  description: string;
+};
 
-const bestSellers = [
-  { name: 'Classic hot chocolate', price: '₹49', rating: 4.9, img: '/hot-chocolate.png' },
-  { name: 'The Signature Sip', price: '₹99', rating: 5.0, img: '/thick-shake.png' },
-  { name: 'Lotus Biscoff Waffle', price: '₹150', rating: 4.8, img: '/biscoff-waffle.png' },
-  { name: 'Thirst Dream Cake', price: '₹199', rating: 4.9, img: '/dream-cake.png' },
-];
+type CategoryVisual = {
+  id: string;
+  name: string;
+  image: string;
+  href: string;
+  color: string;
+};
+
+const CATEGORY_VISUALS: Record<string, { image: string; color: string }> = {
+  'special': { image: '/hot-chocolate.png', color: 'var(--color-berry)' },
+  'shakes': { image: '/thick-shake.png', color: 'var(--color-lavender)' },
+  'thick-shakes': { image: '/thick-shake.png', color: 'var(--color-lavender)' },
+  'crushers': { image: '/blue-crusher.png', color: 'var(--color-berry)' },
+  'treats': { image: '/dream-cake.png', color: 'var(--color-soft-pink)' },
+  'cakes': { image: '/dream-cake.png', color: 'var(--color-soft-pink)' },
+  'waffles': { image: '/biscoff-waffle.png', color: 'var(--color-gold)' },
+  'combos': { image: '/hot-chocolate.png', color: 'var(--color-berry)' },
+  'ice-cream': { image: '/icecream-product.png', color: 'var(--color-lavender)' },
+};
+
+function getCategoryVisual(slug: string, firstProductImage?: string) {
+  const norm = slug.toLowerCase().trim();
+  for (const [key, visual] of Object.entries(CATEGORY_VISUALS)) {
+    if (norm.includes(key)) {
+      return {
+        image: firstProductImage || visual.image,
+        color: visual.color
+      };
+    }
+  }
+  return {
+    image: firstProductImage || '/dream-cake.png',
+    color: 'var(--color-gold)'
+  };
+}
 
 
 
@@ -60,12 +93,7 @@ const reviews = [
   { name: 'Sneha Patel', text: 'The Thirst Dream Cake is life-changing. Beautiful presentation and incredible taste.', rating: 5 },
 ];
 
-const stats = [
-  { value: 1, suffix: '★', label: 'Flagship Store' },
-  { value: 10, suffix: 'k+', label: 'Happy Customers' },
-  { value: 50, suffix: '+', label: 'Menu Items' },
-  { value: 4.9, suffix: '★', label: 'Average Rating' },
-];
+
 
 /* ============================================================
    ANIMATION VARIANTS
@@ -132,32 +160,65 @@ export default function HomePage() {
 
   const [activeReview, setActiveReview] = useState(0);
   const [selectedImg, setSelectedImg] = useState<string | null>(null);
-  const [liveFavorites, setLiveFavorites] = useState(bestSellers);
+  const [liveFavorites, setLiveFavorites] = useState<FavoriteItem[]>([]);
+  const [liveCategories, setLiveCategories] = useState<CategoryVisual[]>([]);
+  const [loadingMenu, setLoadingMenu] = useState(true);
+  const [totalProductsCount, setTotalProductsCount] = useState<number>(0);
 
-  // Load live customer favorites from Supabase products
+  // Load live customer favorites and categories dynamically from Supabase products
   useEffect(() => {
-    async function loadFavorites() {
+    async function loadMenuData() {
+      setLoadingMenu(true);
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('products')
           .select('*')
           .eq('is_available', true)
-          .limit(4);
+          .order('created_at', { ascending: false });
 
-        if (data && data.length > 0) {
-          const mapped = data.map((p, idx) => ({
+        if (!error && data && data.length > 0) {
+          setTotalProductsCount(data.length);
+
+          // 1. Live Customer Favorites (top 4 available products)
+          const favorites: FavoriteItem[] = data.slice(0, 4).map((p, idx) => ({
+            id: p.id,
             name: p.name,
-            price: typeof p.price === 'number' ? `₹${p.price}` : String(p.price || '₹99'),
+            category: p.category,
+            price: typeof p.price === 'number' ? `₹${p.price}` : String(p.price ? (String(p.price).startsWith('₹') ? p.price : `₹${p.price}`) : '₹99'),
             rating: 4.8 + ((idx % 3) * 0.1),
             img: p.image || '/hot-chocolate.png',
+            description: p.description?.trim() || 'Perfectly handcrafted with premium ingredients for an unforgettable taste.',
           }));
-          setLiveFavorites(mapped);
+          setLiveFavorites(favorites);
+
+          // 2. Dynamic Categories derived from live products
+          const uniqueCats = Array.from(new Set(data.map(p => p.category).filter(Boolean)));
+          const dynamicCats: CategoryVisual[] = uniqueCats.map(cat => {
+            const firstProductWithImg = data.find(p => p.category === cat && p.image)?.image;
+            const visual = getCategoryVisual(cat, firstProductWithImg);
+            return {
+              id: cat,
+              name: formatCategoryLabel(cat),
+              image: visual.image,
+              href: `/menu?category=${encodeURIComponent(cat)}`,
+              color: visual.color,
+            };
+          });
+          setLiveCategories(dynamicCats);
+        } else {
+          setLiveFavorites([]);
+          setLiveCategories([]);
         }
-      } catch {
-        // Fallback to static favorites
+      } catch (err) {
+        console.error('Failed to load menu products for homepage:', err);
+        setLiveFavorites([]);
+        setLiveCategories([]);
+      } finally {
+        setLoadingMenu(false);
       }
     }
-    void loadFavorites();
+
+    void loadMenuData();
   }, []);
 
   // Auto-slide testimonials
@@ -240,30 +301,57 @@ export default function HomePage() {
             </motion.h2>
           </motion.div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '40px' }}>
-            {categories.map((cat, i) => (
-              <Link href={cat.href} key={i}>
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: i * 0.1 }}
-                  whileHover={{ scale: 1.05, y: -10 }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
-                >
-                  <div style={{ width: '160px', height: '160px', borderRadius: '50%', overflow: 'hidden', position: 'relative', boxShadow: `0 10px 30px rgba(0,0,0,0.1)`, border: `2px solid ${cat.color}`, padding: '4px' }}>
-                    <div style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden' }}>
-                      <Image src={cat.image} alt={cat.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit: 'cover' }} />
-                      <motion.div whileHover={{ opacity: 1 }} initial={{ opacity: 0 }} style={{ position: 'absolute', inset: 0, background: 'rgba(217,79,138,0.3)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.3s ease' }}>
-                        <span style={{ color: 'white', fontWeight: 600 }}>Explore</span>
-                      </motion.div>
+          {loadingMenu ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '40px' }}>
+              {[1, 2, 3, 4].map(idx => (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ width: '160px', height: '160px', borderRadius: '50%', background: 'rgba(74, 13, 51, 0.06)' }} />
+                  <div style={{ width: '90px', height: '18px', borderRadius: '8px', background: 'rgba(74, 13, 51, 0.08)', marginTop: '20px' }} />
+                </div>
+              ))}
+            </div>
+          ) : liveCategories.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '40px' }}>
+              {liveCategories.map((cat, i) => (
+                <Link href={cat.href} key={cat.id || i}>
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.6, delay: i * 0.1 }}
+                    whileHover={{ scale: 1.05, y: -10 }}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}
+                  >
+                    <div style={{ width: '160px', height: '160px', borderRadius: '50%', overflow: 'hidden', position: 'relative', boxShadow: `0 10px 30px rgba(0,0,0,0.1)`, border: `2px solid ${cat.color}`, padding: '4px' }}>
+                      <div style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden' }}>
+                        <Image 
+                          src={cat.image} 
+                          alt={cat.name} 
+                          fill 
+                          sizes="(max-width: 768px) 50vw, 25vw" 
+                          unoptimized={Boolean(cat.image && cat.image.startsWith('http'))}
+                          style={{ objectFit: 'cover' }} 
+                        />
+                        <motion.div whileHover={{ opacity: 1 }} initial={{ opacity: 0 }} style={{ position: 'absolute', inset: 0, background: 'rgba(217,79,138,0.3)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.3s ease' }}>
+                          <span style={{ color: 'white', fontWeight: 600 }}>Explore</span>
+                        </motion.div>
+                      </div>
                     </div>
-                  </div>
-                  <h3 style={{ marginTop: '20px', fontFamily: 'var(--font-heading)', fontSize: '1.2rem', color: 'var(--color-plum)' }}>{cat.name}</h3>
-                </motion.div>
+                    <h3 style={{ marginTop: '20px', fontFamily: 'var(--font-heading)', fontSize: '1.2rem', color: 'var(--color-plum)', textAlign: 'center' }}>{cat.name}</h3>
+                  </motion.div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px 20px', background: 'rgba(255,255,255,0.7)', borderRadius: '24px', maxWidth: '600px', margin: '0 auto' }}>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.1rem', marginBottom: '20px' }}>
+                Handcrafted luxury desserts. Made fresh, served daily.
+              </p>
+              <Link href="/menu" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                Explore Menu <ArrowRight size={18} />
               </Link>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -329,88 +417,116 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* 4. BEST SELLERS */}
+      {/* 4. BEST SELLERS / CUSTOMER FAVORITES */}
       <section className="pad-mobile" style={{ padding: '120px 0', background: 'var(--color-cream)' }}>
         <div className="container">
           <div className="flex-col-mobile text-center-mobile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '60px', flexWrap: 'wrap', gap: '20px' }}>
             <div>
               <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(2rem, 4vw, 3rem)', color: 'var(--color-plum)' }}>Customer Favorites</h2>
-              <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px', fontSize: '1.1rem' }}>The most loved items by our customers.</p>
+              <p style={{ color: 'var(--color-text-secondary)', marginTop: '8px', fontSize: '1.1rem' }}>The most loved items from our live menu.</p>
             </div>
             <Link href="/menu" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--color-berry)', fontWeight: 600, fontSize: '1.1rem' }}>
               View All <ArrowRight size={20} />
             </Link>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '32px' }}>
-            {liveFavorites.map((item, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: i * 0.1 }}
-                whileHover={{ y: -12, boxShadow: '0 30px 60px rgba(0,0,0,0.12)' }}
-                style={{ 
-                  background: 'var(--color-white)', 
-                  borderRadius: '24px', 
-                  overflow: 'hidden', 
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.05)', 
-                  border: '1px solid rgba(0,0,0,0.03)',
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}
-              >
-                {/* Elegant Heart Button */}
-                <motion.div 
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10, background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(12px)', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
-                  <Heart size={20} color="var(--color-berry)" />
-                </motion.div>
-
-                {/* Image Section */}
-                <div style={{ position: 'relative', paddingBottom: '100%', overflow: 'hidden' }}>
-                  <motion.div whileHover={{ scale: 1.08 }} transition={{ duration: 0.8, ease: "easeOut" }} style={{ position: 'absolute', inset: 0 }}>
-                    <Image 
-                      src={item.img} 
-                      alt={item.name} 
-                      fill 
-                      unoptimized={Boolean(item.img && item.img.startsWith('http'))}
-                      style={{ objectFit: 'cover' }} 
-                    />
-                  </motion.div>
+          {loadingMenu ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '32px' }}>
+              {[1, 2, 3, 4].map(idx => (
+                <div key={idx} style={{ background: 'var(--color-white)', borderRadius: '24px', overflow: 'hidden', padding: '24px', height: '420px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ width: '100%', height: '220px', borderRadius: '16px', background: 'rgba(74, 13, 51, 0.05)' }} />
+                  <div style={{ width: '60%', height: '24px', borderRadius: '8px', background: 'rgba(74, 13, 51, 0.08)' }} />
+                  <div style={{ width: '90%', height: '16px', borderRadius: '6px', background: 'rgba(74, 13, 51, 0.05)' }} />
+                  <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: '30%', height: '28px', borderRadius: '8px', background: 'rgba(74, 13, 51, 0.08)' }} />
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(74, 13, 51, 0.05)' }} />
+                  </div>
                 </div>
+              ))}
+            </div>
+          ) : liveFavorites.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '32px' }}>
+              {liveFavorites.map((item, i) => (
+                <motion.div 
+                  key={item.id || i}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: i * 0.1 }}
+                  whileHover={{ y: -12, boxShadow: '0 30px 60px rgba(0,0,0,0.12)' }}
+                  style={{ 
+                    background: 'var(--color-white)', 
+                    borderRadius: '24px', 
+                    overflow: 'hidden', 
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.05)', 
+                    border: '1px solid rgba(0,0,0,0.03)',
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                >
+                  {/* Heart Button */}
+                  <motion.div 
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10, background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(12px)', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+                    <Heart size={20} color="var(--color-berry)" />
+                  </motion.div>
 
-                {/* Content Section */}
-                <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--color-cream)', padding: '6px 12px', borderRadius: '20px' }}>
-                      <Star size={14} fill="var(--color-gold)" color="var(--color-gold)" />
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)' }}>{item.rating}</span>
+                  {/* Image Section */}
+                  <div style={{ position: 'relative', paddingBottom: '100%', overflow: 'hidden' }}>
+                    <motion.div whileHover={{ scale: 1.08 }} transition={{ duration: 0.8, ease: "easeOut" }} style={{ position: 'absolute', inset: 0 }}>
+                      <Image 
+                        src={item.img} 
+                        alt={item.name} 
+                        fill 
+                        unoptimized={Boolean(item.img && item.img.startsWith('http'))}
+                        style={{ objectFit: 'cover' }} 
+                      />
+                    </motion.div>
+                  </div>
+
+                  {/* Content Section */}
+                  <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--color-cream)', padding: '6px 12px', borderRadius: '20px' }}>
+                        <Star size={14} fill="var(--color-gold)" color="var(--color-gold)" />
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-plum)' }}>{item.rating}</span>
+                      </div>
+                    </div>
+                    
+                    <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.4rem', color: 'var(--color-plum)', fontWeight: 600, marginBottom: '8px', lineHeight: 1.2 }}>{item.name}</h3>
+                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem', marginBottom: '24px', flex: 1 }}>{item.description}</p>
+                    
+                    {/* Footer (Price & Action) */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                      <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 600, color: 'var(--color-plum)' }}>{item.price}</span>
+                      <Link href={`/menu?category=${encodeURIComponent(item.category || 'all')}`}>
+                        <motion.div 
+                          whileHover={{ scale: 1.05, backgroundColor: 'var(--color-plum)', color: 'white' }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--color-cream)', color: 'var(--color-plum)', transition: 'all 0.3s' }}
+                        >
+                          <ArrowRight size={22} />
+                        </motion.div>
+                      </Link>
                     </div>
                   </div>
-                  
-                  <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.4rem', color: 'var(--color-plum)', fontWeight: 600, marginBottom: '8px', lineHeight: 1.2 }}>{item.name}</h3>
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem', marginBottom: '24px', flex: 1 }}>Perfectly handcrafted with premium ingredients for an unforgettable taste.</p>
-                  
-                  {/* Footer (Price & Action) */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
-                    <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.75rem', fontWeight: 600, color: 'var(--color-plum)' }}>{item.price}</span>
-                    <Link href="/menu">
-                      <motion.div 
-                        whileHover={{ scale: 1.05, backgroundColor: 'var(--color-plum)', color: 'white' }}
-                        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--color-cream)', color: 'var(--color-plum)', transition: 'all 0.3s' }}
-                      >
-                        <ArrowRight size={22} />
-                      </motion.div>
-                    </Link>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '60px 24px', background: 'white', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.05)', maxWidth: '640px', margin: '0 auto' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.6rem', color: 'var(--color-plum)', marginBottom: '12px' }}>
+                Handcrafted Menu Updates
+              </h3>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: '1.05rem', lineHeight: 1.6, marginBottom: '28px' }}>
+                Our artisanal dessert menu is freshly crafted every morning. Explore our live catalog to discover all our sweet creations.
+              </p>
+              <Link href="/menu" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '14px 32px' }}>
+                Explore Menu <ArrowRight size={18} />
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
@@ -528,7 +644,12 @@ export default function HomePage() {
       <section style={{ padding: '100px 0', background: 'var(--color-plum)' }}>
         <div className="container">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '40px' }}>
-            {stats.map((s, i) => <Counter key={i} value={s.value} suffix={s.suffix} label={s.label} />)}
+            {[
+              { value: 1, suffix: '★', label: 'Flagship Store' },
+              { value: 10, suffix: 'k+', label: 'Happy Customers' },
+              { value: totalProductsCount > 0 ? totalProductsCount : 35, suffix: '+', label: 'Menu Items' },
+              { value: 4.9, suffix: '★', label: 'Average Rating' },
+            ].map((s, i) => <Counter key={i} value={s.value} suffix={s.suffix} label={s.label} />)}
           </div>
         </div>
       </section>
